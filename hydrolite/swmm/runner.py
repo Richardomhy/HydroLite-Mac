@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 import json
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -25,6 +26,11 @@ SWMM_SUMMARY_COLUMNS = [
     "backend_used",
     "backend_attempts",
     "diagnosis_file",
+    "external_solver_available",
+    "external_solver_python",
+    "external_solver_status",
+    "external_solver_summary_json",
+    "solver_env_diagnosis_file",
 ]
 
 
@@ -43,6 +49,11 @@ class SwmmRunResult:
     backend_used: str = ""
     backend_attempts: str = ""
     diagnosis_file: str = ""
+    external_solver_available: bool = False
+    external_solver_python: str = ""
+    external_solver_status: str = ""
+    external_solver_summary_json: str = ""
+    solver_env_diagnosis_file: str = ""
 
 
 def write_swmm_summary(path: Path, result: SwmmRunResult) -> None:
@@ -181,6 +192,111 @@ def _diagnosis_file(case_output_dir: Path) -> Path:
     return case_output_dir.parent / "swmm_backend_diagnosis.txt"
 
 
+def _solver_env_diagnosis_file(case_output_dir: Path) -> Path:
+    return case_output_dir.parent / "swmm_solver_env_diagnosis.txt"
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _conda_env_python() -> Path | None:
+    try:
+        completed = subprocess.run(
+            ["conda", "info", "--base"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except Exception:
+        return None
+    if completed.returncode != 0:
+        return None
+    base = completed.stdout.strip()
+    if not base:
+        return None
+    return Path(base) / "envs" / "hydrolite-swmm-x64" / "bin" / "python"
+
+
+def find_external_solver_python() -> Path | None:
+    env_value = os.environ.get("HYDROLITE_SWMM_PYTHON")
+    if env_value:
+        path = Path(env_value).expanduser()
+        if path.exists():
+            return path.resolve()
+    conda_python = _conda_env_python()
+    if conda_python and conda_python.exists():
+        return conda_python.resolve()
+    return None
+
+
+def _attempt_external_solver(
+    working_inp: Path,
+    report_file: Path,
+    output_file: Path,
+    summary_json: Path,
+) -> tuple[dict[str, object], dict[str, object] | None]:
+    external_python = find_external_solver_python()
+    if external_python is None:
+        return (
+            {
+                "backend_name": "external_solver",
+                "backend_available": False,
+                "backend_status": "failed",
+                "return_code": "",
+                "error_message": "No isolated SWMM Python found via HYDROLITE_SWMM_PYTHON or conda env hydrolite-swmm-x64.",
+                "external_solver_python": "",
+                "external_solver_summary_json": str(summary_json),
+            },
+            None,
+        )
+
+    script = _project_root() / "scripts" / "swmm_env" / "run_swmm_solver.py"
+    completed = subprocess.run(
+        [
+            str(external_python),
+            str(script),
+            "--inp",
+            str(working_inp),
+            "--rpt",
+            str(report_file),
+            "--out",
+            str(output_file),
+            "--summary",
+            str(summary_json),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+    payload = None
+    if summary_json.exists():
+        try:
+            payload = json.loads(summary_json.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            payload = None
+    message = (completed.stderr or completed.stdout or "").strip()
+    if payload and payload.get("error_message"):
+        message = str(payload["error_message"])
+    if completed.returncode != 0 and not message:
+        message = f"external_solver exited with code {completed.returncode}"
+
+    return (
+        {
+            "backend_name": "external_solver",
+            "backend_available": True,
+            "backend_status": "success" if completed.returncode == 0 else "failed",
+            "return_code": completed.returncode,
+            "error_message": "" if completed.returncode == 0 else message,
+            "external_solver_python": str(external_python),
+            "external_solver_summary_json": str(summary_json),
+        },
+        payload,
+    )
+
+
 def run_swmm(
     *,
     inp_file: Path,
@@ -194,6 +310,8 @@ def run_swmm(
     output_file = swmm_dir / "working.out"
     summary_file = swmm_dir / "swmm_summary.xlsx"
     diagnosis_file = _diagnosis_file(case_output_dir)
+    solver_env_diagnosis_file = _solver_env_diagnosis_file(case_output_dir)
+    external_summary_json = swmm_dir / "external_solver_summary.json"
 
     if not inp_file.exists():
         attempts: list[dict[str, object]] = []
@@ -207,6 +325,7 @@ def run_swmm(
             backend_used="",
             backend_attempts=json.dumps(attempts, ensure_ascii=False),
             diagnosis_file=str(diagnosis_file),
+            solver_env_diagnosis_file=str(solver_env_diagnosis_file),
         )
         write_swmm_summary(summary_file, result)
         logger.warning(result.error_message)
@@ -219,6 +338,8 @@ def run_swmm(
     backend_used = ""
     run_status = "failed"
     error_message = ""
+    external_solver_python = ""
+    external_solver_status = ""
     for backend_name in ("pyswmm", "swmm-toolkit", "swmm_api"):
         attempt = _attempt_backend(backend_name, working_inp, report_file, output_file)
         attempts.append(attempt)
@@ -242,6 +363,33 @@ def run_swmm(
             break
 
     if run_status != "success":
+        external_attempt, external_payload = _attempt_external_solver(
+            working_inp, swmm_dir / "model.rpt", swmm_dir / "model.out", external_summary_json
+        )
+        attempts.append(external_attempt)
+        external_solver_python = str(external_attempt.get("external_solver_python", ""))
+        external_solver_status = str(external_attempt["backend_status"])
+        logger.info(
+            "SWMM backend attempt: backend_name=%s, backend_available=%s, "
+            "backend_status=%s, return_code=%s",
+            external_attempt["backend_name"],
+            external_attempt["backend_available"],
+            external_attempt["backend_status"],
+            external_attempt["return_code"],
+        )
+        if external_attempt["error_message"]:
+            logger.warning(
+                "SWMM backend %s error: %s",
+                external_attempt["backend_name"],
+                external_attempt["error_message"],
+            )
+        if external_attempt["backend_status"] == "success":
+            backend_used = "external_solver"
+            if external_payload and external_payload.get("backend_used"):
+                backend_used = f"external_solver:{external_payload['backend_used']}"
+            run_status = "success"
+
+    if run_status != "success":
         error_message = "; ".join(
             f"{item['backend_name']}: {item['error_message'] or 'failed'}"
             for item in attempts
@@ -257,6 +405,11 @@ def run_swmm(
         backend_used=backend_used,
         backend_attempts=json.dumps(attempts, ensure_ascii=False),
         diagnosis_file=str(diagnosis_file),
+        external_solver_available=bool(external_solver_python),
+        external_solver_python=external_solver_python,
+        external_solver_status=external_solver_status,
+        external_solver_summary_json=str(external_summary_json),
+        solver_env_diagnosis_file=str(solver_env_diagnosis_file),
     )
     write_swmm_summary(summary_file, result)
 

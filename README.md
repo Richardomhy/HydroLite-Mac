@@ -53,3 +53,16 @@ Batch runs also write:
 
 `data_raw/` is reserved for original raw data. HydroLite should not modify or delete files under `data_raw/`. Demo inputs live in `data_demo/`, and generated outputs are written under `output/`.
 
+## SWMM on macOS Backend Notes
+
+HydroLite's main watershed workflow does not depend on SWMM succeeding. If the local SWMM Python backends fail because of macOS binary compatibility, HydroLite still writes the normal `result_flow.csv`, `summary.xlsx`, `hydrograph.png`, and `water_balance.xlsx` outputs and records SWMM diagnostics in `swmm_summary.xlsx`.
+
+For SWMM on macOS, especially Apple Silicon, use the isolated solver environment:
+
+```bash
+bash scripts/swmm_env/create_swmm_solver_env.sh
+export HYDROLITE_SWMM_PYTHON="$(conda info --base)/envs/hydrolite-swmm-x64/bin/python"
+python -m hydrolite run cases/demo_swmm.yaml
+```
+
+On Apple Silicon, the script first tries an x86_64 conda environment using `CONDA_SUBDIR=osx-64`, which requires Rosetta 2. Diagnostics are written to `output/swmm_solver_env_diagnosis.txt`.
