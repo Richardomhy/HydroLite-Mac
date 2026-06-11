@@ -129,6 +129,8 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None) -> Run
             swmm_result, swmm_summary_xlsx = run_swmm(
                 inp_file=config.swmm_inp_file,
                 case_output_dir=config.output_dir,
+                result_flow_csv=outputs.result_flow_csv,
+                coupling=config.swmm_coupling,
                 logger=logger,
             )
             swmm_status = swmm_result.run_status

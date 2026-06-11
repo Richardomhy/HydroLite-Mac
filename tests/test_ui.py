@@ -54,6 +54,7 @@ def test_ui_reads_swmm_outputs():
     assert "node_depth" in tables
     assert "link_flow" in tables
     assert "system" in tables
+    assert "coupling" in tables
 
 
 def test_ui_checks_do_not_modify_data_raw():

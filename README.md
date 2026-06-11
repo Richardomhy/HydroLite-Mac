@@ -66,3 +66,9 @@ python -m hydrolite run cases/demo_swmm.yaml
 ```
 
 On Apple Silicon, the script first tries an x86_64 conda environment using `CONDA_SUBDIR=osx-64`, which requires Rosetta 2. Diagnostics are written to `output/swmm_solver_env_diagnosis.txt`.
+
+## HydroLite to SWMM Coupling
+
+SWMM cases can inject a HydroLite flow hydrograph into the copied `working.inp` file through `swmm.coupling`. The demo uses `source_time_column: time` and `source_flow_column: outflow_cms`, matching HydroLite's current `result_flow.csv` outlet flow field.
+
+The original `data_raw/swmm/demo.inp` is not edited. Coupling writes `[TIMESERIES]` and `[INFLOWS]` only into `output/<case_name>/swmm/working.inp`, then writes `coupling_summary.xlsx`.

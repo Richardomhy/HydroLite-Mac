@@ -4,9 +4,10 @@ import sys
 
 import pandas as pd
 
+from hydrolite.config import SwmmCouplingConfig
 from hydrolite.config import load_case
 from hydrolite.runner import run_case
-from hydrolite.swmm.runner import SWMM_SUMMARY_COLUMNS, read_swmm_summary
+from hydrolite.swmm.runner import SWMM_SUMMARY_COLUMNS, read_swmm_summary, run_swmm
 
 
 def test_swmm_absent_keeps_existing_case_running():
@@ -33,7 +34,7 @@ def test_swmm_run_copies_working_inp_and_preserves_original():
     assert original.read_bytes() == before
     working = Path("output/demo_swmm/swmm/working.inp")
     assert working.exists()
-    assert working.read_bytes() == before
+    assert "HYDROLITE_INFLOW" in working.read_text(encoding="utf-8")
     assert outputs.swmm_summary_xlsx == Path("output/demo_swmm/swmm/swmm_summary.xlsx").resolve()
 
 
@@ -57,6 +58,11 @@ def test_swmm_summary_fields_are_complete():
     assert "link_flow_timeseries_csv" in summary.columns
     assert "system_timeseries_csv" in summary.columns
     assert "swmm_kpis_xlsx" in summary.columns
+    assert "coupling_enabled" in summary.columns
+    assert "coupling_status" in summary.columns
+    assert "coupling_summary_file" in summary.columns
+    assert "target_node" in summary.columns
+    assert "inflow_name" in summary.columns
 
 
 def test_non_swmm_flow_still_works_after_swmm_case():
@@ -96,6 +102,62 @@ def test_swmm_result_tables_exist_with_required_fields():
         "report_file",
         "output_file",
     }.issubset(kpis.columns)
+
+
+def test_swmm_coupling_writes_working_inp_and_summary():
+    original = Path("data_raw/swmm/demo.inp")
+    before = original.read_bytes()
+    outputs = run_case(Path("cases/demo_swmm.yaml"), output_dir=Path("output/demo_swmm"))
+    swmm_dir = outputs.output_dir / "swmm"
+
+    assert original.read_bytes() == before
+    assert "HYDROLITE_INFLOW" in (swmm_dir / "working.inp").read_text(encoding="utf-8")
+    coupling_summary = pd.read_excel(swmm_dir / "coupling_summary.xlsx")
+    assert {
+        "coupling_enabled",
+        "coupling_status",
+        "source_flow_csv",
+        "source_time_column",
+        "source_flow_column",
+        "target_node",
+        "inflow_name",
+        "flow_unit",
+        "timeseries_points",
+        "min_flow",
+        "max_flow",
+        "total_inflow_volume_m3",
+        "working_inp",
+        "error_message",
+    }.issubset(coupling_summary.columns)
+    assert coupling_summary.loc[0, "coupling_status"] == "success"
+
+
+def test_swmm_coupling_missing_target_node_fails_gracefully(tmp_path: Path):
+    source = tmp_path / "flow.csv"
+    source.write_text(
+        "time,outflow_cms\n2026-01-01 00:00,0\n2026-01-01 01:00,1\n",
+        encoding="utf-8",
+    )
+    result, summary_path = run_swmm(
+        inp_file=Path("data_raw/swmm/demo.inp").resolve(),
+        case_output_dir=tmp_path / "case",
+        result_flow_csv=source,
+        coupling=SwmmCouplingConfig(
+            enabled=True,
+            source_flow_csv=source,
+            source_time_column="time",
+            source_flow_column="outflow_cms",
+            target_node="MISSING_NODE",
+            inflow_name="HYDROLITE_INFLOW",
+            flow_unit="CMS",
+        ),
+        logger=__import__("logging").getLogger("test-swmm"),
+    )
+    assert result.run_status == "failed"
+    assert result.coupling_status == "failed"
+    assert summary_path.exists()
+    coupling_summary = pd.read_excel(tmp_path / "case" / "swmm" / "coupling_summary.xlsx")
+    assert "target_node does not exist" in coupling_summary.loc[0, "error_message"]
 
 
 def test_swmm_diagnosis_script_runs_and_writes_report():

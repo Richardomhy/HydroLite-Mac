@@ -51,6 +51,7 @@ def read_swmm_outputs(swmm_dir: str | Path) -> dict[str, pd.DataFrame]:
         "node_depth": root / "node_depth_timeseries.csv",
         "link_flow": root / "link_flow_timeseries.csv",
         "system": root / "system_timeseries.csv",
+        "coupling": root / "coupling_summary.xlsx",
     }
     for key, path in files.items():
         if path.exists():
@@ -69,6 +70,7 @@ def load_existing_outputs(output_dir: Path) -> dict[str, Path]:
         "swmm_node_depth": "swmm/node_depth_timeseries.csv",
         "swmm_link_flow": "swmm/link_flow_timeseries.csv",
         "swmm_system": "swmm/system_timeseries.csv",
+        "swmm_coupling": "swmm/coupling_summary.xlsx",
     }
     return {key: output_dir / name for key, name in names.items() if (output_dir / name).exists()}
 
@@ -154,6 +156,21 @@ def _show_swmm_outputs(swmm_dir: Path, outputs: dict[str, Path]) -> None:
         st.write("swmm_kpis.xlsx")
         st.dataframe(kpis, use_container_width=True)
 
+    coupling = tables.get("coupling", pd.DataFrame())
+    if not coupling.empty:
+        st.write("coupling_summary.xlsx")
+        row = coupling.iloc[0]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("coupling_enabled", str(row.get("coupling_enabled", "")))
+        c2.metric("coupling_status", str(row.get("coupling_status", "")))
+        c3.metric("target_node", str(row.get("target_node", "")))
+        c4, c5, c6 = st.columns(3)
+        c4.metric("inflow_name", str(row.get("inflow_name", "")))
+        c5.metric("timeseries_points", str(row.get("timeseries_points", "")))
+        c6.metric("max_flow", str(row.get("max_flow", "")))
+        st.metric("total_inflow_volume_m3", str(row.get("total_inflow_volume_m3", "")))
+        st.dataframe(coupling, use_container_width=True)
+
     node_depth = tables.get("node_depth", pd.DataFrame())
     if not node_depth.empty:
         st.write("node_depth_timeseries.csv")
@@ -180,6 +197,7 @@ def _show_swmm_outputs(swmm_dir: Path, outputs: dict[str, Path]) -> None:
         ("swmm_node_depth", "下载 node_depth_timeseries.csv", "text/csv"),
         ("swmm_link_flow", "下载 link_flow_timeseries.csv", "text/csv"),
         ("swmm_system", "下载 system_timeseries.csv", "text/csv"),
+        ("swmm_coupling", "下载 coupling_summary.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
     ]:
         if key in outputs:
             _show_download(label, outputs[key], mime)

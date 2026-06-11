@@ -15,4 +15,11 @@ outputs:
 swmm:
   enabled: true
   inp_file: data_raw/swmm/demo.inp
-
+  coupling:
+    enabled: true
+    source_flow_csv: output/demo_swmm/result_flow.csv
+    source_time_column: time
+    source_flow_column: outflow_cms
+    target_node: J1
+    inflow_name: HYDROLITE_INFLOW
+    flow_unit: CMS

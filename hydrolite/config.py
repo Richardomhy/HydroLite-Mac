@@ -8,6 +8,17 @@ import yaml
 
 
 @dataclass(frozen=True)
+class SwmmCouplingConfig:
+    enabled: bool = False
+    source_flow_csv: Path | None = None
+    source_time_column: str = "time"
+    source_flow_column: str = "outflow_cms"
+    target_node: str = ""
+    inflow_name: str = "HYDROLITE_INFLOW"
+    flow_unit: str = "CMS"
+
+
+@dataclass(frozen=True)
 class CaseConfig:
     name: str
     time_step_hours: float
@@ -18,6 +29,7 @@ class CaseConfig:
     reaches_csv: Path
     swmm_enabled: bool = False
     swmm_inp_file: Path | None = None
+    swmm_coupling: SwmmCouplingConfig = SwmmCouplingConfig()
 
 
 def _resolve(base_dir: Path, value: str | Path) -> Path:
@@ -56,6 +68,9 @@ def load_case(path: str | Path) -> CaseConfig:
         raise ValueError("Case YAML sections inputs, outputs, and model must be mappings.")
     if not isinstance(swmm, dict):
         raise ValueError("Case YAML section swmm must be a mapping when provided.")
+    coupling = swmm.get("coupling", {}) or {}
+    if not isinstance(coupling, dict):
+        raise ValueError("Case YAML section swmm.coupling must be a mapping when provided.")
 
     input_dir = _resolve(base_dir, _require(inputs, "directory", "inputs"))
     output_dir = _resolve(base_dir, _require(outputs, "directory", "outputs"))
@@ -68,6 +83,20 @@ def load_case(path: str | Path) -> CaseConfig:
         raise ValueError("model.time_step_hours must be positive.")
     swmm_enabled = bool(swmm.get("enabled", False))
     swmm_inp_file = _resolve(base_dir, _require(swmm, "inp_file", "swmm")) if swmm_enabled else None
+    coupling_enabled = bool(coupling.get("enabled", False))
+    swmm_coupling = SwmmCouplingConfig(
+        enabled=coupling_enabled,
+        source_flow_csv=_resolve(
+            base_dir, coupling.get("source_flow_csv", f"output/{raw.get('name', case_path.stem)}/result_flow.csv")
+        )
+        if coupling_enabled
+        else None,
+        source_time_column=str(coupling.get("source_time_column", "time")),
+        source_flow_column=str(coupling.get("source_flow_column", "outflow_cms")),
+        target_node=str(coupling.get("target_node", "")),
+        inflow_name=str(coupling.get("inflow_name", "HYDROLITE_INFLOW")),
+        flow_unit=str(coupling.get("flow_unit", "CMS")),
+    )
 
     return CaseConfig(
         name=str(_require(raw, "name", "root")),
@@ -79,4 +108,5 @@ def load_case(path: str | Path) -> CaseConfig:
         reaches_csv=_resolve(input_dir, _require(inputs, "reaches", "inputs")),
         swmm_enabled=swmm_enabled,
         swmm_inp_file=swmm_inp_file,
+        swmm_coupling=swmm_coupling,
     )
