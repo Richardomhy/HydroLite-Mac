@@ -298,6 +298,18 @@ def find_external_solver_python() -> Path | None:
     return None
 
 
+def _is_streamlit_cloud_runtime() -> bool:
+    return any(
+        os.environ.get(name)
+        for name in (
+            "STREAMLIT_CLOUD",
+            "STREAMLIT_COMMUNITY_CLOUD",
+            "STREAMLIT_SHARING_MODE",
+            "STREAMLIT_RUNTIME_ENV",
+        )
+    )
+
+
 def _attempt_external_solver(
     working_inp: Path,
     report_file: Path,
@@ -312,7 +324,10 @@ def _attempt_external_solver(
                 "backend_available": False,
                 "backend_status": "failed",
                 "return_code": "",
-                "error_message": "No isolated SWMM Python found via HYDROLITE_SWMM_PYTHON or conda env hydrolite-swmm-x64.",
+                "error_message": (
+                    "No isolated SWMM Python found via HYDROLITE_SWMM_PYTHON or conda env "
+                    "hydrolite-swmm-x64. Current Python SWMM backends were attempted first."
+                ),
                 "external_solver_python": "",
                 "external_solver_summary_json": str(summary_json),
             },
@@ -658,6 +673,10 @@ def run_swmm(
     external_solver_python = ""
     external_solver_status = ""
     external_payload: dict[str, object] | None = None
+    if _is_streamlit_cloud_runtime():
+        logger.info("Streamlit Cloud runtime detected; using current Python SWMM backend fallback.")
+    elif not os.environ.get("HYDROLITE_SWMM_PYTHON"):
+        logger.info("HYDROLITE_SWMM_PYTHON not set; trying current Python SWMM backends first.")
     for backend_name in ("pyswmm", "swmm-toolkit", "swmm_api"):
         attempt = _attempt_backend(backend_name, working_inp, report_file, output_file)
         attempts.append(attempt)

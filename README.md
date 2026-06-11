@@ -11,6 +11,17 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
+## Quick Start Local
+
+```bash
+python -m hydrolite validate cases/
+python -m hydrolite run cases/demo.yaml
+python -m hydrolite run cases/demo_swmm.yaml
+python -m hydrolite batch cases/
+python -m hydrolite compare output/
+python -m streamlit run streamlit_app.py --server.headless true
+```
+
 ## Run One Case
 
 ```bash
@@ -26,7 +37,7 @@ python -m hydrolite batch cases/
 ## Start Streamlit UI
 
 ```bash
-python -m streamlit run hydrolite/ui/app.py --server.headless true
+python -m streamlit run streamlit_app.py --server.headless true
 ```
 
 Then open:
@@ -34,6 +45,33 @@ Then open:
 ```text
 http://localhost:8501
 ```
+
+If the browser does not open, try:
+
+```text
+http://127.0.0.1:8501
+```
+
+You can also run:
+
+```bash
+python scripts/diagnose_streamlit_local.py
+```
+
+The diagnosis is written to `output/streamlit_local_diagnosis.txt`.
+
+## Deploy to Streamlit Community Cloud
+
+GitHub Pages cannot run Streamlit or Python services. Use GitHub for source hosting and Streamlit Community Cloud for the running app.
+
+Streamlit Community Cloud settings:
+
+- Repository: your HydroLite GitHub repository
+- Branch: `main`
+- Main file path: `streamlit_app.py`
+- Python version: 3.11 recommended
+
+See `docs/deployment.md` and `docs/github_push_commands.md` for the push and deployment templates.
 
 ## Outputs
 
@@ -56,6 +94,8 @@ Batch runs also write:
 ## SWMM on macOS Backend Notes
 
 HydroLite's main watershed workflow does not depend on SWMM succeeding. If the local SWMM Python backends fail because of macOS binary compatibility, HydroLite still writes the normal `result_flow.csv`, `summary.xlsx`, `hydrograph.png`, and `water_balance.xlsx` outputs and records SWMM diagnostics in `swmm_summary.xlsx`.
+
+On Streamlit Community Cloud, HydroLite first tries SWMM packages in the current Python environment. If cloud SWMM binaries fail, the interface remains usable for existing outputs, validation, batch summaries, scenario comparison, and non-SWMM runs. The macOS isolated solver remains available locally through `HYDROLITE_SWMM_PYTHON`.
 
 For SWMM on macOS, especially Apple Silicon, use the isolated solver environment:
 

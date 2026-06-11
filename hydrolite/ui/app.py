@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -15,6 +16,24 @@ from hydrolite.validate import validate_target
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CASES_DIR = PROJECT_ROOT / "cases"
 OUTPUT_ROOT = PROJECT_ROOT / "output"
+
+
+def is_streamlit_cloud() -> bool:
+    markers = (
+        "STREAMLIT_CLOUD",
+        "STREAMLIT_COMMUNITY_CLOUD",
+        "STREAMLIT_SHARING_MODE",
+        "STREAMLIT_RUNTIME_ENV",
+    )
+    return any(os.environ.get(name) for name in markers)
+
+
+def swmm_python_status() -> tuple[bool, str]:
+    value = os.environ.get("HYDROLITE_SWMM_PYTHON", "")
+    if not value:
+        return False, ""
+    path = Path(value).expanduser()
+    return path.exists(), str(path)
 
 
 def scan_case_files(cases_dir: str | Path = CASES_DIR) -> list[Path]:
@@ -212,6 +231,25 @@ def _show_download(label: str, path: Path, mime: str) -> None:
         st.download_button(label, _read_bytes(path), file_name=path.name, mime=mime)
 
 
+def _sidebar_runtime_info() -> None:
+    has_swmm_python, swmm_python = swmm_python_status()
+    cloud = is_streamlit_cloud()
+    st.sidebar.header("运行环境")
+    st.sidebar.write(f"HYDROLITE_SWMM_PYTHON: `{'detected' if has_swmm_python else 'not detected'}`")
+    if swmm_python:
+        st.sidebar.write(f"SWMM Python: `{swmm_python}`")
+    st.sidebar.write(f"Streamlit Cloud: `{cloud}`")
+    st.sidebar.write(f"项目根目录: `{PROJECT_ROOT}`")
+    if cloud:
+        st.info(
+            "云端演示模式提示：如果 SWMM 二进制后端不可用，界面仍会展示已有输出、校验结果、批量汇总和情景对比。"
+        )
+    elif not has_swmm_python:
+        st.info(
+            "未检测到 HYDROLITE_SWMM_PYTHON。SWMM 会优先尝试当前 Python 环境；非 SWMM 工作流不受影响。"
+        )
+
+
 def _show_swmm_outputs(swmm_dir: Path, outputs: dict[str, Path]) -> None:
     tables = read_swmm_outputs(swmm_dir)
     summary = tables.get("summary", pd.DataFrame())
@@ -403,6 +441,7 @@ def _show_comparison() -> None:
 def main() -> None:
     st.set_page_config(page_title="HydroLite-Mac", layout="wide")
     st.title("HydroLite-Mac")
+    _sidebar_runtime_info()
 
     case_files = scan_case_files()
     if not case_files:
@@ -417,7 +456,11 @@ def main() -> None:
     )
     st.sidebar.write(f"情景文件路径: `{selected}`")
 
-    config = load_case(selected)
+    try:
+        config = load_case(selected)
+    except Exception as exc:
+        st.error(f"情景配置读取失败: {exc}")
+        return
     case_output_dir = output_dir_for_case(config.name)
 
     if st.sidebar.button("运行当前情景", use_container_width=True):
@@ -428,34 +471,46 @@ def main() -> None:
             st.sidebar.error(f"当前情景运行失败: {exc}")
 
     if st.sidebar.button("校验当前情景", use_container_width=True):
-        result = validate_target(selected)
-        if result.has_fatal_errors:
-            st.sidebar.error(f"校验失败: `{result.outputs.xlsx}`")
-        elif not result.warnings.empty:
-            st.sidebar.warning(f"校验通过但有 warning: `{result.outputs.xlsx}`")
-        else:
-            st.sidebar.success(f"校验通过: `{result.outputs.xlsx}`")
+        try:
+            result = validate_target(selected)
+            if result.has_fatal_errors:
+                st.sidebar.error(f"校验失败: `{result.outputs.xlsx}`")
+            elif not result.warnings.empty:
+                st.sidebar.warning(f"校验通过但有 warning: `{result.outputs.xlsx}`")
+            else:
+                st.sidebar.success(f"校验通过: `{result.outputs.xlsx}`")
+        except Exception as exc:
+            st.sidebar.error(f"校验失败: {exc}")
 
     if st.sidebar.button("校验全部情景", use_container_width=True):
-        result = validate_target(CASES_DIR)
-        if result.has_fatal_errors:
-            st.sidebar.error(f"校验失败: `{result.outputs.xlsx}`")
-        elif not result.warnings.empty:
-            st.sidebar.warning(f"校验通过但有 warning: `{result.outputs.xlsx}`")
-        else:
-            st.sidebar.success(f"校验通过: `{result.outputs.xlsx}`")
+        try:
+            result = validate_target(CASES_DIR)
+            if result.has_fatal_errors:
+                st.sidebar.error(f"校验失败: `{result.outputs.xlsx}`")
+            elif not result.warnings.empty:
+                st.sidebar.warning(f"校验通过但有 warning: `{result.outputs.xlsx}`")
+            else:
+                st.sidebar.success(f"校验通过: `{result.outputs.xlsx}`")
+        except Exception as exc:
+            st.sidebar.error(f"校验失败: {exc}")
 
     if st.sidebar.button("批量运行全部情景", use_container_width=True):
-        summary_path, rows, failed_cases = run_batch(CASES_DIR)
-        st.sidebar.write(f"批量汇总: `{summary_path}`")
-        if failed_cases:
-            st.sidebar.error(f"失败情景数: {len(failed_cases)}")
-        else:
-            st.sidebar.success(f"全部情景运行完成: {len(rows)}")
+        try:
+            summary_path, rows, failed_cases = run_batch(CASES_DIR)
+            st.sidebar.write(f"批量汇总: `{summary_path}`")
+            if failed_cases:
+                st.sidebar.error(f"失败情景数: {len(failed_cases)}")
+            else:
+                st.sidebar.success(f"全部情景运行完成: {len(rows)}")
+        except Exception as exc:
+            st.sidebar.error(f"批量运行失败: {exc}")
 
     if st.sidebar.button("生成情景对比", use_container_width=True):
-        outputs = run_compare(OUTPUT_ROOT)
-        st.sidebar.success(f"情景对比已生成: `{outputs.xlsx}`")
+        try:
+            outputs = run_compare(OUTPUT_ROOT)
+            st.sidebar.success(f"情景对比已生成: `{outputs.xlsx}`")
+        except Exception as exc:
+            st.sidebar.error(f"情景对比生成失败: {exc}")
 
     _case_display(config)
     _show_case_validation(config)
