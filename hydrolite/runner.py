@@ -11,6 +11,7 @@ from hydrolite.io import read_rainfall, read_reaches, read_subcatchments, write_
 from hydrolite.plotting import plot_hydrograph
 from hydrolite.routing import route_reaches
 from hydrolite.swmm.runner import run_swmm
+from hydrolite.validate import validate_target
 from hydrolite.water_balance import (
     balance_warning_messages,
     build_water_balance,
@@ -45,8 +46,15 @@ def _configure_logger(log_file: Path) -> logging.Logger:
     return logger
 
 
-def run_case(case_file: str | Path, output_dir: str | Path | None = None) -> RunOutputs:
+def run_case(case_file: str | Path, output_dir: str | Path | None = None, skip_validate: bool = False) -> RunOutputs:
     started = time.perf_counter()
+    validation = None
+    if not skip_validate:
+        validation = validate_target(case_file)
+        if validation.has_fatal_errors:
+            messages = "; ".join(validation.errors["message"].astype(str).head(5))
+            raise ValueError(f"Validation failed for {case_file}: {messages}")
+
     config = load_case(case_file)
     if output_dir is not None:
         config = replace(config, output_dir=Path(output_dir).expanduser().resolve())
@@ -64,6 +72,10 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None) -> Run
 
     try:
         logger.info("Starting HydroLite case: %s", config.name)
+        if validation is not None:
+            logger.info("Validation summary: %s", validation.outputs.xlsx)
+            for _, warning in validation.warnings.iterrows():
+                logger.warning("Validation warning: %s - %s", warning["check_name"], warning["message"])
         logger.info("Case file: %s", Path(case_file).expanduser().resolve())
         logger.info("Input directory: %s", config.input_dir)
         logger.info("Output directory: %s", config.output_dir)

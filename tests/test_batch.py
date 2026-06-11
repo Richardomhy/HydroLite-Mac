@@ -85,10 +85,12 @@ outputs:
 
     assert summary_path.exists()
     assert len(failed_cases) == 1
-    assert {row["status"] for row in rows} == {"success", "failed"}
+    assert {row["status"] for row in rows} == {"success", "failed_validation"}
 
     summary = pd.read_excel(summary_path)
-    assert set(summary["status"]) == {"success", "failed"}
+    assert set(summary["status"]) == {"success", "failed_validation"}
+    assert "validation_status" in summary.columns
+    assert "validation_message" in summary.columns
     assert "batch_summary.xlsx" in str(summary_path)
 
 
@@ -108,4 +110,3 @@ def test_batch_run_does_not_modify_data_raw():
         if path.is_file()
     } if root.exists() else {}
     assert after == before
-

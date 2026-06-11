@@ -6,6 +6,7 @@ import sys
 from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
 from hydrolite.runner import run_case
+from hydrolite.validate import validate_target
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -20,6 +21,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     compare_parser = subparsers.add_parser("compare", help="Compare HydroLite scenario outputs.")
     compare_parser.add_argument("output_dir", help="Output directory containing scenario result folders.")
+
+    validate_parser = subparsers.add_parser("validate", help="Validate a HydroLite YAML case or cases directory.")
+    validate_parser.add_argument("target", help="Path to a case YAML file or a directory containing cases.")
 
     return parser
 
@@ -46,6 +50,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "compare":
         outputs = run_compare(args.output_dir)
         print(f"HydroLite comparison complete. Outputs written to: {outputs.output_dir}")
+        return 0
+    if args.command == "validate":
+        result = validate_target(args.target)
+        print(f"HydroLite validation complete. Outputs written to: {result.outputs.output_dir}")
+        if result.has_fatal_errors:
+            print("Validation failed with fatal errors.")
+            return 1
+        if not result.warnings.empty:
+            print("Validation passed with warnings.")
+        else:
+            print("Validation passed.")
         return 0
     return 2
 

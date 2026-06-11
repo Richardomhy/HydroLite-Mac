@@ -9,6 +9,7 @@ from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
 from hydrolite.config import CaseConfig, load_case
 from hydrolite.runner import run_case
+from hydrolite.validate import validate_target
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -87,6 +88,24 @@ def read_comparison_outputs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, 
     return outputs
 
 
+def read_validation_outputs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, pd.DataFrame | Path]:
+    root = Path(output_root) / "validation"
+    workbook = root / "validation_summary.xlsx"
+    outputs: dict[str, pd.DataFrame | Path] = {}
+    if workbook.exists():
+        for sheet in ("overview", "checks", "errors", "warnings"):
+            outputs[sheet] = pd.read_excel(workbook, sheet_name=sheet)
+        outputs["validation_summary_xlsx"] = workbook
+    for key, name in {
+        "validation_summary_csv": "validation_summary.csv",
+        "validation_report_md": "validation_report.md",
+    }.items():
+        path = root / name
+        if path.exists():
+            outputs[key] = path
+    return outputs
+
+
 def load_existing_outputs(output_dir: Path) -> dict[str, Path]:
     names = {
         "result_flow": "result_flow.csv",
@@ -117,6 +136,37 @@ def _case_display(config: CaseConfig) -> None:
     st.write(f"SWMM enabled: `{config.swmm_enabled}`")
     if config.swmm_enabled:
         st.write(f"SWMM inp_file: `{config.swmm_inp_file}`")
+
+
+def _show_case_validation(config: CaseConfig) -> None:
+    outputs = read_validation_outputs(OUTPUT_ROOT)
+    overview = outputs.get("overview")
+    checks = outputs.get("checks")
+    if not isinstance(overview, pd.DataFrame):
+        st.info("validation_status: 未发现校验结果")
+        return
+
+    case_rows = overview[overview["case_name"].astype(str) == config.name] if "case_name" in overview.columns else pd.DataFrame()
+    if case_rows.empty:
+        st.info("validation_status: 当前情景暂无校验结果")
+    else:
+        row = case_rows.iloc[0]
+        status = str(row.get("validation_status", ""))
+        st.metric("validation_status", status)
+        message = str(row.get("message", ""))
+        if status == "failed":
+            st.error(message)
+        elif status == "warning":
+            st.warning(message)
+        elif message:
+            st.write(message)
+
+    if isinstance(checks, pd.DataFrame) and "case_name" in checks.columns:
+        filtered = checks[checks["case_name"].astype(str) == config.name]
+        issues = filtered[filtered["severity"].isin(["fatal", "warning"])] if "severity" in filtered.columns else filtered
+        if not issues.empty:
+            st.write("validation warnings/errors")
+            st.dataframe(issues, use_container_width=True)
 
 
 def _show_result_flow(path: Path) -> None:
@@ -283,6 +333,30 @@ def _show_batch_summary() -> None:
     )
 
 
+def _show_validation_summary() -> None:
+    outputs = read_validation_outputs(OUTPUT_ROOT)
+    if not outputs:
+        return
+    st.subheader("配置与数据校验")
+    for key, label in [("overview", "overview"), ("checks", "checks")]:
+        df = outputs.get(key)
+        if isinstance(df, pd.DataFrame):
+            st.write(label)
+            st.dataframe(df, use_container_width=True)
+    for key, label, mime in [
+        (
+            "validation_summary_xlsx",
+            "下载 validation_summary.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ),
+        ("validation_summary_csv", "下载 validation_summary.csv", "text/csv"),
+        ("validation_report_md", "下载 validation_report.md", "text/markdown"),
+    ]:
+        path = outputs.get(key)
+        if isinstance(path, Path):
+            _show_download(label, path, mime)
+
+
 def _show_comparison() -> None:
     outputs = read_comparison_outputs(OUTPUT_ROOT)
     if not outputs:
@@ -353,6 +427,24 @@ def main() -> None:
         except Exception as exc:
             st.sidebar.error(f"当前情景运行失败: {exc}")
 
+    if st.sidebar.button("校验当前情景", use_container_width=True):
+        result = validate_target(selected)
+        if result.has_fatal_errors:
+            st.sidebar.error(f"校验失败: `{result.outputs.xlsx}`")
+        elif not result.warnings.empty:
+            st.sidebar.warning(f"校验通过但有 warning: `{result.outputs.xlsx}`")
+        else:
+            st.sidebar.success(f"校验通过: `{result.outputs.xlsx}`")
+
+    if st.sidebar.button("校验全部情景", use_container_width=True):
+        result = validate_target(CASES_DIR)
+        if result.has_fatal_errors:
+            st.sidebar.error(f"校验失败: `{result.outputs.xlsx}`")
+        elif not result.warnings.empty:
+            st.sidebar.warning(f"校验通过但有 warning: `{result.outputs.xlsx}`")
+        else:
+            st.sidebar.success(f"校验通过: `{result.outputs.xlsx}`")
+
     if st.sidebar.button("批量运行全部情景", use_container_width=True):
         summary_path, rows, failed_cases = run_batch(CASES_DIR)
         st.sidebar.write(f"批量汇总: `{summary_path}`")
@@ -366,7 +458,9 @@ def main() -> None:
         st.sidebar.success(f"情景对比已生成: `{outputs.xlsx}`")
 
     _case_display(config)
+    _show_case_validation(config)
     _show_case_outputs(config)
+    _show_validation_summary()
     _show_batch_summary()
     _show_comparison()
 
