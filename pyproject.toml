@@ -11,9 +11,11 @@ dependencies = [
   "matplotlib>=3.8",
   "openpyxl>=3.1",
   "pandas>=2.0",
+  "pyswmm>=2.1",
   "PyYAML>=6.0",
   "streamlit>=1.58",
-  "swmm-toolkit>=0.17",
+  "swmm-toolkit>=0.16.2",
+  "swmm_api>=0.4.73",
 ]
 
 [project.optional-dependencies]

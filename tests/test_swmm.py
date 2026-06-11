@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import sys
 
 import pandas as pd
 
@@ -43,6 +45,9 @@ def test_swmm_summary_fields_are_complete():
     summary = read_swmm_summary(outputs.swmm_summary_xlsx)
     assert list(summary.columns) == SWMM_SUMMARY_COLUMNS
     assert summary.loc[0, "run_status"] in {"success", "skipped", "failed"}
+    assert "backend_used" in summary.columns
+    assert "backend_attempts" in summary.columns
+    assert "diagnosis_file" in summary.columns
 
 
 def test_non_swmm_flow_still_works_after_swmm_case():
@@ -51,3 +56,18 @@ def test_non_swmm_flow_still_works_after_swmm_case():
     result = pd.read_csv(outputs.result_flow_csv)
     assert result["outflow_cms"].max() > 0
 
+
+def test_swmm_diagnosis_script_runs_and_writes_report():
+    completed = subprocess.run(
+        [sys.executable, "scripts/diagnose_swmm_backend.py"],
+        capture_output=True,
+        text=True,
+        timeout=90,
+        check=False,
+    )
+    assert completed.returncode == 0
+    report = Path("output/swmm_backend_diagnosis.txt")
+    assert report.exists()
+    text = report.read_text(encoding="utf-8")
+    assert "python_version" in text
+    assert "direct_run" in text
