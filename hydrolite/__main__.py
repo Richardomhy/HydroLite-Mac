@@ -4,6 +4,7 @@ import argparse
 import sys
 
 from hydrolite.batch import run_batch
+from hydrolite.compare import run_compare
 from hydrolite.runner import run_case
 
 
@@ -16,6 +17,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     batch_parser = subparsers.add_parser("batch", help="Run all HydroLite YAML cases in a directory.")
     batch_parser.add_argument("cases_dir", help="Directory containing .yaml and .yml case files.")
+
+    compare_parser = subparsers.add_parser("compare", help="Compare HydroLite scenario outputs.")
+    compare_parser.add_argument("output_dir", help="Output directory containing scenario result folders.")
 
     return parser
 
@@ -38,6 +42,10 @@ def main(argv: list[str] | None = None) -> int:
             for case_file in failed_cases:
                 print(f"- {case_file}")
             return 1
+        return 0
+    if args.command == "compare":
+        outputs = run_compare(args.output_dir)
+        print(f"HydroLite comparison complete. Outputs written to: {outputs.output_dir}")
         return 0
     return 2
 

@@ -6,9 +6,9 @@ import pandas as pd
 import streamlit as st
 
 from hydrolite.batch import run_batch
+from hydrolite.compare import run_compare
 from hydrolite.config import CaseConfig, load_case
 from hydrolite.runner import run_case
-from hydrolite.swmm.runner import read_swmm_summary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -56,6 +56,34 @@ def read_swmm_outputs(swmm_dir: str | Path) -> dict[str, pd.DataFrame]:
     for key, path in files.items():
         if path.exists():
             outputs[key] = pd.read_excel(path) if path.suffix == ".xlsx" else pd.read_csv(path)
+    return outputs
+
+
+def read_comparison_outputs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, pd.DataFrame | Path]:
+    root = Path(output_root) / "comparison"
+    workbook = root / "scenario_comparison.xlsx"
+    outputs: dict[str, pd.DataFrame | Path] = {}
+    if workbook.exists():
+        for sheet in (
+            "overview",
+            "hydrology_metrics",
+            "water_balance_metrics",
+            "swmm_metrics",
+            "coupling_metrics",
+        ):
+            outputs[sheet] = pd.read_excel(workbook, sheet_name=sheet)
+        outputs["scenario_comparison_xlsx"] = workbook
+    for key, name in {
+        "scenario_comparison_csv": "scenario_comparison.csv",
+        "peak_flow_png": "peak_flow_comparison.png",
+        "volume_png": "volume_comparison.png",
+        "water_balance_png": "water_balance_comparison.png",
+        "swmm_kpi_png": "swmm_kpi_comparison.png",
+        "hydrolite_report_md": "hydrolite_report.md",
+    }.items():
+        path = root / name
+        if path.exists():
+            outputs[key] = path
     return outputs
 
 
@@ -255,6 +283,49 @@ def _show_batch_summary() -> None:
     )
 
 
+def _show_comparison() -> None:
+    outputs = read_comparison_outputs(OUTPUT_ROOT)
+    if not outputs:
+        return
+
+    st.subheader("情景对比")
+    for key, label in [
+        ("overview", "overview"),
+        ("hydrology_metrics", "hydrology_metrics"),
+        ("water_balance_metrics", "water_balance_metrics"),
+        ("swmm_metrics", "swmm_metrics"),
+        ("coupling_metrics", "coupling_metrics"),
+    ]:
+        df = outputs.get(key)
+        if isinstance(df, pd.DataFrame):
+            st.write(label)
+            st.dataframe(df, use_container_width=True)
+
+    for key, caption in [
+        ("peak_flow_png", "peak_flow_comparison.png"),
+        ("volume_png", "volume_comparison.png"),
+        ("water_balance_png", "water_balance_comparison.png"),
+        ("swmm_kpi_png", "swmm_kpi_comparison.png"),
+    ]:
+        path = outputs.get(key)
+        if isinstance(path, Path):
+            st.image(str(path), caption=caption)
+
+    downloads = [
+        (
+            "scenario_comparison_xlsx",
+            "下载 scenario_comparison.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ),
+        ("scenario_comparison_csv", "下载 scenario_comparison.csv", "text/csv"),
+        ("hydrolite_report_md", "下载 hydrolite_report.md", "text/markdown"),
+    ]
+    for key, label, mime in downloads:
+        path = outputs.get(key)
+        if isinstance(path, Path):
+            _show_download(label, path, mime)
+
+
 def main() -> None:
     st.set_page_config(page_title="HydroLite-Mac", layout="wide")
     st.title("HydroLite-Mac")
@@ -290,9 +361,14 @@ def main() -> None:
         else:
             st.sidebar.success(f"全部情景运行完成: {len(rows)}")
 
+    if st.sidebar.button("生成情景对比", use_container_width=True):
+        outputs = run_compare(OUTPUT_ROOT)
+        st.sidebar.success(f"情景对比已生成: `{outputs.xlsx}`")
+
     _case_display(config)
     _show_case_outputs(config)
     _show_batch_summary()
+    _show_comparison()
 
 
 if __name__ == "__main__":

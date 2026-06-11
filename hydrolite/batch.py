@@ -6,6 +6,7 @@ import time
 
 import pandas as pd
 
+from hydrolite.compare import run_compare
 from hydrolite.config import load_case
 from hydrolite.runner import run_case
 
@@ -121,5 +122,8 @@ def run_batch(cases_dir: str | Path) -> tuple[Path, list[dict[str, object]], lis
             )
 
     pd.DataFrame(rows).to_excel(summary_path, index=False)
+    try:
+        run_compare(output_root)
+    except Exception as exc:
+        print(f"WARNING scenario comparison failed after batch run: {exc}")
     return summary_path, rows, failed_cases
-
