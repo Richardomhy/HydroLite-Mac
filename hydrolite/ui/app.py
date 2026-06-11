@@ -12,6 +12,7 @@ from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
 from hydrolite.config import CaseConfig, load_case
 from hydrolite.gee.auth import get_gee_status
+from hydrolite.gee.basin import get_boundary_bbox
 from hydrolite.gee.datasets import list_supported_datasets
 from hydrolite.openhydronet.runner import detect_openhydronet_environment
 from hydrolite.runner import run_case
@@ -136,11 +137,19 @@ def read_text_if_exists(path: str | Path) -> str:
 
 
 def get_gee_panel_payload() -> dict[str, object]:
+    demo_boundary = PROJECT_ROOT / "data_demo" / "gee" / "demo_basin.geojson"
     return {
         "status": get_gee_status(),
         "datasets": list_supported_datasets(),
         "config_text": read_text_if_exists(PROJECT_ROOT / "configs" / "gee.example.yaml"),
         "diagnosis_text": read_text_if_exists(OUTPUT_ROOT / "gee_diagnosis.txt"),
+        "demo_basin_bbox": get_boundary_bbox(demo_boundary),
+        "outputs": {
+            "gee_data_plan": OUTPUT_ROOT / "gee" / "gee_data_plan.xlsx",
+            "gee_summary_xlsx": OUTPUT_ROOT / "gee" / "gee_summary.xlsx",
+            "gee_summary_csv": OUTPUT_ROOT / "gee" / "gee_summary.csv",
+            "gee_report_md": OUTPUT_ROOT / "gee" / "gee_report.md",
+        },
     }
 
 
@@ -483,10 +492,22 @@ def _show_gee_data_center() -> None:
     st.subheader("GEE 数据中心")
     payload = get_gee_panel_payload()
     status = payload["status"]
-    st.write("GEE 认证状态")
+    initialization = status.get("initialization", {}) if isinstance(status, dict) else {}
+    c1, c2, c3 = st.columns(3)
+    c1.metric("GEE 初始化状态", str(initialization.get("status", "")))
+    c2.metric("project", str(initialization.get("project", "")))
+    c3.metric("auth_source", str(initialization.get("auth_source", "")))
+    next_steps = initialization.get("next_steps", [])
+    if next_steps:
+        st.warning("未认证或初始化失败。可在本地运行: `python scripts/gee_auth_local.py`，并设置 `GEE_PROJECT`。")
+        st.write("next_steps")
+        st.write(next_steps)
+    st.write("GEE 认证状态详情")
     st.json(status)
     st.write("支持的数据类型")
     st.write(", ".join(str(item) for item in payload["datasets"]))
+    st.write("demo_basin.geojson bbox")
+    st.json(payload["demo_basin_bbox"])
     st.write("gee.example.yaml")
     st.code(str(payload["config_text"]) or "configs/gee.example.yaml not found", language="yaml")
     if st.button("运行 GEE 诊断", use_container_width=True):
@@ -499,6 +520,20 @@ def _show_gee_data_center() -> None:
     if diagnosis:
         st.write("gee_diagnosis.txt")
         st.code(diagnosis, language="json")
+    outputs = payload["outputs"]
+    if isinstance(outputs, dict):
+        st.write("GEE 输出")
+        for key, path in outputs.items():
+            if isinstance(path, Path) and path.exists():
+                if path.suffix == ".xlsx":
+                    st.dataframe(pd.read_excel(path), use_container_width=True)
+                    _show_download(f"下载 {path.name}", path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                elif path.suffix == ".csv":
+                    st.dataframe(pd.read_csv(path), use_container_width=True)
+                    _show_download(f"下载 {path.name}", path, "text/csv")
+                elif path.suffix == ".md":
+                    st.code(path.read_text(encoding="utf-8"), language="markdown")
+                    _show_download(f"下载 {path.name}", path, "text/markdown")
 
 
 def _show_openhydronet_panel() -> None:

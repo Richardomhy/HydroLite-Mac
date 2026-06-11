@@ -9,5 +9,8 @@ output/
 outputs/
 logs/
 .streamlit/
+.streamlit/secrets.toml
 *.log
-
+configs/gee.local.yaml
+*service-account*.json
+*credentials*.json

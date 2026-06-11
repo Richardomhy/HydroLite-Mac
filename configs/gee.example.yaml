@@ -1,20 +1,26 @@
 project:
-auth_mode: placeholder
-basin_boundary: data_demo/basin_boundary.geojson
+auth_mode: auto
+basin_boundary: data_demo/gee/demo_basin.geojson
 datasets:
   dem:
     enabled: true
-    provider: NASADEM
+    gee_id: USGS/SRTMGL1_003
   landcover:
     enabled: true
-    provider: ESA WorldCover
+    gee_id: ESA/WorldCover/v200
   precipitation:
     enabled: true
-    provider: GPM IMERG or CHIRPS
+    gee_id: UCSB-CHG/CHIRPS/DAILY
+  ndvi:
+    enabled: true
+    gee_id: MODIS/061/MOD13Q1
   surface_water:
     enabled: true
-    provider: JRC Global Surface Water
+    gee_id: JRC/GSW1_4/GlobalSurfaceWater
 export:
-  output_folder: output/gee_exports
+  output_folder: output/gee
   scale: 30
   crs: EPSG:4326
+date_range:
+  start_date:
+  end_date:

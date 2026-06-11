@@ -1,0 +1,5 @@
+project: your-gee-project-id
+basin_boundary: data_demo/gee/demo_basin.geojson
+output_folder: output/gee
+start_date:
+end_date:

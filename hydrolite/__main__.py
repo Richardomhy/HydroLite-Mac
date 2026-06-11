@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import sys
 
 from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
+from hydrolite.gee.export import create_gee_data_plan, write_gee_summary_outputs
+from hydrolite.gee.diagnostics import build_gee_diagnosis
 from hydrolite.runner import run_case
 from hydrolite.validate import validate_target
 
@@ -24,6 +27,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate_parser = subparsers.add_parser("validate", help="Validate a HydroLite YAML case or cases directory.")
     validate_parser.add_argument("target", help="Path to a case YAML file or a directory containing cases.")
+
+    gee_parser = subparsers.add_parser("gee", help="GEE data center commands.")
+    gee_subparsers = gee_parser.add_subparsers(dest="gee_command", required=True)
+    gee_subparsers.add_parser("diagnose", help="Diagnose local Google Earth Engine availability.")
+    gee_plan = gee_subparsers.add_parser("plan", help="Write a GEE data plan workbook.")
+    gee_plan.add_argument("config", help="Path to GEE YAML config.")
+    gee_summary = gee_subparsers.add_parser("summarize", help="Write GEE basin summary outputs.")
+    gee_summary.add_argument("config", help="Path to GEE YAML config.")
 
     return parser
 
@@ -62,6 +73,27 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("Validation passed.")
         return 0
+    if args.command == "gee":
+        if args.gee_command == "diagnose":
+            diagnosis = build_gee_diagnosis()
+            output = Path("output/gee_diagnosis.txt").resolve()
+            output.parent.mkdir(parents=True, exist_ok=True)
+            import json
+
+            output.write_text(json.dumps(diagnosis, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            print(f"GEE diagnosis written to: {output}")
+            return 0
+        if args.gee_command == "plan":
+            plan = create_gee_data_plan(args.config)
+            output = Path("output/gee/gee_data_plan.xlsx").resolve()
+            output.parent.mkdir(parents=True, exist_ok=True)
+            plan.to_excel(output, index=False)
+            print(f"GEE data plan written to: {output}")
+            return 0
+        if args.gee_command == "summarize":
+            outputs = write_gee_summary_outputs(args.config)
+            print(f"GEE summary written to: {outputs['gee_summary_xlsx']}")
+            return 0
     return 2
 
 

@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "name": "demo_basin",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "basin_id": "demo_gee_basin"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [120.1200, 30.1200],
+            [120.1600, 30.1200],
+            [120.1600, 30.1600],
+            [120.1200, 30.1600],
+            [120.1200, 30.1200]
+          ]
+        ]
+      }
+    }
+  ]
+}

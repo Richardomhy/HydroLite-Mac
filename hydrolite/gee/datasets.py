@@ -5,28 +5,49 @@ from typing import Any
 
 _DATASETS: dict[str, dict[str, Any]] = {
     "DEM": {
-        "examples": ["NASA/NASADEM_HGT/001", "USGS/SRTMGL1_003"],
-        "description": "Elevation and terrain derivatives for basin preprocessing.",
-    },
-    "landcover": {
-        "examples": ["ESA/WorldCover/v200", "MODIS/061/MCD12Q1"],
-        "description": "Land cover classes for runoff parameter support.",
-    },
-    "precipitation": {
-        "examples": ["NASA/GPM_L3/IMERG_V06", "UCSB-CHG/CHIRPS/DAILY"],
-        "description": "Satellite or blended precipitation forcing.",
-    },
-    "ndvi": {
-        "examples": ["MODIS/061/MOD13Q1", "COPERNICUS/S2_SR_HARMONIZED"],
-        "description": "Vegetation index time series.",
-    },
-    "water_index": {
-        "examples": ["COPERNICUS/S2_SR_HARMONIZED"],
-        "description": "Placeholder for NDWI/MNDWI style derived water indices.",
+        "dataset_name": "DEM",
+        "gee_id": "USGS/SRTMGL1_003",
+        "data_type": "Image",
+        "spatial_resolution": "30 m",
+        "temporal_resolution": "static",
+        "bands": ["elevation"],
+        "notes": "SRTM DEM for terrain and elevation statistics.",
     },
     "surface_water": {
-        "examples": ["JRC/GSW1_4/GlobalSurfaceWater"],
-        "description": "Long-term surface water occurrence and change products.",
+        "dataset_name": "surface_water",
+        "gee_id": "JRC/GSW1_4/GlobalSurfaceWater",
+        "data_type": "Image",
+        "spatial_resolution": "30 m",
+        "temporal_resolution": "1984-present summary layers",
+        "bands": ["occurrence", "change_abs", "change_norm", "seasonality", "recurrence", "transition", "max_extent"],
+        "notes": "JRC Global Surface Water occurrence and change metrics.",
+    },
+    "precipitation": {
+        "dataset_name": "precipitation",
+        "gee_id": "UCSB-CHG/CHIRPS/DAILY",
+        "data_type": "ImageCollection",
+        "spatial_resolution": "0.05 degree",
+        "temporal_resolution": "daily",
+        "bands": ["precipitation"],
+        "notes": "CHIRPS daily rainfall; used for recent 30-day basin precipitation summaries.",
+    },
+    "landcover": {
+        "dataset_name": "landcover",
+        "gee_id": "ESA/WorldCover/v200",
+        "data_type": "ImageCollection",
+        "spatial_resolution": "10 m",
+        "temporal_resolution": "annual snapshot",
+        "bands": ["Map"],
+        "notes": "ESA WorldCover land cover classes.",
+    },
+    "ndvi": {
+        "dataset_name": "ndvi",
+        "gee_id": "MODIS/061/MOD13Q1",
+        "data_type": "ImageCollection",
+        "spatial_resolution": "250 m",
+        "temporal_resolution": "16 day",
+        "bands": ["NDVI", "EVI"],
+        "notes": "MODIS vegetation indices.",
     },
 }
 
@@ -36,7 +57,16 @@ def list_supported_datasets() -> list[str]:
 
 
 def get_dataset_metadata(dataset_name: str) -> dict[str, Any]:
+    normalized = dataset_name.lower()
+    aliases = {
+        "surface water": "surface_water",
+        "surface_water": "surface_water",
+        "dem": "DEM",
+        "precip": "precipitation",
+        "rainfall": "precipitation",
+    }
+    key = aliases.get(normalized, dataset_name)
     for name, metadata in _DATASETS.items():
-        if name.lower() == dataset_name.lower():
-            return {"name": name, **metadata}
-    raise KeyError(f"Unsupported GEE dataset placeholder: {dataset_name}")
+        if name.lower() == str(key).lower():
+            return dict(metadata)
+    raise KeyError(f"Unsupported GEE dataset: {dataset_name}")

@@ -6,6 +6,7 @@ openpyxl>=3.1
 scipy>=1.11
 pytest>=8.0
 streamlit>=1.58
+earthengine-api>=1.5
 pyswmm>=2.1
 swmm-toolkit>=0.16.2
 swmm_api>=0.4.73
