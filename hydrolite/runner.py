@@ -10,6 +10,7 @@ from hydrolite.hydrology import runoff_to_flow_cms
 from hydrolite.io import read_rainfall, read_reaches, read_subcatchments, write_summary
 from hydrolite.plotting import plot_hydrograph
 from hydrolite.routing import route_reaches
+from hydrolite.swmm.runner import run_swmm
 from hydrolite.water_balance import (
     balance_warning_messages,
     build_water_balance,
@@ -25,6 +26,7 @@ class RunOutputs:
     hydrograph_png: Path
     water_balance_xlsx: Path
     log_file: Path
+    swmm_summary_xlsx: Path | None = None
 
 
 def _configure_logger(log_file: Path) -> logging.Logger:
@@ -72,6 +74,11 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None) -> Run
             config.subcatchments_csv,
             config.reaches_csv,
         )
+        logger.info(
+            "SWMM configuration: enabled=%s, inp_file=%s",
+            config.swmm_enabled,
+            config.swmm_inp_file,
+        )
 
         rainfall = read_rainfall(config.rainfall_csv)
         subcatchments = read_subcatchments(config.subcatchments_csv)
@@ -103,7 +110,6 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None) -> Run
             "outflow_volume_m3": float(result["outflow_cms"].sum() * config.time_step_hours * 3600.0),
             "elapsed_seconds": elapsed_seconds,
         }
-        write_summary(outputs.summary_xlsx, summary)
         plot_hydrograph(result, outputs.hydrograph_png)
         subbasin_balance, outlet_balance = build_water_balance(
             case_name=config.name,
@@ -116,10 +122,28 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None) -> Run
         for message in balance_warning_messages(subbasin_balance, outlet_balance):
             logger.warning(message)
 
+        swmm_status = "not_configured"
+        swmm_summary_xlsx: Path | None = None
+        if config.swmm_enabled:
+            assert config.swmm_inp_file is not None
+            swmm_result, swmm_summary_xlsx = run_swmm(
+                inp_file=config.swmm_inp_file,
+                case_output_dir=config.output_dir,
+                logger=logger,
+            )
+            swmm_status = swmm_result.run_status
+            outputs = replace(outputs, swmm_summary_xlsx=swmm_summary_xlsx)
+
+        summary["swmm_status"] = swmm_status
+        summary["swmm_summary_xlsx"] = "" if swmm_summary_xlsx is None else str(swmm_summary_xlsx)
+        write_summary(outputs.summary_xlsx, summary)
+
         logger.info("Wrote %s", outputs.result_flow_csv)
         logger.info("Wrote %s", outputs.summary_xlsx)
         logger.info("Wrote %s", outputs.hydrograph_png)
         logger.info("Wrote %s", outputs.water_balance_xlsx)
+        if swmm_summary_xlsx is not None:
+            logger.info("Wrote %s", swmm_summary_xlsx)
         logger.info("HydroLite case complete in %.3f seconds", elapsed_seconds)
         return outputs
     except Exception:

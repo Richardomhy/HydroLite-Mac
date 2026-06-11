@@ -1,0 +1,90 @@
+[TITLE]
+HydroLite-Mac minimal SWMM interface demo
+
+[OPTIONS]
+FLOW_UNITS           CFS
+INFILTRATION         HORTON
+FLOW_ROUTING         KINWAVE
+START_DATE           01/01/2026
+START_TIME           00:00:00
+REPORT_START_DATE    01/01/2026
+REPORT_START_TIME    00:00:00
+END_DATE             01/01/2026
+END_TIME             02:00:00
+SWEEP_START          01/01
+SWEEP_END            12/31
+DRY_DAYS             0
+REPORT_STEP          00:15:00
+WET_STEP             00:05:00
+DRY_STEP             01:00:00
+ROUTING_STEP         00:05:00
+
+[EVAPORATION]
+CONSTANT             0.0
+
+[RAINGAGES]
+;;Name  Format     Interval SCF Source
+G1      INTENSITY  00:05    1.0 TIMESERIES TS1
+
+[SUBCATCHMENTS]
+;;Name RainGage Outlet Area Imperv Width Slope CurbLen SnowPack
+S1     G1       J1     1.0  25     500   0.5   0
+
+[SUBAREAS]
+;;Subcatch N-Imperv N-Perv S-Imperv S-Perv PctZero RouteTo PctRouted
+S1       0.05     0.10   0.05     0.10   25      OUTLET
+
+[INFILTRATION]
+;;Subcatch MaxRate MinRate Decay DryTime MaxInfil
+S1       3.0     0.5     4.0   7.0     0.0
+
+[JUNCTIONS]
+;;Name Elevation MaxDepth InitDepth SurDepth Aponded
+J1     0         10       0         0        0
+
+[OUTFALLS]
+;;Name Elevation Type StageData Gated RouteTo
+OUT1   0         FREE NO
+
+[CONDUITS]
+;;Name FromNode ToNode Length Roughness InOffset OutOffset InitFlow MaxFlow
+C1     J1       OUT1   500    0.013     0        0         0        0
+
+[XSECTIONS]
+;;Link Shape    Geom1 Geom2 Geom3 Geom4 Barrels
+C1     CIRCULAR 2.0   0     0     0     1
+
+[TIMESERIES]
+;;Name Date       Time  Value
+TS1    01/01/2026 00:00 0.0
+TS1    01/01/2026 00:15 0.5
+TS1    01/01/2026 00:30 1.0
+TS1    01/01/2026 00:45 0.0
+TS1    01/01/2026 02:00 0.0
+
+[REPORT]
+INPUT      YES
+CONTROLS   NO
+SUBCATCHMENTS ALL
+NODES ALL
+LINKS ALL
+
+[COORDINATES]
+;;Node X-Coord Y-Coord
+J1    0       0
+OUT1  500     0
+
+[VERTICES]
+;;Link X-Coord Y-Coord
+
+[Polygons]
+;;Subcatch X-Coord Y-Coord
+S1 0 100
+S1 0 300
+S1 300 300
+S1 300 100
+
+[SYMBOLS]
+;;Gage X-Coord Y-Coord
+G1 100 400
+

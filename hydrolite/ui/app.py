@@ -8,6 +8,7 @@ import streamlit as st
 from hydrolite.batch import run_batch
 from hydrolite.config import CaseConfig, load_case
 from hydrolite.runner import run_case
+from hydrolite.swmm.runner import read_swmm_summary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +48,7 @@ def load_existing_outputs(output_dir: Path) -> dict[str, Path]:
         "summary": "summary.xlsx",
         "hydrograph": "hydrograph.png",
         "water_balance": "water_balance.xlsx",
+        "swmm_summary": "swmm/swmm_summary.xlsx",
     }
     return {key: output_dir / name for key, name in names.items() if (output_dir / name).exists()}
 
@@ -62,6 +64,9 @@ def _case_display(config: CaseConfig) -> None:
     st.write("水文方法: `SCS-CN 产流 + 简化单位线汇流`")
     st.write("汇流方法: `Muskingum 河道汇流`")
     st.write(f"输出目录: `{output_dir_for_case(config.name)}`")
+    st.write(f"SWMM enabled: `{config.swmm_enabled}`")
+    if config.swmm_enabled:
+        st.write(f"SWMM inp_file: `{config.swmm_inp_file}`")
 
 
 def _show_result_flow(path: Path) -> None:
@@ -135,6 +140,14 @@ def _show_case_outputs(config: CaseConfig) -> None:
             outputs["water_balance"],
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+    if "swmm_summary" in outputs:
+        st.subheader("swmm_summary.xlsx")
+        st.dataframe(read_swmm_summary(outputs["swmm_summary"]), use_container_width=True)
+        _show_download(
+            "下载 swmm_summary.xlsx",
+            outputs["swmm_summary"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
 
 
 def _show_batch_summary() -> None:
@@ -199,4 +212,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

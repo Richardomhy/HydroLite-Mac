@@ -16,6 +16,8 @@ class CaseConfig:
     rainfall_csv: Path
     subcatchments_csv: Path
     reaches_csv: Path
+    swmm_enabled: bool = False
+    swmm_inp_file: Path | None = None
 
 
 def _resolve(base_dir: Path, value: str | Path) -> Path:
@@ -49,8 +51,11 @@ def load_case(path: str | Path) -> CaseConfig:
     inputs = _require(raw, "inputs", "root")
     outputs = _require(raw, "outputs", "root")
     model = _require(raw, "model", "root")
+    swmm = raw.get("swmm", {}) or {}
     if not isinstance(inputs, dict) or not isinstance(outputs, dict) or not isinstance(model, dict):
         raise ValueError("Case YAML sections inputs, outputs, and model must be mappings.")
+    if not isinstance(swmm, dict):
+        raise ValueError("Case YAML section swmm must be a mapping when provided.")
 
     input_dir = _resolve(base_dir, _require(inputs, "directory", "inputs"))
     output_dir = _resolve(base_dir, _require(outputs, "directory", "outputs"))
@@ -61,6 +66,8 @@ def load_case(path: str | Path) -> CaseConfig:
     time_step_hours = float(_require(model, "time_step_hours", "model"))
     if time_step_hours <= 0:
         raise ValueError("model.time_step_hours must be positive.")
+    swmm_enabled = bool(swmm.get("enabled", False))
+    swmm_inp_file = _resolve(base_dir, _require(swmm, "inp_file", "swmm")) if swmm_enabled else None
 
     return CaseConfig(
         name=str(_require(raw, "name", "root")),
@@ -70,4 +77,6 @@ def load_case(path: str | Path) -> CaseConfig:
         rainfall_csv=_resolve(input_dir, _require(inputs, "rainfall", "inputs")),
         subcatchments_csv=_resolve(input_dir, _require(inputs, "subcatchments", "inputs")),
         reaches_csv=_resolve(input_dir, _require(inputs, "reaches", "inputs")),
+        swmm_enabled=swmm_enabled,
+        swmm_inp_file=swmm_inp_file,
     )

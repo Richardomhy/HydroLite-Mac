@@ -13,6 +13,7 @@ dependencies = [
   "pandas>=2.0",
   "PyYAML>=6.0",
   "streamlit>=1.58",
+  "swmm-toolkit>=0.17",
 ]
 
 [project.optional-dependencies]
