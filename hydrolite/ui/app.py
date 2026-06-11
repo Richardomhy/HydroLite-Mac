@@ -42,6 +42,22 @@ def read_water_balance(path: str | Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     return subbasin, outlet
 
 
+def read_swmm_outputs(swmm_dir: str | Path) -> dict[str, pd.DataFrame]:
+    root = Path(swmm_dir)
+    outputs: dict[str, pd.DataFrame] = {}
+    files = {
+        "summary": root / "swmm_summary.xlsx",
+        "kpis": root / "swmm_kpis.xlsx",
+        "node_depth": root / "node_depth_timeseries.csv",
+        "link_flow": root / "link_flow_timeseries.csv",
+        "system": root / "system_timeseries.csv",
+    }
+    for key, path in files.items():
+        if path.exists():
+            outputs[key] = pd.read_excel(path) if path.suffix == ".xlsx" else pd.read_csv(path)
+    return outputs
+
+
 def load_existing_outputs(output_dir: Path) -> dict[str, Path]:
     names = {
         "result_flow": "result_flow.csv",
@@ -49,6 +65,10 @@ def load_existing_outputs(output_dir: Path) -> dict[str, Path]:
         "hydrograph": "hydrograph.png",
         "water_balance": "water_balance.xlsx",
         "swmm_summary": "swmm/swmm_summary.xlsx",
+        "swmm_kpis": "swmm/swmm_kpis.xlsx",
+        "swmm_node_depth": "swmm/node_depth_timeseries.csv",
+        "swmm_link_flow": "swmm/link_flow_timeseries.csv",
+        "swmm_system": "swmm/system_timeseries.csv",
     }
     return {key: output_dir / name for key, name in names.items() if (output_dir / name).exists()}
 
@@ -112,6 +132,59 @@ def _show_download(label: str, path: Path, mime: str) -> None:
         st.download_button(label, _read_bytes(path), file_name=path.name, mime=mime)
 
 
+def _show_swmm_outputs(swmm_dir: Path, outputs: dict[str, Path]) -> None:
+    tables = read_swmm_outputs(swmm_dir)
+    summary = tables.get("summary", pd.DataFrame())
+    kpis = tables.get("kpis", pd.DataFrame())
+
+    st.subheader("SWMM 输出")
+    if not summary.empty:
+        row = summary.iloc[0]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("SWMM 状态", str(row.get("run_status", "")))
+        c2.metric("backend_used", str(row.get("backend_used", "")))
+        c3.metric("max_node_depth", str(row.get("max_node_depth", "")))
+        c4, c5, c6 = st.columns(3)
+        c4.metric("max_link_flow", str(row.get("max_link_flow", "")))
+        c5.metric("total_flooding_volume", str(row.get("total_flooding_volume", "")))
+        c6.metric("total_outflow_volume", str(row.get("total_outflow_volume", "")))
+        st.dataframe(summary, use_container_width=True)
+
+    if not kpis.empty:
+        st.write("swmm_kpis.xlsx")
+        st.dataframe(kpis, use_container_width=True)
+
+    node_depth = tables.get("node_depth", pd.DataFrame())
+    if not node_depth.empty:
+        st.write("node_depth_timeseries.csv")
+        st.dataframe(node_depth.head(200), use_container_width=True)
+        if {"node_id", "depth"}.issubset(node_depth.columns):
+            chart = node_depth.groupby("node_id", as_index=False)["depth"].max()
+            st.bar_chart(chart.set_index("node_id"), y="depth")
+
+    link_flow = tables.get("link_flow", pd.DataFrame())
+    if not link_flow.empty:
+        st.write("link_flow_timeseries.csv")
+        st.dataframe(link_flow.head(200), use_container_width=True)
+        if {"link_id", "flow"}.issubset(link_flow.columns):
+            chart = link_flow.groupby("link_id", as_index=False)["flow"].max()
+            st.bar_chart(chart.set_index("link_id"), y="flow")
+
+    _show_download(
+        "下载 swmm_summary.xlsx",
+        outputs["swmm_summary"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    for key, label, mime in [
+        ("swmm_kpis", "下载 swmm_kpis.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        ("swmm_node_depth", "下载 node_depth_timeseries.csv", "text/csv"),
+        ("swmm_link_flow", "下载 link_flow_timeseries.csv", "text/csv"),
+        ("swmm_system", "下载 system_timeseries.csv", "text/csv"),
+    ]:
+        if key in outputs:
+            _show_download(label, outputs[key], mime)
+
+
 def _show_case_outputs(config: CaseConfig) -> None:
     output_dir = output_dir_for_case(config.name)
     outputs = load_existing_outputs(output_dir)
@@ -141,13 +214,7 @@ def _show_case_outputs(config: CaseConfig) -> None:
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
     if "swmm_summary" in outputs:
-        st.subheader("swmm_summary.xlsx")
-        st.dataframe(read_swmm_summary(outputs["swmm_summary"]), use_container_width=True)
-        _show_download(
-            "下载 swmm_summary.xlsx",
-            outputs["swmm_summary"],
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        _show_swmm_outputs(output_dir / "swmm", outputs)
 
 
 def _show_batch_summary() -> None:

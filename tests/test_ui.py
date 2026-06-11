@@ -43,6 +43,19 @@ def test_ui_reads_result_flow_and_water_balance():
     assert "balance_error_percent" in outlet.columns
 
 
+def test_ui_reads_swmm_outputs():
+    from hydrolite.ui.app import read_swmm_outputs
+
+    outputs = run_case(Path("cases/demo_swmm.yaml"), output_dir=Path("output/demo_swmm"))
+    tables = read_swmm_outputs(outputs.output_dir / "swmm")
+
+    assert "summary" in tables
+    assert "kpis" in tables
+    assert "node_depth" in tables
+    assert "link_flow" in tables
+    assert "system" in tables
+
+
 def test_ui_checks_do_not_modify_data_raw():
     before = _snapshot_data_raw()
     from hydrolite.ui.app import scan_case_files
@@ -50,4 +63,3 @@ def test_ui_checks_do_not_modify_data_raw():
     scan_case_files(Path("cases"))
     after = _snapshot_data_raw()
     assert after == before
-

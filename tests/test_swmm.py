@@ -53,6 +53,10 @@ def test_swmm_summary_fields_are_complete():
     assert "external_solver_status" in summary.columns
     assert "external_solver_summary_json" in summary.columns
     assert "solver_env_diagnosis_file" in summary.columns
+    assert "node_depth_timeseries_csv" in summary.columns
+    assert "link_flow_timeseries_csv" in summary.columns
+    assert "system_timeseries_csv" in summary.columns
+    assert "swmm_kpis_xlsx" in summary.columns
 
 
 def test_non_swmm_flow_still_works_after_swmm_case():
@@ -60,6 +64,38 @@ def test_non_swmm_flow_still_works_after_swmm_case():
     outputs = run_case(Path("cases/demo.yaml"), output_dir=Path("output/demo"))
     result = pd.read_csv(outputs.result_flow_csv)
     assert result["outflow_cms"].max() > 0
+
+
+def test_swmm_result_tables_exist_with_required_fields():
+    outputs = run_case(Path("cases/demo_swmm.yaml"), output_dir=Path("output/demo_swmm"))
+    swmm_dir = outputs.output_dir / "swmm"
+
+    assert (swmm_dir / "swmm_summary.xlsx").exists()
+    assert (swmm_dir / "swmm_kpis.xlsx").exists()
+    assert (swmm_dir / "node_depth_timeseries.csv").exists()
+    assert (swmm_dir / "link_flow_timeseries.csv").exists()
+    assert (swmm_dir / "system_timeseries.csv").exists()
+
+    node_depth = pd.read_csv(swmm_dir / "node_depth_timeseries.csv")
+    link_flow = pd.read_csv(swmm_dir / "link_flow_timeseries.csv")
+    system = pd.read_csv(swmm_dir / "system_timeseries.csv")
+    assert {"datetime", "node_id", "depth"}.issubset(node_depth.columns)
+    assert {"datetime", "link_id", "flow"}.issubset(link_flow.columns)
+    assert {"datetime", "runoff", "flooding", "outflow", "storage"}.issubset(system.columns)
+
+    kpis = pd.read_excel(swmm_dir / "swmm_kpis.xlsx")
+    assert {
+        "run_status",
+        "backend_used",
+        "max_node_depth",
+        "max_link_flow",
+        "total_flooding_volume",
+        "total_outflow_volume",
+        "node_count",
+        "link_count",
+        "report_file",
+        "output_file",
+    }.issubset(kpis.columns)
 
 
 def test_swmm_diagnosis_script_runs_and_writes_report():

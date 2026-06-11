@@ -31,6 +31,11 @@ SWMM_SUMMARY_COLUMNS = [
     "external_solver_status",
     "external_solver_summary_json",
     "solver_env_diagnosis_file",
+    "node_depth_timeseries_csv",
+    "link_flow_timeseries_csv",
+    "system_timeseries_csv",
+    "swmm_kpis_xlsx",
+    "result_extraction_errors",
 ]
 
 
@@ -54,6 +59,11 @@ class SwmmRunResult:
     external_solver_status: str = ""
     external_solver_summary_json: str = ""
     solver_env_diagnosis_file: str = ""
+    node_depth_timeseries_csv: str = ""
+    link_flow_timeseries_csv: str = ""
+    system_timeseries_csv: str = ""
+    swmm_kpis_xlsx: str = ""
+    result_extraction_errors: str = ""
 
 
 def write_swmm_summary(path: Path, result: SwmmRunResult) -> None:
@@ -64,6 +74,24 @@ def write_swmm_summary(path: Path, result: SwmmRunResult) -> None:
 
 def read_swmm_summary(path: str | Path) -> pd.DataFrame:
     return pd.read_excel(path)
+
+
+def write_swmm_kpis(path: Path, kpis: dict[str, object]) -> None:
+    columns = [
+        "run_status",
+        "backend_used",
+        "max_node_depth",
+        "max_link_flow",
+        "total_flooding_volume",
+        "total_outflow_volume",
+        "node_count",
+        "link_count",
+        "report_file",
+        "output_file",
+    ]
+    pd.DataFrame([{column: kpis.get(column, pd.NA) for column in columns}]).to_excel(
+        path, index=False
+    )
 
 
 def _attempt(
@@ -309,9 +337,13 @@ def run_swmm(
     report_file = swmm_dir / "working.rpt"
     output_file = swmm_dir / "working.out"
     summary_file = swmm_dir / "swmm_summary.xlsx"
+    kpis_file = swmm_dir / "swmm_kpis.xlsx"
     diagnosis_file = _diagnosis_file(case_output_dir)
     solver_env_diagnosis_file = _solver_env_diagnosis_file(case_output_dir)
     external_summary_json = swmm_dir / "external_solver_summary.json"
+    node_depth_csv = swmm_dir / "node_depth_timeseries.csv"
+    link_flow_csv = swmm_dir / "link_flow_timeseries.csv"
+    system_csv = swmm_dir / "system_timeseries.csv"
 
     if not inp_file.exists():
         attempts: list[dict[str, object]] = []
@@ -340,6 +372,7 @@ def run_swmm(
     error_message = ""
     external_solver_python = ""
     external_solver_status = ""
+    external_payload: dict[str, object] | None = None
     for backend_name in ("pyswmm", "swmm-toolkit", "swmm_api"):
         attempt = _attempt_backend(backend_name, working_inp, report_file, output_file)
         attempts.append(attempt)
@@ -395,12 +428,56 @@ def run_swmm(
             for item in attempts
         )
 
+    external_kpis = external_payload.get("kpis", {}) if external_payload else {}
+    extraction_errors = (
+        external_payload.get("result_extraction_errors", []) if external_payload else []
+    )
+    final_report_file = (
+        str(external_kpis.get("report_file"))
+        if isinstance(external_kpis, dict) and external_kpis.get("report_file")
+        else str(report_file)
+    )
+    final_output_file = (
+        str(external_kpis.get("output_file"))
+        if isinstance(external_kpis, dict) and external_kpis.get("output_file")
+        else str(output_file)
+    )
+    kpis = {
+        "run_status": run_status,
+        "backend_used": backend_used,
+        "max_node_depth": external_kpis.get("max_node_depth", pd.NA)
+        if isinstance(external_kpis, dict)
+        else pd.NA,
+        "max_link_flow": external_kpis.get("max_link_flow", pd.NA)
+        if isinstance(external_kpis, dict)
+        else pd.NA,
+        "total_flooding_volume": external_kpis.get("total_flooding_volume", pd.NA)
+        if isinstance(external_kpis, dict)
+        else pd.NA,
+        "total_outflow_volume": external_kpis.get("total_outflow_volume", pd.NA)
+        if isinstance(external_kpis, dict)
+        else pd.NA,
+        "node_count": external_kpis.get("node_count", pd.NA)
+        if isinstance(external_kpis, dict)
+        else pd.NA,
+        "link_count": external_kpis.get("link_count", pd.NA)
+        if isinstance(external_kpis, dict)
+        else pd.NA,
+        "report_file": final_report_file,
+        "output_file": final_output_file,
+    }
+    write_swmm_kpis(kpis_file, kpis)
+
     result = SwmmRunResult(
         run_status=run_status,
         inp_file=str(inp_file),
         working_inp=str(working_inp),
-        report_file=str(report_file),
-        output_file=str(output_file),
+        report_file=final_report_file,
+        output_file=final_output_file,
+        total_flooding_volume=kpis["total_flooding_volume"],
+        total_outflow_volume=kpis["total_outflow_volume"],
+        max_node_depth=kpis["max_node_depth"],
+        max_link_flow=kpis["max_link_flow"],
         error_message=error_message,
         backend_used=backend_used,
         backend_attempts=json.dumps(attempts, ensure_ascii=False),
@@ -410,8 +487,15 @@ def run_swmm(
         external_solver_status=external_solver_status,
         external_solver_summary_json=str(external_summary_json),
         solver_env_diagnosis_file=str(solver_env_diagnosis_file),
+        node_depth_timeseries_csv=str(node_depth_csv),
+        link_flow_timeseries_csv=str(link_flow_csv),
+        system_timeseries_csv=str(system_csv),
+        swmm_kpis_xlsx=str(kpis_file),
+        result_extraction_errors=json.dumps(extraction_errors, ensure_ascii=False),
     )
     write_swmm_summary(summary_file, result)
+    if extraction_errors:
+        logger.warning("SWMM result extraction issues: %s", extraction_errors)
 
     if run_status == "success":
         logger.info("SWMM run succeeded; wrote %s", summary_file)
