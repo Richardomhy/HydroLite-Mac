@@ -1,0 +1,20 @@
+project:
+auth_mode: placeholder
+basin_boundary: data_demo/basin_boundary.geojson
+datasets:
+  dem:
+    enabled: true
+    provider: NASADEM
+  landcover:
+    enabled: true
+    provider: ESA WorldCover
+  precipitation:
+    enabled: true
+    provider: GPM IMERG or CHIRPS
+  surface_water:
+    enabled: true
+    provider: JRC Global Surface Water
+export:
+  output_folder: output/gee_exports
+  scale: 30
+  crs: EPSG:4326

@@ -1,0 +1,14 @@
+enabled: false
+openhydronet_home:
+mode: placeholder
+basin_id: demo_basin
+gauge_id: demo_gauge
+input:
+  static_attributes: output/gee_exports/static_attributes.csv
+  meteorological_forcing: output/gee_exports/meteorological_forcing.csv
+  observed_streamflow: data_demo/observed_streamflow.csv
+output:
+  folder: output/openhydronet
+forecast:
+  horizon_days: 7
+  ensemble_members: 1

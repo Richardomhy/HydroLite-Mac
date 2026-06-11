@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pandas as pd
 import streamlit as st
@@ -9,6 +11,9 @@ import streamlit as st
 from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
 from hydrolite.config import CaseConfig, load_case
+from hydrolite.gee.auth import get_gee_status
+from hydrolite.gee.datasets import list_supported_datasets
+from hydrolite.openhydronet.runner import detect_openhydronet_environment
 from hydrolite.runner import run_case
 from hydrolite.validate import validate_target
 
@@ -123,6 +128,29 @@ def read_validation_outputs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, 
         if path.exists():
             outputs[key] = path
     return outputs
+
+
+def read_text_if_exists(path: str | Path) -> str:
+    text_path = Path(path)
+    return text_path.read_text(encoding="utf-8") if text_path.exists() else ""
+
+
+def get_gee_panel_payload() -> dict[str, object]:
+    return {
+        "status": get_gee_status(),
+        "datasets": list_supported_datasets(),
+        "config_text": read_text_if_exists(PROJECT_ROOT / "configs" / "gee.example.yaml"),
+        "diagnosis_text": read_text_if_exists(OUTPUT_ROOT / "gee_diagnosis.txt"),
+    }
+
+
+def get_openhydronet_panel_payload() -> dict[str, object]:
+    return {
+        "environment": detect_openhydronet_environment(),
+        "config_text": read_text_if_exists(PROJECT_ROOT / "configs" / "openhydronet.example.yaml"),
+        "diagnosis_text": read_text_if_exists(OUTPUT_ROOT / "openhydronet_diagnosis.txt"),
+        "stage": "placeholder / not yet running real model",
+    }
 
 
 def load_existing_outputs(output_dir: Path) -> dict[str, Path]:
@@ -438,6 +466,71 @@ def _show_comparison() -> None:
             _show_download(label, path, mime)
 
 
+def _run_script(script: Path) -> tuple[bool, str]:
+    completed = subprocess.run(
+        [sys.executable, str(script)],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    output = (completed.stdout or "") + (completed.stderr or "")
+    return completed.returncode == 0, output.strip()
+
+
+def _show_gee_data_center() -> None:
+    st.subheader("GEE 数据中心")
+    payload = get_gee_panel_payload()
+    status = payload["status"]
+    st.write("GEE 认证状态")
+    st.json(status)
+    st.write("支持的数据类型")
+    st.write(", ".join(str(item) for item in payload["datasets"]))
+    st.write("gee.example.yaml")
+    st.code(str(payload["config_text"]) or "configs/gee.example.yaml not found", language="yaml")
+    if st.button("运行 GEE 诊断", use_container_width=True):
+        ok, output = _run_script(PROJECT_ROOT / "scripts" / "diagnose_gee.py")
+        if ok:
+            st.success(output or "GEE 诊断完成")
+        else:
+            st.error(output or "GEE 诊断失败")
+    diagnosis = read_text_if_exists(OUTPUT_ROOT / "gee_diagnosis.txt")
+    if diagnosis:
+        st.write("gee_diagnosis.txt")
+        st.code(diagnosis, language="json")
+
+
+def _show_openhydronet_panel() -> None:
+    st.subheader("OpenHydroNet AI 洪水预测")
+    payload = get_openhydronet_panel_payload()
+    st.write(f"当前阶段: `{payload['stage']}`")
+    st.write("OpenHydroNet 环境状态")
+    st.json(payload["environment"])
+    st.write("openhydronet.example.yaml")
+    st.code(str(payload["config_text"]) or "configs/openhydronet.example.yaml not found", language="yaml")
+    st.info("当前仅为 placeholder / not yet running real model，不下载仓库、不训练模型。")
+    if st.button("运行 OpenHydroNet 诊断", use_container_width=True):
+        ok, output = _run_script(PROJECT_ROOT / "scripts" / "diagnose_openhydronet.py")
+        if ok:
+            st.success(output or "OpenHydroNet 诊断完成")
+        else:
+            st.error(output or "OpenHydroNet 诊断失败")
+    diagnosis = read_text_if_exists(OUTPUT_ROOT / "openhydronet_diagnosis.txt")
+    if diagnosis:
+        st.write("openhydronet_diagnosis.txt")
+        st.code(diagnosis, language="json")
+
+
+def _show_extension_panels() -> None:
+    st.subheader("扩展板块")
+    gee_tab, ai_tab = st.tabs(["GEE 数据中心", "OpenHydroNet AI 洪水预测"])
+    with gee_tab:
+        _show_gee_data_center()
+    with ai_tab:
+        _show_openhydronet_panel()
+
+
 def main() -> None:
     st.set_page_config(page_title="HydroLite-Mac", layout="wide")
     st.title("HydroLite-Mac")
@@ -518,6 +611,7 @@ def main() -> None:
     _show_validation_summary()
     _show_batch_summary()
     _show_comparison()
+    _show_extension_panels()
 
 
 if __name__ == "__main__":
