@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_cache/
+.DS_Store
+*.pyc
+.venv/
+env/
+.env
+output/
+outputs/
+logs/
+.streamlit/
+*.log
+

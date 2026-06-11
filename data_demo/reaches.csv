@@ -1,0 +1,4 @@
+id,from,to,K_hours,X
+R1,upper,middle,2.0,0.2
+R2,middle,outlet,3.0,0.15
+
