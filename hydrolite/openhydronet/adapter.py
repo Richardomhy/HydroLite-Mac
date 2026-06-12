@@ -10,6 +10,7 @@ import yaml
 
 from hydrolite.openhydronet.config import load_openhydronet_config
 from hydrolite.openhydronet.postprocess import build_input_quality_report, write_input_quality_report
+from hydrolite.observed import load_observed_streamflow
 
 
 def describe_openhydronet_adapter() -> dict[str, str]:
@@ -181,6 +182,25 @@ def _hydrolite_streamflow(adapter: dict[str, Any]) -> tuple[pd.DataFrame, str]:
     return frame, flow_col
 
 
+def _observed_streamflow(config: dict[str, Any], adapter: dict[str, Any]) -> pd.DataFrame | None:
+    value = adapter.get("observed_streamflow") or (config.get("input") or {}).get("observed_streamflow")
+    if not value:
+        return None
+    path = _resolve_path(value)
+    if not path.exists():
+        return None
+    observed = load_observed_streamflow(path)
+    return pd.DataFrame(
+        {
+            "datetime": pd.to_datetime(observed["datetime"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M:%S"),
+            "basin_id": adapter["basin_id"],
+            "gauge_id": observed["gauge_id"],
+            "observed_streamflow_m3s": observed["observed_streamflow_m3s"],
+            "source": "synthetic/demo only",
+        }
+    )
+
+
 def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
     config = load_openhydronet_config(config_path)
     adapter = config.get("input_adapter") or {}
@@ -209,6 +229,9 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
         "gee_temperature_csv": str(_resolve_path(adapter.get("gee_temperature_csv") or "output/gee/hydrolite_inputs/gee_temperature_daily.csv")),
         "gee_parameter_suggestions": str(_resolve_path(adapter["gee_parameter_suggestions"])),
         "hydrolite_result_flow": str(_resolve_path(adapter["hydrolite_result_flow"])),
+        "observed_streamflow": str(_resolve_path(adapter.get("observed_streamflow") or (config.get("input") or {}).get("observed_streamflow", "")))
+        if adapter.get("observed_streamflow") or (config.get("input") or {}).get("observed_streamflow")
+        else "",
         "basin_boundary": str(_resolve_path(adapter.get("basin_boundary", ""))) if adapter.get("basin_boundary") else "",
     }
 
@@ -217,6 +240,7 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
     static = _static_attributes(adapter, basin_row, suggestions)
     met = _meteorological_forcing(adapter)
     streamflow, detected_flow_col = _hydrolite_streamflow(adapter)
+    observed_streamflow = _observed_streamflow(config, adapter)
     temperature_values = pd.to_numeric(met.get("temperature_mean_c"), errors="coerce")
     temperature_coverage = float(temperature_values.notna().mean()) if len(met) else 0.0
     temperature_source = ""
@@ -227,6 +251,7 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
     static_path = output_dir / "static_attributes.csv"
     met_path = output_dir / "meteorological_forcing.csv"
     flow_path = output_dir / "hydrolite_streamflow.csv"
+    observed_path = output_dir / "observed_streamflow.csv"
     metadata_path = output_dir / "basin_metadata.json"
     manifest_path = output_dir / "input_manifest.json"
     quality_path = output_dir / "input_quality_report.xlsx"
@@ -235,10 +260,10 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
     static.to_csv(static_path, index=False)
     met.to_csv(met_path, index=False)
     streamflow.to_csv(flow_path, index=False)
+    if observed_streamflow is not None:
+        observed_streamflow.to_csv(observed_path, index=False)
 
-    observed_streamflow = _resolve_path(config.get("input", {}).get("observed_streamflow", ""))
-    observed_exists = bool(str(observed_streamflow)) and observed_streamflow.exists()
-    quality = build_input_quality_report(static, met, streamflow, observed_exists)
+    quality = build_input_quality_report(static, met, streamflow, observed_streamflow)
     write_input_quality_report(quality_path, quality)
     warning_rows = quality["warnings"].to_dict(orient="records")
 
@@ -268,6 +293,8 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
         "input_quality_report": str(quality_path),
         "openhydronet_input_report": str(report_path),
     }
+    if observed_streamflow is not None:
+        files["observed_streamflow"] = str(observed_path)
     manifest = {
         "package_version": "0.1",
         "generated_at": generated_at,
@@ -285,10 +312,11 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
             "static_attributes": int(len(static)),
             "meteorological_forcing": int(len(met)),
             "hydrolite_streamflow": int(len(streamflow)),
+            "observed_streamflow": int(0 if observed_streamflow is None else len(observed_streamflow)),
         },
         "warnings": warning_rows,
         "next_steps": [
-            "Add observed streamflow for training/evaluation.",
+            "Replace synthetic demo observed streamflow with real gauge observations for training/evaluation.",
             "Add additional meteorological forcings required by the target OpenHydroNet schema.",
             "Validate the package against the real OpenHydroNet repository schema before training or inference.",
         ],
@@ -313,6 +341,7 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
                 "- `static_attributes.csv`: 流域静态属性与 GEE 参数建议。",
                 "- `meteorological_forcing.csv`: CHIRPS 降雨与 ERA5-Land 2 m 日均温度。",
                 "- `hydrolite_streamflow.csv`: HydroLite `demo_gee` 模拟出口流量。",
+                "- `observed_streamflow.csv`: synthetic/demo only 观测流量示例，用于评估流程测试。",
                 "",
                 "## 质量检查结果",
                 f"- warnings: {len(warning_rows)}",
@@ -322,7 +351,8 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
                 "",
                 "## 已知限制",
                 "- 当前输入包不是正式 OpenHydroNet 训练数据。",
-                "- 缺少真实观测流量和真实模型 schema 校验。",
+                "- 缺少真实站点观测流量和真实模型 schema 校验。",
+                "- `observed_streamflow.csv` 当前为 synthetic/demo only，不是真实水文站资料。",
                 f"- HydroLite 出口流量列自动识别为 `{detected_flow_col}`。",
                 "- temperature_mean_c 单位为摄氏度；GEE ERA5-Land Kelvin 原始值已转换为 Celsius。",
                 "",

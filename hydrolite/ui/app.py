@@ -97,6 +97,7 @@ def read_comparison_outputs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, 
             "water_balance_metrics",
             "swmm_metrics",
             "coupling_metrics",
+            "performance_metrics",
         ):
             outputs[sheet] = pd.read_excel(workbook, sheet_name=sheet)
         outputs["scenario_comparison_xlsx"] = workbook
@@ -173,6 +174,7 @@ def get_openhydronet_panel_payload() -> dict[str, object]:
             "static_attributes": inputs / "static_attributes.csv",
             "meteorological_forcing": inputs / "meteorological_forcing.csv",
             "hydrolite_streamflow": inputs / "hydrolite_streamflow.csv",
+            "observed_streamflow": inputs / "observed_streamflow.csv",
             "basin_metadata": inputs / "basin_metadata.json",
             "input_manifest": inputs / "input_manifest.json",
             "input_quality_report": inputs / "input_quality_report.xlsx",
@@ -213,6 +215,10 @@ def load_existing_outputs(output_dir: Path) -> dict[str, Path]:
         "swmm_link_flow": "swmm/link_flow_timeseries.csv",
         "swmm_system": "swmm/system_timeseries.csv",
         "swmm_coupling": "swmm/coupling_summary.xlsx",
+        "observed_vs_simulated": "observed_vs_simulated.csv",
+        "observed_vs_simulated_png": "observed_vs_simulated.png",
+        "model_performance": "model_performance.xlsx",
+        "model_performance_report": "model_performance_report.md",
     }
     return {key: output_dir / name for key, name in names.items() if (output_dir / name).exists()}
 
@@ -425,6 +431,25 @@ def _show_case_outputs(config: CaseConfig) -> None:
         )
     if "swmm_summary" in outputs:
         _show_swmm_outputs(output_dir / "swmm", outputs)
+    if "model_performance" in outputs:
+        st.subheader("模型评估")
+        metrics = pd.read_excel(outputs["model_performance"], sheet_name="metrics")
+        st.dataframe(metrics, use_container_width=True)
+        _show_download(
+            "下载 model_performance.xlsx",
+            outputs["model_performance"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    if "observed_vs_simulated" in outputs:
+        st.write("observed_vs_simulated.csv")
+        st.dataframe(pd.read_csv(outputs["observed_vs_simulated"]).head(200), use_container_width=True)
+        _show_download("下载 observed_vs_simulated.csv", outputs["observed_vs_simulated"], "text/csv")
+    if "observed_vs_simulated_png" in outputs:
+        st.image(str(outputs["observed_vs_simulated_png"]), caption="observed_vs_simulated.png")
+    if "model_performance_report" in outputs:
+        st.write("model_performance_report.md")
+        st.code(outputs["model_performance_report"].read_text(encoding="utf-8"), language="markdown")
+        _show_download("下载 model_performance_report.md", outputs["model_performance_report"], "text/markdown")
 
 
 def _show_batch_summary() -> None:
@@ -483,6 +508,7 @@ def _show_comparison() -> None:
         ("water_balance_metrics", "water_balance_metrics"),
         ("swmm_metrics", "swmm_metrics"),
         ("coupling_metrics", "coupling_metrics"),
+        ("performance_metrics", "performance_metrics"),
     ]:
         df = outputs.get(key)
         if isinstance(df, pd.DataFrame):
@@ -653,6 +679,7 @@ def _show_openhydronet_panel() -> None:
         ("static_attributes", "static_attributes.csv"),
         ("meteorological_forcing", "meteorological_forcing.csv"),
         ("hydrolite_streamflow", "hydrolite_streamflow.csv"),
+        ("observed_streamflow", "observed_streamflow.csv"),
     ]:
         path = Path(package[key])
         if path.exists():
@@ -674,6 +701,8 @@ def _show_openhydronet_panel() -> None:
                     chart_df["temperature_mean_c"] = pd.to_numeric(chart_df["temperature_mean_c"], errors="coerce")
                     st.line_chart(chart_df.dropna().set_index("datetime"))
             _show_download(f"下载 {label}", path, "text/csv")
+            if key == "observed_streamflow":
+                st.success("input package now includes observed streamflow")
     metadata = Path(package["basin_metadata"])
     if metadata.exists():
         st.write("basin_metadata.json")
@@ -684,6 +713,12 @@ def _show_openhydronet_panel() -> None:
         st.write("input_quality_report.xlsx")
         for sheet in ("overview", "warnings"):
             st.dataframe(pd.read_excel(quality, sheet_name=sheet), use_container_width=True)
+        try:
+            observed_checks = pd.read_excel(quality, sheet_name="observed_streamflow_checks")
+            st.write("observed_streamflow quality status")
+            st.dataframe(observed_checks, use_container_width=True)
+        except Exception:
+            pass
         _show_download(
             "下载 input_quality_report.xlsx",
             quality,

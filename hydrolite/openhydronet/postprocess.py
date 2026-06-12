@@ -25,7 +25,7 @@ def build_input_quality_report(
     static_attributes: pd.DataFrame,
     meteorological_forcing: pd.DataFrame,
     hydrolite_streamflow: pd.DataFrame,
-    observed_streamflow_exists: bool,
+    observed_streamflow: pd.DataFrame | None = None,
 ) -> dict[str, pd.DataFrame]:
     warnings: list[dict[str, Any]] = []
 
@@ -60,10 +60,16 @@ def build_input_quality_report(
     ]
     met_required = ["datetime", "basin_id", "precipitation_mm", "temperature_mean_c"]
     flow_required = ["datetime", "basin_id", "streamflow_m3s", "source_case"]
+    observed_required = ["datetime", "basin_id", "gauge_id", "observed_streamflow_m3s", "source"]
 
     static_checks = check_fields("static_attributes", static_attributes, static_required)
     met_checks = check_fields("meteorological_forcing", meteorological_forcing, met_required)
     flow_checks = check_fields("hydrolite_streamflow", hydrolite_streamflow, flow_required)
+    observed_checks = (
+        check_fields("observed_streamflow", observed_streamflow, observed_required)
+        if observed_streamflow is not None
+        else pd.DataFrame(columns=["dataset", "check_name", "status", "message", "severity"])
+    )
 
     if "precipitation_mm" in meteorological_forcing.columns:
         has_negative = (pd.to_numeric(meteorological_forcing["precipitation_mm"], errors="coerce") < 0).any()
@@ -144,9 +150,51 @@ def build_input_quality_report(
             ],
             ignore_index=True,
         )
+    observed_time = pd.Series(dtype="datetime64[ns]")
+    if observed_streamflow is not None and "observed_streamflow_m3s" in observed_streamflow.columns:
+        observed_values = pd.to_numeric(observed_streamflow["observed_streamflow_m3s"], errors="coerce")
+        bad_observed = observed_values.isna().any() or (observed_values < 0).any()
+        observed_checks = pd.concat(
+            [
+                observed_checks,
+                pd.DataFrame(
+                    [
+                        {
+                            "dataset": "observed_streamflow",
+                            "check_name": "observed_streamflow_non_negative",
+                            "status": "failed" if bad_observed else "passed",
+                            "message": "observed_streamflow_m3s must be numeric and non-negative"
+                            if bad_observed
+                            else "observed streamflow is numeric and non-negative",
+                            "severity": "error" if bad_observed else "info",
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
 
     met_time = pd.to_datetime(meteorological_forcing.get("datetime"), errors="coerce")
     flow_time = pd.to_datetime(hydrolite_streamflow.get("datetime"), errors="coerce")
+    if observed_streamflow is not None:
+        observed_time = pd.to_datetime(observed_streamflow.get("datetime"), errors="coerce")
+        observed_checks = pd.concat(
+            [
+                observed_checks,
+                pd.DataFrame(
+                    [
+                        {
+                            "dataset": "observed_streamflow",
+                            "check_name": "datetime_parseable",
+                            "status": "failed" if observed_time.isna().any() else "passed",
+                            "message": "unparseable datetime found" if observed_time.isna().any() else "datetime parseable",
+                            "severity": "error" if observed_time.isna().any() else "info",
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
     met_checks = pd.concat(
         [
             met_checks,
@@ -209,6 +257,20 @@ def build_input_quality_report(
             "severity": "error" if not basin_consistent else "info",
         }
     )
+    if observed_streamflow is not None:
+        observed_overlap = False
+        if not met_time.dropna().empty and not observed_time.dropna().empty:
+            observed_overlap = met_time.min() <= observed_time.max() and observed_time.min() <= met_time.max()
+        overview_rows.append(
+            {
+                "check_name": "observed_meteorological_time_range_overlap",
+                "status": "passed" if observed_overlap else "failed",
+                "message": "observed streamflow and meteorological forcing time ranges overlap"
+                if observed_overlap
+                else "observed streamflow and meteorological forcing time ranges do not overlap",
+                "severity": "error" if not observed_overlap else "info",
+            }
+        )
 
     if "temperature_mean_c" in meteorological_forcing.columns and pd.to_numeric(
         meteorological_forcing["temperature_mean_c"], errors="coerce"
@@ -220,7 +282,7 @@ def build_input_quality_report(
                 "severity": "warning",
             }
         )
-    if not observed_streamflow_exists:
+    if observed_streamflow is None:
         warnings.append(
             {
                 "warning_name": "observed_streamflow_missing",
@@ -236,6 +298,7 @@ def build_input_quality_report(
         "static_attributes_checks": static_checks,
         "meteorological_checks": met_checks,
         "streamflow_checks": flow_checks,
+        "observed_streamflow_checks": observed_checks,
         "warnings": warnings_df,
     }
 

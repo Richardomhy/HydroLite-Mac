@@ -21,5 +21,6 @@ input_adapter:
   gee_temperature_csv: output/gee/hydrolite_inputs/gee_temperature_daily.csv
   gee_parameter_suggestions: output/gee/hydrolite_inputs/gee_parameter_suggestions.yaml
   hydrolite_result_flow: output/demo_gee/result_flow.csv
+  observed_streamflow: data_demo/observed/demo_observed_streamflow.csv
   basin_boundary: data_demo/gee/demo_basin.geojson
   output_folder: output/openhydronet/inputs

@@ -67,6 +67,17 @@ COUPLING_COLUMNS = [
     "total_inflow_volume_m3",
     "coupling_summary_file",
 ]
+PERFORMANCE_COLUMNS = [
+    "case_name",
+    "NSE",
+    "RMSE",
+    "MAE",
+    "PBIAS",
+    "R2",
+    "KGE",
+    "n_pairs",
+    "model_performance_file",
+]
 MISSING_COLUMNS = ["case_name", "expected_file", "status", "message"]
 
 
@@ -227,6 +238,22 @@ def _coupling_metrics(case_name: str, folder: Path) -> dict[str, Any]:
     }
 
 
+def _performance_metrics(case_name: str, folder: Path) -> dict[str, Any]:
+    path = folder / "model_performance.xlsx"
+    row = _first_row(path, sheet_name="metrics")
+    return {
+        "case_name": case_name,
+        "NSE": _number(row.get("NSE")),
+        "RMSE": _number(row.get("RMSE")),
+        "MAE": _number(row.get("MAE")),
+        "PBIAS": _number(row.get("PBIAS")),
+        "R2": _number(row.get("R2")),
+        "KGE": _number(row.get("KGE")),
+        "n_pairs": _number(row.get("n_pairs")),
+        "model_performance_file": str(path) if path.exists() else "",
+    }
+
+
 def _missing_rows(case_name: str, folder: Path) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for expected in EXPECTED_FILES:
@@ -274,9 +301,10 @@ def _comparison_csv(
     water_balance: pd.DataFrame,
     swmm: pd.DataFrame,
     coupling: pd.DataFrame,
+    performance: pd.DataFrame,
 ) -> pd.DataFrame:
     combined = overview.copy()
-    for df in (hydrology, water_balance, swmm, coupling):
+    for df in (hydrology, water_balance, swmm, coupling, performance):
         cols = [column for column in df.columns if column != "case_name"]
         combined = combined.merge(df[["case_name", *cols]], on="case_name", how="left")
     return combined
@@ -293,6 +321,7 @@ def run_compare(output_root: str | Path) -> ComparisonOutputs:
     water_rows: list[dict[str, Any]] = []
     swmm_rows: list[dict[str, Any]] = []
     coupling_rows: list[dict[str, Any]] = []
+    performance_rows: list[dict[str, Any]] = []
     missing_rows: list[dict[str, Any]] = []
 
     for folder in folders:
@@ -301,6 +330,7 @@ def run_compare(output_root: str | Path) -> ComparisonOutputs:
         water = _water_balance_metrics(case_name, folder)
         swmm = _swmm_metrics(case_name, folder)
         coupling = _coupling_metrics(case_name, folder)
+        performance = _performance_metrics(case_name, folder)
         missing = _missing_rows(case_name, folder)
 
         has_hydrolite = bool(hydrology["result_flow_csv"])
@@ -326,6 +356,7 @@ def run_compare(output_root: str | Path) -> ComparisonOutputs:
         water_rows.append(water)
         swmm_rows.append(swmm)
         coupling_rows.append(coupling)
+        performance_rows.append(performance)
         missing_rows.extend(missing)
 
     tables = {
@@ -334,6 +365,7 @@ def run_compare(output_root: str | Path) -> ComparisonOutputs:
         "water_balance_metrics": pd.DataFrame(water_rows, columns=WATER_BALANCE_COLUMNS),
         "swmm_metrics": pd.DataFrame(swmm_rows, columns=SWMM_COLUMNS),
         "coupling_metrics": pd.DataFrame(coupling_rows, columns=COUPLING_COLUMNS),
+        "performance_metrics": pd.DataFrame(performance_rows, columns=PERFORMANCE_COLUMNS),
         "missing_outputs": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
     }
 
@@ -358,6 +390,7 @@ def run_compare(output_root: str | Path) -> ComparisonOutputs:
         tables["water_balance_metrics"],
         tables["swmm_metrics"],
         tables["coupling_metrics"],
+        tables["performance_metrics"],
     ).to_csv(outputs.csv, index=False)
 
     _plot_bar(tables["hydrology_metrics"], "case_name", ["peak_flow"], outputs.peak_flow_png, "Peak Flow")

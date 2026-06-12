@@ -19,6 +19,15 @@ class SwmmCouplingConfig:
 
 
 @dataclass(frozen=True)
+class ObservedConfig:
+    enabled: bool = False
+    observed_streamflow_csv: Path | None = None
+    time_column: str = "datetime"
+    flow_column: str = "observed_streamflow_m3s"
+    gauge_id_column: str = "gauge_id"
+
+
+@dataclass(frozen=True)
 class CaseConfig:
     name: str
     time_step_hours: float
@@ -30,6 +39,7 @@ class CaseConfig:
     swmm_enabled: bool = False
     swmm_inp_file: Path | None = None
     swmm_coupling: SwmmCouplingConfig = SwmmCouplingConfig()
+    observed: ObservedConfig = ObservedConfig()
 
 
 def _resolve(base_dir: Path, value: str | Path) -> Path:
@@ -64,10 +74,13 @@ def load_case(path: str | Path) -> CaseConfig:
     outputs = _require(raw, "outputs", "root")
     model = _require(raw, "model", "root")
     swmm = raw.get("swmm", {}) or {}
+    observed = raw.get("observed", {}) or {}
     if not isinstance(inputs, dict) or not isinstance(outputs, dict) or not isinstance(model, dict):
         raise ValueError("Case YAML sections inputs, outputs, and model must be mappings.")
     if not isinstance(swmm, dict):
         raise ValueError("Case YAML section swmm must be a mapping when provided.")
+    if not isinstance(observed, dict):
+        raise ValueError("Case YAML section observed must be a mapping when provided.")
     coupling = swmm.get("coupling", {}) or {}
     if not isinstance(coupling, dict):
         raise ValueError("Case YAML section swmm.coupling must be a mapping when provided.")
@@ -97,6 +110,16 @@ def load_case(path: str | Path) -> CaseConfig:
         inflow_name=str(coupling.get("inflow_name", "HYDROLITE_INFLOW")),
         flow_unit=str(coupling.get("flow_unit", "CMS")),
     )
+    observed_enabled = bool(observed.get("enabled", False))
+    observed_config = ObservedConfig(
+        enabled=observed_enabled,
+        observed_streamflow_csv=_resolve(base_dir, _require(observed, "observed_streamflow_csv", "observed"))
+        if observed_enabled
+        else None,
+        time_column=str(observed.get("time_column", "datetime")),
+        flow_column=str(observed.get("flow_column", "observed_streamflow_m3s")),
+        gauge_id_column=str(observed.get("gauge_id_column", "gauge_id")),
+    )
 
     return CaseConfig(
         name=str(_require(raw, "name", "root")),
@@ -109,4 +132,5 @@ def load_case(path: str | Path) -> CaseConfig:
         swmm_enabled=swmm_enabled,
         swmm_inp_file=swmm_inp_file,
         swmm_coupling=swmm_coupling,
+        observed=observed_config,
     )

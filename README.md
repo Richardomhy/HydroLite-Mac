@@ -81,6 +81,9 @@ Single-case outputs are written to `output/<case_name>/`:
 - `summary.xlsx`: basic run metrics and peak flow summary.
 - `hydrograph.png`: inflow and outflow hydrograph plot.
 - `water_balance.xlsx`: `subbasin_balance` and `outlet_balance` sheets.
+- `observed_vs_simulated.csv`: aligned observed and simulated streamflow when `observed.enabled` is true.
+- `model_performance.xlsx`: NSE, RMSE, MAE, PBIAS, R2, and KGE metrics plus aligned timeseries.
+- `observed_vs_simulated.png`: observed/simulated hydrograph comparison.
 - `run.log`: run log with input paths, parameters, Muskingum checks, outputs, and runtime.
 
 Batch runs also write:
@@ -90,6 +93,12 @@ Batch runs also write:
 ## Raw Data Safety
 
 `data_raw/` is reserved for original raw data. HydroLite should not modify or delete files under `data_raw/`. Demo inputs live in `data_demo/`, and generated outputs are written under `output/`.
+
+## Observed Streamflow Evaluation
+
+`cases/demo_gee.yaml` includes an optional observed streamflow block that points to `data_demo/observed/demo_observed_streamflow.csv`. This file is synthetic/demo only and is not real gauge data. It is used to exercise model evaluation and OpenHydroNet input packaging.
+
+When observed data is enabled, HydroLite aligns observed and simulated streamflow and writes model performance outputs under `output/<case_name>/`.
 
 ## SWMM on macOS Backend Notes
 

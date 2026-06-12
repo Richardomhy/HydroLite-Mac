@@ -578,6 +578,13 @@ def _write_demo_gee_files(output_dir: Path, rainfall_path: Path, suggestions: di
                     "reaches": "data_demo/gee/gee_reaches.csv",
                 },
                 "outputs": {"directory": "output/demo_gee"},
+                "observed": {
+                    "enabled": True,
+                    "observed_streamflow_csv": "data_demo/observed/demo_observed_streamflow.csv",
+                    "time_column": "datetime",
+                    "flow_column": "observed_streamflow_m3s",
+                    "gauge_id_column": "gauge_id",
+                },
             },
             sort_keys=False,
             allow_unicode=True,

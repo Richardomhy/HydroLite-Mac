@@ -8,3 +8,9 @@ inputs:
   reaches: data_demo/gee/gee_reaches.csv
 outputs:
   directory: output/demo_gee
+observed:
+  enabled: true
+  observed_streamflow_csv: data_demo/observed/demo_observed_streamflow.csv
+  time_column: datetime
+  flow_column: observed_streamflow_m3s
+  gauge_id_column: gauge_id

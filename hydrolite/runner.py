@@ -8,6 +8,12 @@ import time
 from hydrolite.config import load_case
 from hydrolite.hydrology import runoff_to_flow_cms
 from hydrolite.io import read_rainfall, read_reaches, read_subcatchments, write_summary
+from hydrolite.observed import (
+    build_model_performance,
+    load_observed_streamflow,
+    plot_observed_vs_simulated,
+    write_observed_quality_report,
+)
 from hydrolite.plotting import plot_hydrograph
 from hydrolite.routing import route_reaches
 from hydrolite.swmm.runner import run_swmm
@@ -28,6 +34,10 @@ class RunOutputs:
     water_balance_xlsx: Path
     log_file: Path
     swmm_summary_xlsx: Path | None = None
+    observed_vs_simulated_csv: Path | None = None
+    model_performance_xlsx: Path | None = None
+    model_performance_report_md: Path | None = None
+    observed_vs_simulated_png: Path | None = None
 
 
 def _configure_logger(log_file: Path) -> logging.Logger:
@@ -134,6 +144,86 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None, skip_v
         for message in balance_warning_messages(subbasin_balance, outlet_balance):
             logger.warning(message)
 
+        performance_status = "not_configured"
+        performance_file = ""
+        if config.observed.enabled:
+            assert config.observed.observed_streamflow_csv is not None
+            logger.info("Observed streamflow enabled: %s", config.observed.observed_streamflow_csv)
+            observed_df = load_observed_streamflow(
+                config.observed.observed_streamflow_csv,
+                time_column=config.observed.time_column,
+                flow_column=config.observed.flow_column,
+                gauge_id_column=config.observed.gauge_id_column,
+            )
+            simulated_flow_col = "outflow_cms" if "outflow_cms" in result.columns else result.select_dtypes("number").columns[-1]
+            metrics_df, aligned, quality_checks, perf_warnings = build_model_performance(
+                config.name,
+                observed_file=config.observed.observed_streamflow_csv,
+                simulated_file=outputs.result_flow_csv,
+                observed_df=observed_df,
+                simulated_df=result,
+                simulated_flow_col=str(simulated_flow_col),
+            )
+            observed_vs_simulated_csv = config.output_dir / "observed_vs_simulated.csv"
+            model_performance_xlsx = config.output_dir / "model_performance.xlsx"
+            model_performance_report_md = config.output_dir / "model_performance_report.md"
+            observed_vs_simulated_png = config.output_dir / "observed_vs_simulated.png"
+            aligned.to_csv(observed_vs_simulated_csv, index=False)
+            write_observed_quality_report(
+                model_performance_xlsx,
+                {
+                    "metrics": metrics_df,
+                    "aligned_timeseries": aligned,
+                    "quality_checks": quality_checks,
+                    "warnings": perf_warnings,
+                },
+            )
+            plot_observed_vs_simulated(aligned, observed_vs_simulated_png)
+            n_pairs = int(metrics_df.loc[0, "n_pairs"]) if not metrics_df.empty else 0
+            model_performance_report_md.write_text(
+                "\n".join(
+                    [
+                        "# HydroLite Model Performance Report",
+                        "",
+                        f"Case: `{config.name}`",
+                        f"Observed data source: `{config.observed.observed_streamflow_csv}`",
+                        "Observed data note: synthetic/demo only, not real station observation.",
+                        f"Simulated data source: `{outputs.result_flow_csv}`",
+                        f"Aligned sample count: `{n_pairs}`",
+                        f"Time range: `{aligned['datetime'].min() if not aligned.empty else ''}` to `{aligned['datetime'].max() if not aligned.empty else ''}`",
+                        "",
+                        "## Metrics",
+                        "",
+                        "- NSE: Nash-Sutcliffe efficiency, higher is better.",
+                        "- RMSE: root mean square error, lower is better.",
+                        "- MAE: mean absolute error, lower is better.",
+                        "- PBIAS: percent bias, closer to zero is better.",
+                        "- R2: coefficient of determination, higher is better.",
+                        "- KGE: Kling-Gupta efficiency, higher is better.",
+                        "",
+                        "```text",
+                        metrics_df.to_string(index=False),
+                        "```",
+                        "",
+                        "## Limitations",
+                        "",
+                        "This demo observed streamflow is synthetic and exists only to exercise the evaluation workflow.",
+                        "Real calibration, evaluation, or OpenHydroNet training requires true gauge observations and QA flags.",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            outputs = replace(
+                outputs,
+                observed_vs_simulated_csv=observed_vs_simulated_csv,
+                model_performance_xlsx=model_performance_xlsx,
+                model_performance_report_md=model_performance_report_md,
+                observed_vs_simulated_png=observed_vs_simulated_png,
+            )
+            performance_status = "success"
+            performance_file = str(model_performance_xlsx)
+
         swmm_status = "not_configured"
         swmm_summary_xlsx: Path | None = None
         if config.swmm_enabled:
@@ -150,6 +240,8 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None, skip_v
 
         summary["swmm_status"] = swmm_status
         summary["swmm_summary_xlsx"] = "" if swmm_summary_xlsx is None else str(swmm_summary_xlsx)
+        summary["performance_status"] = performance_status
+        summary["model_performance_xlsx"] = performance_file
         write_summary(outputs.summary_xlsx, summary)
 
         logger.info("Wrote %s", outputs.result_flow_csv)
@@ -158,6 +250,8 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None, skip_v
         logger.info("Wrote %s", outputs.water_balance_xlsx)
         if swmm_summary_xlsx is not None:
             logger.info("Wrote %s", swmm_summary_xlsx)
+        if outputs.model_performance_xlsx is not None:
+            logger.info("Wrote %s", outputs.model_performance_xlsx)
         logger.info("HydroLite case complete in %.3f seconds", elapsed_seconds)
         return outputs
     except Exception:

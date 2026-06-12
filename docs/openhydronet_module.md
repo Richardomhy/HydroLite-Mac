@@ -86,6 +86,7 @@ output/openhydronet/inputs/
 static_attributes.csv
 meteorological_forcing.csv
 hydrolite_streamflow.csv
+observed_streamflow.csv
 basin_metadata.json
 input_manifest.json
 input_quality_report.xlsx
@@ -96,7 +97,8 @@ openhydronet_input_report.md
 
 1. GEE 数据中心生成 `gee_basin_summary.xlsx`、`gee_chirps_rainfall.csv` 和 `gee_parameter_suggestions.yaml`。
 2. HydroLite 使用 `cases/demo_gee.yaml` 运行，生成 `output/demo_gee/result_flow.csv`。
-3. OpenHydroNet 输入适配器把上述成果整理为一个 OpenHydroNet-ready input package。
+3. 示例 synthetic observed streamflow 位于 `data_demo/observed/demo_observed_streamflow.csv`。
+4. OpenHydroNet 输入适配器把上述成果整理为一个 OpenHydroNet-ready input package。
 
 ### 字段映射
 
@@ -105,6 +107,7 @@ openhydronet_input_report.md
 - `gee_chirps_rainfall.csv` -> `meteorological_forcing.csv` 中的 `precipitation_mm`。
 - `gee_temperature_daily.csv` -> `meteorological_forcing.csv` 中的 `temperature_mean_c`。
 - `output/demo_gee/result_flow.csv` -> `hydrolite_streamflow.csv` 中的 `streamflow_m3s`。
+- `data_demo/observed/demo_observed_streamflow.csv` -> `observed_streamflow.csv` 中的 `observed_streamflow_m3s`。
 
 HydroLite 的出口流量列会自动识别，当前 demo_gee 通常识别为 `outflow_cms`。
 
@@ -122,13 +125,13 @@ HydroLite 的出口流量列会自动识别，当前 demo_gee 通常识别为 `o
 - `streamflow_checks`
 - `warnings`
 
-检查内容包括字段完整性、负降雨、负流量、时间字段可解析、降雨和流量时间范围是否重叠、`basin_id` 是否一致、温度字段是否全为空、温度数值范围、温度覆盖率，以及是否缺少真实观测流量。
+检查内容包括字段完整性、负降雨、负流量、时间字段可解析、降雨和流量时间范围是否重叠、`basin_id` 是否一致、温度字段是否全为空、温度数值范围、温度覆盖率，以及 observed streamflow 字段、时间和非负性。
 
 ### 当前限制
 
 当前输入包是 OpenHydroNet-ready 的数据整理成果，不是正式训练数据，也不代表真实 AI 模型推理已经完成。当前仍缺少：
 
-- 真实观测流量；
+- 当前 observed streamflow 是 synthetic/demo only，不是真实水文站观测；
 - 更多气象强迫变量；
 - OpenHydroNet 官方 schema 校验；
 - 模型 checkpoint 和归一化参数；
@@ -138,7 +141,7 @@ HydroLite 的出口流量列会自动识别，当前 demo_gee 通常识别为 `o
 
 后续接入真实推理前，应先确认外部仓库版本、输入 schema、checkpoint、归一化参数和推理入口。真实推理应继续在隔离环境中运行，不应污染 HydroLite 主环境。
 
-即使 temperature forcing 已接入，只要缺少真实观测流量、模型 checkpoint、归一化参数和官方 schema 校验，当前输入包仍不能作为正式训练数据。
+即使 temperature forcing 和 synthetic observed streamflow 已接入，只要缺少真实站点观测、模型 checkpoint、归一化参数和官方 schema 校验，当前输入包仍不能作为正式训练数据。
 
 ## 输入数据需求
 

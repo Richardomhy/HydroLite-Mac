@@ -146,7 +146,7 @@ def test_openhydronet_prepare_inputs_outputs_are_complete():
         assert "temperature_mean_c_all_na" not in warning_names
     else:
         assert "temperature_mean_c_all_na" in warning_names
-    assert "observed_streamflow_missing" in set(warnings["warning_name"])
+    assert "observed_streamflow_missing" not in set(warnings["warning_name"])
     assert _snapshot_data_raw() == before
 
 

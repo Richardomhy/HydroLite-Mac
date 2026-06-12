@@ -50,6 +50,7 @@ def build_report(
     water_balance = tables.get("water_balance_metrics", pd.DataFrame())
     swmm = tables.get("swmm_metrics", pd.DataFrame())
     coupling = tables.get("coupling_metrics", pd.DataFrame())
+    performance = tables.get("performance_metrics", pd.DataFrame())
 
     conclusions: list[str] = []
     peak_row = _best_row(hydrology, "peak_flow")
@@ -87,6 +88,12 @@ def build_report(
         if not failed.empty:
             cases = ", ".join(f"`{name}`" for name in failed["case_name"].astype(str))
             conclusions.append(f"- 存在 HydroLite-SWMM coupling failed 情景：{cases}。")
+    nse_row = _best_row(performance, "NSE")
+    if nse_row is not None:
+        conclusions.append(
+            f"- 模型评估中 NSE 最高的情景为 `{nse_row.get('case_name')}`，NSE "
+            f"{_format_value(nse_row.get('NSE'))}。"
+        )
     if not overview.empty and "run_status" in overview.columns:
         statuses = overview["run_status"].astype(str).str.lower()
         if not statuses.empty and (statuses == "success").all():
@@ -120,6 +127,10 @@ def build_report(
 ## HydroLite-SWMM coupling 状态
 
 {_markdown_table(coupling, ["case_name", "coupling_enabled", "coupling_status", "target_node", "inflow_name", "timeseries_points", "max_flow", "total_inflow_volume_m3"])}
+
+## 模型评估摘要
+
+{_markdown_table(performance, ["case_name", "NSE", "RMSE", "MAE", "PBIAS", "R2", "KGE", "n_pairs"])}
 
 ## 主要结论自动摘要
 
