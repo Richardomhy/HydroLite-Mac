@@ -134,6 +134,19 @@ def summarize_precipitation_over_basin(config_path: str | Path) -> list[dict[str
         start, end = _date_range(config)
         geometry = _geometry_from_geojson(_basin_boundary(config))
         collection = ee.ImageCollection(get_dataset_metadata("precipitation")["gee_id"]).filterDate(start, end)
+        count = int(collection.size().getInfo())
+        if count == 0:
+            return [
+                {
+                    "metric_group": "precipitation",
+                    "status": "failed",
+                    "metric": "basin_mean_total_precipitation",
+                    "value": pd.NA,
+                    "unit": "mm",
+                    "error_message": f"No CHIRPS images found for {start} to {end}.",
+                    "next_steps": "Set start_date/end_date in the GEE config to a period covered by CHIRPS.",
+                }
+            ]
         image = collection.select("precipitation").sum()
         stats = image.reduceRegion(
             reducer=ee.Reducer.mean(),
@@ -141,12 +154,25 @@ def summarize_precipitation_over_basin(config_path: str | Path) -> list[dict[str
             scale=5500,
             maxPixels=1_000_000,
         ).getInfo()
+        value = stats.get("precipitation")
+        if value is None:
+            return [
+                {
+                    "metric_group": "precipitation",
+                    "status": "failed",
+                    "metric": "basin_mean_total_precipitation",
+                    "value": pd.NA,
+                    "unit": "mm",
+                    "error_message": f"CHIRPS returned no precipitation value for basin and date range {start} to {end}.",
+                    "next_steps": "Check basin geometry, date range, and CHIRPS coverage.",
+                }
+            ]
         return [
             {
                 "metric_group": "precipitation",
                 "status": "available",
                 "metric": "basin_mean_total_precipitation",
-                "value": stats.get("precipitation"),
+                "value": value,
                 "unit": "mm",
                 "error_message": "",
                 "next_steps": "",

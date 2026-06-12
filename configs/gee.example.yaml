@@ -22,5 +22,5 @@ export:
   scale: 30
   crs: EPSG:4326
 date_range:
-  start_date:
-  end_date:
+  start_date: 2024-06-01
+  end_date: 2024-07-01
