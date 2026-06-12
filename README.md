@@ -1,6 +1,18 @@
 # HydroLite Studio v0.5.0-alpha
 
+[![Release](https://img.shields.io/badge/release-v0.5.0--alpha.2-blue)](https://github.com/Richardomhy/HydroLite-Mac/releases/tag/v0.5.0-alpha.2)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Cloud%20ready-ff4b4b)](streamlit_app.py)
+
 HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.5.0-alpha adds a project-centered professional workbench for data validation, scenario runs, GEE data products, SWMM coupling, OpenHydroNet-ready input packages, scenario comparison, reports, and project export.
+
+Latest public demo release: **v0.5.0-alpha.2**.
+
+Quick demo entry points:
+
+- 中文快速开始：`docs/quickstart_zh.md`
+- 中文演示脚本：`docs/demo_script_zh.md`
+- GitHub Release 发布说明：`docs/release_announcement_v0.5.0-alpha.2.md`
+- FAQ：`docs/faq_zh.md`
 
 ## Quick Start
 
@@ -120,6 +132,8 @@ python -m hydrolite project compare projects/demo_project
 python -m hydrolite project export projects/demo_project
 ```
 
+For a guided public demonstration, follow `docs/demo_script_zh.md`.
+
 ## Capability Matrix
 
 | Area | v0.5.0-alpha status |
@@ -140,6 +154,10 @@ python -m hydrolite project export projects/demo_project
 - `docs/ui_workbench.md`: HydroLite Studio workbench guide.
 - `docs/project_workflow.md`: project folder workflow.
 - `docs/release_notes_v0.5.0-alpha.md`: release notes.
+- `docs/release_announcement_v0.5.0-alpha.2.md`: GitHub Release announcement.
+- `docs/quickstart_zh.md`: Chinese quick start.
+- `docs/demo_script_zh.md`: Chinese demo presenter script.
+- `docs/faq_zh.md`: Chinese FAQ.
 - `docs/installation_guide.md`: install and deployment guide.
 - `docs/demo_walkthrough.md`: end-to-end demo.
 - `docs/known_limitations.md`: limitations and non-use cases.
