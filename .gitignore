@@ -14,3 +14,12 @@ logs/
 configs/gee.local.yaml
 *service-account*.json
 *credentials*.json
+external/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+checkpoints/
+model_weights/
+wandb/
+mlruns/

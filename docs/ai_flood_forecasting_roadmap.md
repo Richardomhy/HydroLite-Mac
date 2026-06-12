@@ -15,19 +15,21 @@
 - 无 credentials 时不崩溃。
 - 不修改 `data_raw`。
 
-## Phase B：环境隔离与示例推理
+## Phase B：OpenHydroNet 环境接入与 smoke test
 
 目标：
 
 - 为 OpenHydroNet 建立隔离 Python 环境。
 - 允许用户配置外部 OpenHydroNet 仓库路径。
-- 使用最小示例数据做一次 placeholder 到真实推理的过渡。
+- 只做最小 import、仓库路径、torch/MPS/CUDA 和配置 smoke test。
+- 不训练模型，不下载大数据，不运行真实预测。
 
 验收标准：
 
 - 主 HydroLite 环境不被大型 AI 依赖污染。
 - 失败时清晰记录环境缺失原因。
 - 不影响 HydroLite/SWMM 主流程。
+- 生成 `output/openhydronet/smoke_test_summary.xlsx` 和 `smoke_test_report.md`。
 
 ## Phase C：GEE 数据输入
 

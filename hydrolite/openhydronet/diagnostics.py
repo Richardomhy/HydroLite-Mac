@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import os
 import platform
 import sys
@@ -33,12 +32,23 @@ def build_openhydronet_diagnosis() -> dict[str, Any]:
         "python_version": sys.version,
         "python_executable": sys.executable,
         "platform": platform.platform(),
+        "status": env["status"],
+        "environment": env["environment"],
+        "repo_path": env["repo_path"],
         "torch_installed": env["torch_installed"],
-        "can_import_googlehydrology": importlib.util.find_spec("googlehydrology") is not None,
+        "torch_status": env["torch_status"],
+        "isolated_python": env.get("isolated_python", ""),
+        "isolated_torch_status": env.get("isolated_torch_status", {}),
+        "accelerator": env["accelerator"],
+        "can_import_googlehydrology": env["googlehydrology_installed"],
         "openhydronet_home": os.environ.get("OPENHYDRONET_HOME", ""),
         "openhydronet_home_exists": env["openhydronet_home_exists"],
+        "repo_exists": env["repo_exists"],
+        "readme_exists": env["readme_exists"],
+        "requirements_exists": env["requirements_exists"],
         "gpu_cuda_available": _cuda_available(),
         "mps_available": _mps_available(),
-        "status": "placeholder_only",
+        "error_message": env["error_message"],
+        "next_steps": env["next_steps"],
         "message": "This diagnosis does not run real OpenHydroNet training or inference.",
     }

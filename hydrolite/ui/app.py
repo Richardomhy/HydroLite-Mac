@@ -164,7 +164,9 @@ def get_openhydronet_panel_payload() -> dict[str, object]:
         "environment": detect_openhydronet_environment(),
         "config_text": read_text_if_exists(PROJECT_ROOT / "configs" / "openhydronet.example.yaml"),
         "diagnosis_text": read_text_if_exists(OUTPUT_ROOT / "openhydronet_diagnosis.txt"),
-        "stage": "placeholder / not yet running real model",
+        "smoke_summary": OUTPUT_ROOT / "openhydronet" / "smoke_test_summary.xlsx",
+        "smoke_report": OUTPUT_ROOT / "openhydronet" / "smoke_test_report.md",
+        "stage": "environment diagnosis / smoke test only",
     }
 
 
@@ -482,8 +484,12 @@ def _show_comparison() -> None:
 
 
 def _run_script(script: Path) -> tuple[bool, str]:
+    return _run_command([sys.executable, str(script)])
+
+
+def _run_command(command: list[str]) -> tuple[bool, str]:
     completed = subprocess.run(
-        [sys.executable, str(script)],
+        command,
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
@@ -554,19 +560,44 @@ def _show_openhydronet_panel() -> None:
     st.write(f"当前阶段: `{payload['stage']}`")
     st.write("OpenHydroNet 环境状态")
     st.json(payload["environment"])
+    env = payload["environment"]
+    cols = st.columns(4)
+    cols[0].metric("状态", str(env.get("status", "unknown")))
+    cols[1].metric("加速器", str(env.get("accelerator", "CPU")))
+    cols[2].metric("torch", "yes" if env.get("torch_installed") else "no")
+    cols[3].metric("repo", "yes" if env.get("repo_exists") else "no")
+    st.write(f"OPENHYDRONET_HOME: `{env.get('openhydronet_home') or ''}`")
+    st.write(f"repo_path: `{env.get('repo_path') or ''}`")
+    st.write(f"next_steps: {env.get('next_steps') or ''}")
     st.write("openhydronet.example.yaml")
     st.code(str(payload["config_text"]) or "configs/openhydronet.example.yaml not found", language="yaml")
-    st.info("当前仅为 placeholder / not yet running real model，不下载仓库、不训练模型。")
+    st.info("当前仅做外部仓库与隔离环境诊断、smoke test；不提供训练按钮，不运行真实预测。")
     if st.button("运行 OpenHydroNet 诊断", use_container_width=True):
         ok, output = _run_script(PROJECT_ROOT / "scripts" / "diagnose_openhydronet.py")
         if ok:
             st.success(output or "OpenHydroNet 诊断完成")
         else:
             st.error(output or "OpenHydroNet 诊断失败")
+    if st.button("运行 OpenHydroNet smoke test", use_container_width=True):
+        ok, output = _run_command([sys.executable, "-m", "hydrolite", "openhydronet", "smoke", "configs/openhydronet.example.yaml"])
+        if ok:
+            st.success(output or "OpenHydroNet smoke test 完成")
+        else:
+            st.error(output or "OpenHydroNet smoke test 失败")
     diagnosis = read_text_if_exists(OUTPUT_ROOT / "openhydronet_diagnosis.txt")
     if diagnosis:
         st.write("openhydronet_diagnosis.txt")
         st.code(diagnosis, language="json")
+    summary = Path(payload["smoke_summary"])
+    if summary.exists():
+        st.write("smoke_test_summary.xlsx")
+        st.dataframe(pd.read_excel(summary), use_container_width=True)
+        _show_download("下载 smoke_test_summary.xlsx", summary, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    report = Path(payload["smoke_report"])
+    if report.exists():
+        st.write("smoke_test_report.md")
+        st.code(report.read_text(encoding="utf-8"), language="markdown")
+        _show_download("下载 smoke_test_report.md", report, "text/markdown")
 
 
 def _show_extension_panels() -> None:

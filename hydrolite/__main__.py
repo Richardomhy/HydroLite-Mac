@@ -12,6 +12,8 @@ from hydrolite.gee.export import (
     write_hydrolite_gee_outputs,
 )
 from hydrolite.gee.diagnostics import build_gee_diagnosis
+from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
+from hydrolite.openhydronet.runner import run_openhydronet_smoke
 from hydrolite.runner import run_case
 from hydrolite.validate import validate_target
 
@@ -41,6 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
     gee_summary.add_argument("config", help="Path to GEE YAML config.")
     gee_inputs = gee_subparsers.add_parser("hydrolite-inputs", help="Generate HydroLite inputs from GEE outputs.")
     gee_inputs.add_argument("config", help="Path to GEE YAML config.")
+
+    openhydronet_parser = subparsers.add_parser("openhydronet", help="OpenHydroNet AI flood forecasting commands.")
+    openhydronet_subparsers = openhydronet_parser.add_subparsers(dest="openhydronet_command", required=True)
+    openhydronet_subparsers.add_parser("diagnose", help="Diagnose OpenHydroNet external repository and environment.")
+    openhydronet_smoke = openhydronet_subparsers.add_parser("smoke", help="Run OpenHydroNet smoke test only.")
+    openhydronet_smoke.add_argument("config", help="Path to OpenHydroNet YAML config.")
 
     return parser
 
@@ -103,6 +111,22 @@ def main(argv: list[str] | None = None) -> int:
         if args.gee_command == "hydrolite-inputs":
             outputs = write_hydrolite_gee_outputs(args.config)
             print(f"GEE HydroLite inputs written to: {outputs['gee_to_hydrolite_report_md'].parent}")
+            return 0
+    if args.command == "openhydronet":
+        if args.openhydronet_command == "diagnose":
+            diagnosis = build_openhydronet_diagnosis()
+            output = Path("output/openhydronet_diagnosis.txt").resolve()
+            output.parent.mkdir(parents=True, exist_ok=True)
+            import json
+
+            output.write_text(json.dumps(diagnosis, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            print(f"OpenHydroNet diagnosis written to: {output}")
+            return 0
+        if args.openhydronet_command == "smoke":
+            result = run_openhydronet_smoke(args.config)
+            print(f"OpenHydroNet smoke status: {result['status']}")
+            print(f"Summary written to: {result['summary_path']}")
+            print(f"Report written to: {result['report_path']}")
             return 0
     return 2
 
