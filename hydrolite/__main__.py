@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 import sys
 
+from hydrolite.__version__ import __app_name__, __release_date__, __version__
 from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
 from hydrolite.gee.export import (
@@ -12,6 +13,7 @@ from hydrolite.gee.export import (
     write_hydrolite_gee_outputs,
 )
 from hydrolite.gee.diagnostics import build_gee_diagnosis
+from hydrolite.healthcheck import build_healthcheck, healthcheck_status
 from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
 from hydrolite.openhydronet.runner import run_openhydronet_prepare_inputs, run_openhydronet_smoke
 from hydrolite.project import (
@@ -42,6 +44,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate_parser = subparsers.add_parser("validate", help="Validate a HydroLite YAML case or cases directory.")
     validate_parser.add_argument("target", help="Path to a case YAML file or a directory containing cases.")
+
+    subparsers.add_parser("version", help="Show HydroLite Studio version information.")
+    subparsers.add_parser("healthcheck", help="Run HydroLite Studio release healthcheck.")
 
     gee_parser = subparsers.add_parser("gee", help="GEE data center commands.")
     gee_subparsers = gee_parser.add_subparsers(dest="gee_command", required=True)
@@ -117,6 +122,20 @@ def main(argv: list[str] | None = None) -> int:
             print("Validation passed with warnings.")
         else:
             print("Validation passed.")
+        return 0
+    if args.command == "version":
+        print(f"app_name: {__app_name__}")
+        print(f"version: {__version__}")
+        print(f"release_date: {__release_date__}")
+        print(f"python_version: {sys.version.split()[0]}")
+        print(f"project_root: {Path(__file__).resolve().parents[1]}")
+        return 0
+    if args.command == "healthcheck":
+        outputs = build_healthcheck()
+        status = healthcheck_status(outputs)
+        print(f"HydroLite healthcheck status: {status}")
+        print(f"Report written to: {outputs.report_md}")
+        print(f"Summary written to: {outputs.summary_xlsx}")
         return 0
     if args.command == "gee":
         if args.gee_command == "diagnose":

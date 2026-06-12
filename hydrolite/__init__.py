@@ -1,4 +1,5 @@
 """HydroLite-Mac lightweight hydrologic and hydraulic model."""
 
-__version__ = "0.1.0"
+from hydrolite.__version__ import __app_name__, __release_date__, __version__
 
+__all__ = ["__app_name__", "__release_date__", "__version__"]

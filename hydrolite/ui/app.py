@@ -4,6 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from hydrolite.__version__ import __version__
 from hydrolite.ui.components import (
     read_comparison_outputs as _read_comparison_outputs,
     read_openhydronet_temperature_stats,
@@ -124,7 +125,7 @@ def get_openhydronet_panel_payload() -> dict[str, object]:
 
 
 def _sidebar_project_selector() -> Path:
-    st.sidebar.title("HydroLite Studio")
+    st.sidebar.title(f"HydroLite Studio v{__version__}")
     project_dirs = scan_project_dirs()
     default = DEFAULT_PROJECT if DEFAULT_PROJECT.exists() else (project_dirs[0] if project_dirs else DEFAULT_PROJECT)
     selected = st.sidebar.text_input("当前项目路径", value=str(default))

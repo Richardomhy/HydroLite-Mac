@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hydrolite-mac"
-version = "0.1.0"
-description = "HydroLite-Mac: a local lightweight hydrologic and hydraulic modeling MVP."
+version = "0.5.0a0"
+description = "HydroLite Studio: a project-centered lightweight hydrologic and hydraulic modeling workbench."
 requires-python = ">=3.10"
 dependencies = [
   "matplotlib>=3.8",

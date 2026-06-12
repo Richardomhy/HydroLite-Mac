@@ -1,6 +1,16 @@
-# HydroLite-Mac
+# HydroLite Studio v0.5.0-alpha
 
-HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. It supports YAML-based cases, CSV inputs, SCS-CN runoff generation, simplified unit hydrograph routing, Muskingum channel routing, water balance checks, batch runs, and a local Streamlit interface.
+HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.5.0-alpha adds a project-centered professional workbench for data validation, scenario runs, GEE data products, SWMM coupling, OpenHydroNet-ready input packages, scenario comparison, reports, and project export.
+
+## Quick Start
+
+```bash
+python -m hydrolite version
+python -m hydrolite healthcheck
+python -m streamlit run streamlit_app.py --server.headless true
+```
+
+Open `http://localhost:8501`, then load `projects/demo_project`.
 
 ## Install
 
@@ -14,6 +24,8 @@ python -m pip install -r requirements.txt
 ## Quick Start Local
 
 ```bash
+python -m hydrolite version
+python -m hydrolite healthcheck
 python -m hydrolite validate cases/
 python -m hydrolite run cases/demo.yaml
 python -m hydrolite run cases/demo_swmm.yaml
@@ -97,6 +109,43 @@ Recommended UI workflow:
 ```
 
 Use the GEE, SWMM, and OpenHydroNet pages only when those modules are needed. See `docs/ui_workbench.md` for page-by-page guidance and local/cloud differences.
+
+## Demo Workflow
+
+```bash
+python -m hydrolite project validate projects/demo_project
+python -m hydrolite project run projects/demo_project demo_gee.yaml
+python -m hydrolite project batch projects/demo_project
+python -m hydrolite project compare projects/demo_project
+python -m hydrolite project export projects/demo_project
+```
+
+## Capability Matrix
+
+| Area | v0.5.0-alpha status |
+| --- | --- |
+| SCS-CN runoff | Available |
+| Simplified unit hydrograph | Available |
+| Muskingum routing and stability checks | Available |
+| Water balance checks | Available |
+| Project workflow | Available |
+| Streamlit Studio workbench | Available |
+| GEE data center | Available when user GEE credentials/project are configured |
+| SWMM coupling | Available with graceful backend fallback |
+| OpenHydroNet | Input package only; no real AI prediction |
+| MIKE replacement | Not a full replacement |
+
+## Documentation Index
+
+- `docs/ui_workbench.md`: HydroLite Studio workbench guide.
+- `docs/project_workflow.md`: project folder workflow.
+- `docs/release_notes_v0.5.0-alpha.md`: release notes.
+- `docs/installation_guide.md`: install and deployment guide.
+- `docs/demo_walkthrough.md`: end-to-end demo.
+- `docs/known_limitations.md`: limitations and non-use cases.
+- `docs/release_checklist.md`: release verification checklist.
+
+Known limitations are summarized in `docs/known_limitations.md`.
 
 ## Deploy to Streamlit Community Cloud
 

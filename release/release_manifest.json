@@ -1,0 +1,24 @@
+{
+  "app_name": "HydroLite Studio",
+  "version": "0.5.0-alpha",
+  "release_date": "2026-06-12",
+  "git_commit": "869cb010b76a976810026e15fffbfd966ad67b15",
+  "files": [
+    "demo_project_package.zip",
+    "demo_walkthrough.md",
+    "installation_guide.md",
+    "known_limitations.md",
+    "release_notes_v0.5.0-alpha.md"
+  ],
+  "test_summary": "version, healthcheck, project workflow, legacy workflow, OpenHydroNet prepare-inputs, pytest -q (100 passed), and Streamlit startup verification completed for v0.5.0-alpha.",
+  "warnings": [
+    "Alpha release for demonstration and workflow validation.",
+    "OpenHydroNet creates input packages only; no real AI prediction is run.",
+    "SWMM and GEE availability depends on local/cloud backend configuration."
+  ],
+  "security_checks": {
+    "no_secrets": true,
+    "no_external_repo": true,
+    "no_model_weights": true
+  }
+}
