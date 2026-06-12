@@ -9,6 +9,8 @@ def read_rainfall(path: Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"Rainfall CSV not found: {path}")
     df = pd.read_csv(path)
+    if "time" not in df.columns and "datetime" in df.columns:
+        df["time"] = df["datetime"]
     required = {"time", "rain_mm"}
     missing = required - set(df.columns)
     if missing:

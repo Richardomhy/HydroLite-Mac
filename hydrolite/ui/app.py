@@ -149,6 +149,12 @@ def get_gee_panel_payload() -> dict[str, object]:
             "gee_summary_xlsx": OUTPUT_ROOT / "gee" / "gee_summary.xlsx",
             "gee_summary_csv": OUTPUT_ROOT / "gee" / "gee_summary.csv",
             "gee_report_md": OUTPUT_ROOT / "gee" / "gee_report.md",
+            "gee_basin_summary_xlsx": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_basin_summary.xlsx",
+            "gee_basin_summary_csv": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_basin_summary.csv",
+            "gee_chirps_rainfall_csv": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_chirps_rainfall.csv",
+            "gee_parameter_suggestions_xlsx": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_parameter_suggestions.xlsx",
+            "gee_parameter_suggestions_yaml": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_parameter_suggestions.yaml",
+            "gee_to_hydrolite_report_md": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_to_hydrolite_report.md",
         },
     }
 
@@ -529,11 +535,17 @@ def _show_gee_data_center() -> None:
                     st.dataframe(pd.read_excel(path), use_container_width=True)
                     _show_download(f"下载 {path.name}", path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                 elif path.suffix == ".csv":
-                    st.dataframe(pd.read_csv(path), use_container_width=True)
+                    df = pd.read_csv(path)
+                    st.dataframe(df.head(200), use_container_width=True)
                     _show_download(f"下载 {path.name}", path, "text/csv")
+                elif path.suffix in {".yaml", ".yml"}:
+                    st.code(path.read_text(encoding="utf-8"), language="yaml")
+                    _show_download(f"下载 {path.name}", path, "text/yaml")
                 elif path.suffix == ".md":
                     st.code(path.read_text(encoding="utf-8"), language="markdown")
                     _show_download(f"下载 {path.name}", path, "text/markdown")
+    if (PROJECT_ROOT / "cases" / "demo_gee.yaml").exists():
+        st.success("已发现 cases/demo_gee.yaml，可在情景运行页选择并运行 demo_gee。")
 
 
 def _show_openhydronet_panel() -> None:

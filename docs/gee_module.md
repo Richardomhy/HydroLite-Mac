@@ -70,6 +70,7 @@ data_demo/gee/demo_basin.geojson
 python -m hydrolite gee diagnose
 python -m hydrolite gee plan configs/gee.example.yaml
 python -m hydrolite gee summarize configs/gee.example.yaml
+python -m hydrolite gee hydrolite-inputs configs/gee.example.yaml
 ```
 
 输出：
@@ -80,6 +81,76 @@ output/gee/gee_summary.xlsx
 output/gee/gee_summary.csv
 output/gee/gee_report.md
 ```
+
+## 从 GEE 生成 HydroLite 输入
+
+运行：
+
+```bash
+export GEE_PROJECT="你的project"
+python -m hydrolite gee hydrolite-inputs configs/gee.example.yaml
+```
+
+输出目录：
+
+```text
+output/gee/hydrolite_inputs/
+```
+
+主要文件：
+
+```text
+gee_basin_summary.xlsx
+gee_basin_summary.csv
+gee_chirps_rainfall.csv
+gee_parameter_suggestions.xlsx
+gee_parameter_suggestions.yaml
+gee_to_hydrolite_report.md
+```
+
+`gee_chirps_rainfall.csv` 兼容 HydroLite 降雨输入，包含：
+
+- `datetime`
+- `time`
+- `subbasin_id`
+- `rain_mm`
+
+其中 `subbasin_id` 当前使用 `GEE_BASIN_1`。
+
+## 参数建议说明
+
+`gee_parameter_suggestions` 基于透明启发式生成：
+
+- CN 根据 JRC surface water occurrence 和 CHIRPS 降雨统计给出 70-85 的初始建议。
+- lag_hours 根据 bbox 面积和 DEM 高差粗略估计。
+- Muskingum K 根据 lag_hours 给出初始建议。
+- Muskingum X 默认 0.2。
+
+这些参数只是初始建议，不等于率定结果，不能替代实测资料校准。
+
+## demo_gee.yaml
+
+如果 CHIRPS 降雨时间序列成功生成，HydroLite 会创建：
+
+```text
+cases/demo_gee.yaml
+data_demo/gee/gee_subbasins.csv
+data_demo/gee/gee_reaches.csv
+```
+
+然后可以运行：
+
+```bash
+python -m hydrolite validate cases/demo_gee.yaml
+python -m hydrolite run cases/demo_gee.yaml
+```
+
+## 局限性
+
+- 示例流域为小矩形，仅用于联动测试。
+- bbox 面积是近似值，不替代正式 GIS 面积计算。
+- GEE 数据统计依赖账号权限、Project 设置和数据集可用性。
+- 参数建议没有经过率定。
 
 后续开发路线：
 

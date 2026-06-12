@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+import math
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +46,26 @@ def _date_range(config: dict[str, Any]) -> tuple[str, str]:
     end = date.fromisoformat(str(explicit_end)) if explicit_end else date.today()
     start = date.fromisoformat(str(explicit_start)) if explicit_start else end - timedelta(days=30)
     return start.isoformat(), end.isoformat()
+
+
+def _bbox_area_km2(bbox: list[float] | None) -> float | None:
+    if not bbox:
+        return None
+    minx, miny, maxx, maxy = bbox
+    mean_lat = math.radians((miny + maxy) / 2.0)
+    width_km = max(0.0, (maxx - minx) * 111.320 * math.cos(mean_lat))
+    height_km = max(0.0, (maxy - miny) * 110.574)
+    return width_km * height_km
+
+
+def _metric_value(rows: list[dict[str, Any]], metric_group: str, metric: str) -> float | None:
+    for row in rows:
+        if row.get("metric_group") == metric_group and row.get("metric") == metric:
+            value = row.get("value")
+            if pd.isna(value):
+                return None
+            return float(value)
+    return None
 
 
 def _geometry_from_geojson(boundary_path: Path):
@@ -204,6 +225,293 @@ def summarize_surface_water_over_basin(config_path: str | Path) -> list[dict[str
         ]
     except Exception as exc:
         return [{"metric_group": "surface_water", "status": "failed", "metric": "", "value": pd.NA, "unit": "", "error_message": str(exc), "next_steps": ""}]
+
+
+def export_chirps_timeseries(config_path: str | Path) -> pd.DataFrame:
+    config = _load_config(config_path)
+    init = initialize_gee(project=config.get("project") or None)
+    columns = ["datetime", "time", "subbasin_id", "rain_mm", "status", "error_message"]
+    if init["status"] != "available":
+        return pd.DataFrame(
+            [
+                {
+                    "datetime": "",
+                    "time": "",
+                    "subbasin_id": "GEE_BASIN_1",
+                    "rain_mm": pd.NA,
+                    "status": init["status"],
+                    "error_message": init.get("error_message", ""),
+                }
+            ],
+            columns=columns,
+        )
+    try:
+        import ee
+
+        start, end = _date_range(config)
+        geometry = _geometry_from_geojson(_basin_boundary(config))
+        collection = (
+            ee.ImageCollection(get_dataset_metadata("precipitation")["gee_id"])
+            .filterDate(start, end)
+            .select("precipitation")
+        )
+        count = int(collection.size().getInfo())
+        if count == 0:
+            return pd.DataFrame(
+                [
+                    {
+                        "datetime": "",
+                        "time": "",
+                        "subbasin_id": "GEE_BASIN_1",
+                        "rain_mm": pd.NA,
+                        "status": "failed",
+                        "error_message": f"No CHIRPS images found for {start} to {end}.",
+                    }
+                ],
+                columns=columns,
+            )
+
+        def summarize_image(image):
+            value = image.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=geometry,
+                scale=5500,
+                maxPixels=1_000_000,
+            ).get("precipitation")
+            return ee.Feature(None, {"datetime": image.date().format("YYYY-MM-dd"), "rain_mm": value})
+
+        features = collection.map(summarize_image).getInfo().get("features", [])
+        rows = []
+        for feature in features:
+            props = feature.get("properties", {})
+            value = props.get("rain_mm")
+            if value is None:
+                continue
+            dt = str(props.get("datetime"))
+            rows.append(
+                {
+                    "datetime": dt,
+                    "time": f"{dt} 00:00",
+                    "subbasin_id": "GEE_BASIN_1",
+                    "rain_mm": float(value),
+                    "status": "available",
+                    "error_message": "",
+                }
+            )
+        if not rows:
+            rows.append(
+                {
+                    "datetime": "",
+                    "time": "",
+                    "subbasin_id": "GEE_BASIN_1",
+                    "rain_mm": pd.NA,
+                    "status": "failed",
+                    "error_message": "CHIRPS returned no usable precipitation values for this basin.",
+                }
+            )
+        return pd.DataFrame(rows, columns=columns)
+    except Exception as exc:
+        return pd.DataFrame(
+            [
+                {
+                    "datetime": "",
+                    "time": "",
+                    "subbasin_id": "GEE_BASIN_1",
+                    "rain_mm": pd.NA,
+                    "status": "failed",
+                    "error_message": str(exc),
+                }
+            ],
+            columns=columns,
+        )
+
+
+def export_dem_summary(config_path: str | Path) -> pd.DataFrame:
+    return pd.DataFrame(summarize_dem_over_basin(config_path))
+
+
+def export_surface_water_summary(config_path: str | Path) -> pd.DataFrame:
+    return pd.DataFrame(summarize_surface_water_over_basin(config_path))
+
+
+def _basin_summary_rows(config_path: str | Path, rainfall: pd.DataFrame) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    config = _load_config(config_path)
+    boundary = _basin_boundary(config)
+    bbox_info = get_boundary_bbox(boundary)
+    bbox = bbox_info.get("bbox")
+    metrics: list[dict[str, Any]] = []
+    metrics.extend(summarize_dem_over_basin(config_path))
+    metrics.extend(summarize_precipitation_over_basin(config_path))
+    metrics.extend(summarize_surface_water_over_basin(config_path))
+    start, end = _date_range(config)
+    available_rain = rainfall[rainfall["status"] == "available"] if "status" in rainfall.columns else rainfall
+    rain_values = pd.to_numeric(available_rain.get("rain_mm", pd.Series(dtype=float)), errors="coerce").dropna()
+    total_rain = float(rain_values.sum()) if not rain_values.empty else _metric_value(
+        metrics, "precipitation", "basin_mean_total_precipitation"
+    )
+    mean_daily = float(rain_values.mean()) if not rain_values.empty else None
+    init = initialize_gee(project=config.get("project") or None)
+    row = {
+        "basin_boundary": str(boundary),
+        "bbox": bbox,
+        "area_km2": _bbox_area_km2(bbox),
+        "dem_mean": _metric_value(metrics, "dem", "mean_elevation"),
+        "dem_min": _metric_value(metrics, "dem", "min_elevation"),
+        "dem_max": _metric_value(metrics, "dem", "max_elevation"),
+        "surface_water_occurrence_mean": _metric_value(metrics, "surface_water", "mean_occurrence"),
+        "surface_water_occurrence_max": _metric_value(metrics, "surface_water", "max_occurrence"),
+        "precipitation_start_date": start,
+        "precipitation_end_date": end,
+        "precipitation_total_mm": total_rain,
+        "precipitation_mean_daily_mm": mean_daily,
+        "gee_project": init.get("project") or "",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return row, metrics
+
+
+def generate_hydrolite_parameter_suggestions(config_path: str | Path) -> dict[str, Any]:
+    rainfall = export_chirps_timeseries(config_path)
+    basin, metrics = _basin_summary_rows(config_path, rainfall)
+    area = float(basin["area_km2"] or 1.0)
+    dem_min = basin.get("dem_min")
+    dem_max = basin.get("dem_max")
+    relief = max(0.0, float(dem_max or 0.0) - float(dem_min or 0.0))
+    water_occurrence = basin.get("surface_water_occurrence_mean")
+    rain_total = basin.get("precipitation_total_mm") or 0.0
+    cn = 75.0
+    if water_occurrence is not None and float(water_occurrence) > 50:
+        cn += 5.0
+    if rain_total and float(rain_total) > 250:
+        cn += 3.0
+    cn = max(70.0, min(85.0, cn))
+    lag = max(1.0, min(18.0, 1.5 + math.sqrt(area) * 1.6 - min(relief, 300.0) / 120.0))
+    k_hours = max(15.0, lag * 1.5)
+    x = 0.2
+    return {
+        "suggested_subbasin_id": "GEE_BASIN_1",
+        "suggested_area_km2": area,
+        "suggested_cn": round(cn, 2),
+        "suggested_lag_hours": round(lag, 2),
+        "suggested_muskingum_k_hours": round(k_hours, 2),
+        "suggested_muskingum_x": x,
+        "basis": (
+            "Transparent heuristic using bbox-derived area, DEM relief, JRC water occurrence, "
+            "and CHIRPS precipitation total."
+        ),
+        "warning": "Initial parameter suggestion only; not a calibrated hydrologic parameter set.",
+        "source_status": "; ".join(f"{row.get('metric_group')}={row.get('status')}" for row in metrics),
+    }
+
+
+def generate_hydrolite_rainfall_csv(config_path: str | Path) -> pd.DataFrame:
+    return export_chirps_timeseries(config_path)
+
+
+def _write_demo_gee_files(output_dir: Path, rainfall_path: Path, suggestions: dict[str, Any]) -> dict[str, Path] | None:
+    rainfall = pd.read_csv(rainfall_path)
+    usable = rainfall[rainfall["status"] == "available"] if "status" in rainfall.columns else rainfall
+    usable = usable[pd.to_numeric(usable["rain_mm"], errors="coerce").notna()]
+    if usable.empty:
+        return None
+    data_dir = PROJECT_ROOT / "data_demo" / "gee"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    subbasins = data_dir / "gee_subbasins.csv"
+    reaches = data_dir / "gee_reaches.csv"
+    case_file = PROJECT_ROOT / "cases" / "demo_gee.yaml"
+    pd.DataFrame(
+        [
+            {
+                "id": suggestions["suggested_subbasin_id"],
+                "area_km2": suggestions["suggested_area_km2"],
+                "curve_number": suggestions["suggested_cn"],
+                "lag_hours": suggestions["suggested_lag_hours"],
+            }
+        ]
+    ).to_csv(subbasins, index=False)
+    pd.DataFrame(
+        [
+            {
+                "id": "GEE_R1",
+                "from": "GEE_BASIN_1",
+                "to": "outlet",
+                "K_hours": suggestions["suggested_muskingum_k_hours"],
+                "X": suggestions["suggested_muskingum_x"],
+            }
+        ]
+    ).to_csv(reaches, index=False)
+    case_file.write_text(
+        yaml.safe_dump(
+            {
+                "name": "demo_gee",
+                "model": {"time_step_hours": 24.0},
+                "inputs": {
+                    "directory": ".",
+                    "rainfall": "output/gee/hydrolite_inputs/gee_chirps_rainfall.csv",
+                    "subcatchments": "data_demo/gee/gee_subbasins.csv",
+                    "reaches": "data_demo/gee/gee_reaches.csv",
+                },
+                "outputs": {"directory": "output/demo_gee"},
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+    return {"subbasins": subbasins, "reaches": reaches, "case": case_file}
+
+
+def write_hydrolite_gee_outputs(config_path: str | Path) -> dict[str, Path]:
+    config = _load_config(config_path)
+    root = _output_folder(config) / "hydrolite_inputs"
+    root.mkdir(parents=True, exist_ok=True)
+    basin_xlsx = root / "gee_basin_summary.xlsx"
+    basin_csv = root / "gee_basin_summary.csv"
+    rainfall_csv = root / "gee_chirps_rainfall.csv"
+    suggestions_xlsx = root / "gee_parameter_suggestions.xlsx"
+    suggestions_yaml = root / "gee_parameter_suggestions.yaml"
+    report_md = root / "gee_to_hydrolite_report.md"
+
+    rainfall = generate_hydrolite_rainfall_csv(config_path)
+    rainfall.to_csv(rainfall_csv, index=False)
+    basin_row, _metrics = _basin_summary_rows(config_path, rainfall)
+    basin = pd.DataFrame([basin_row])
+    basin.to_excel(basin_xlsx, index=False)
+    basin.to_csv(basin_csv, index=False)
+    suggestions = generate_hydrolite_parameter_suggestions(config_path)
+    pd.DataFrame([suggestions]).to_excel(suggestions_xlsx, index=False)
+    suggestions_yaml.write_text(yaml.safe_dump(suggestions, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    demo_files = _write_demo_gee_files(root, rainfall_csv, suggestions)
+    report_md.write_text(
+        "\n".join(
+            [
+                "# GEE to HydroLite Input Report",
+                "",
+                f"Config: `{config_path}`",
+                f"Basin summary: `{basin_xlsx}`",
+                f"Rainfall CSV: `{rainfall_csv}`",
+                f"Parameter suggestions: `{suggestions_xlsx}`",
+                "",
+                "The suggested CN, lag time, and Muskingum parameters are transparent initial heuristics only.",
+                "They are not calibrated model parameters and should be reviewed before decision use.",
+                "",
+                f"demo_gee.yaml generated: `{bool(demo_files)}`",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    outputs = {
+        "gee_basin_summary_xlsx": basin_xlsx,
+        "gee_basin_summary_csv": basin_csv,
+        "gee_chirps_rainfall_csv": rainfall_csv,
+        "gee_parameter_suggestions_xlsx": suggestions_xlsx,
+        "gee_parameter_suggestions_yaml": suggestions_yaml,
+        "gee_to_hydrolite_report_md": report_md,
+    }
+    if demo_files:
+        outputs.update({f"demo_{key}": value for key, value in demo_files.items()})
+    return outputs
 
 
 def write_gee_summary_outputs(config_path: str | Path) -> dict[str, Path]:

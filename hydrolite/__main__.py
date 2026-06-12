@@ -6,7 +6,11 @@ import sys
 
 from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
-from hydrolite.gee.export import create_gee_data_plan, write_gee_summary_outputs
+from hydrolite.gee.export import (
+    create_gee_data_plan,
+    write_gee_summary_outputs,
+    write_hydrolite_gee_outputs,
+)
 from hydrolite.gee.diagnostics import build_gee_diagnosis
 from hydrolite.runner import run_case
 from hydrolite.validate import validate_target
@@ -35,6 +39,8 @@ def build_parser() -> argparse.ArgumentParser:
     gee_plan.add_argument("config", help="Path to GEE YAML config.")
     gee_summary = gee_subparsers.add_parser("summarize", help="Write GEE basin summary outputs.")
     gee_summary.add_argument("config", help="Path to GEE YAML config.")
+    gee_inputs = gee_subparsers.add_parser("hydrolite-inputs", help="Generate HydroLite inputs from GEE outputs.")
+    gee_inputs.add_argument("config", help="Path to GEE YAML config.")
 
     return parser
 
@@ -93,6 +99,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.gee_command == "summarize":
             outputs = write_gee_summary_outputs(args.config)
             print(f"GEE summary written to: {outputs['gee_summary_xlsx']}")
+            return 0
+        if args.gee_command == "hydrolite-inputs":
+            outputs = write_hydrolite_gee_outputs(args.config)
+            print(f"GEE HydroLite inputs written to: {outputs['gee_to_hydrolite_report_md'].parent}")
             return 0
     return 2
 

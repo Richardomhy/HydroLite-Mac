@@ -84,12 +84,60 @@ def test_gee_cli_commands_run_without_crashing():
         [sys.executable, "-m", "hydrolite", "gee", "diagnose"],
         [sys.executable, "-m", "hydrolite", "gee", "plan", "configs/gee.example.yaml"],
         [sys.executable, "-m", "hydrolite", "gee", "summarize", "configs/gee.example.yaml"],
+        [sys.executable, "-m", "hydrolite", "gee", "hydrolite-inputs", "configs/gee.example.yaml"],
     ):
         completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=90)
         assert completed.returncode == 0, completed.stderr
     assert Path("output/gee/gee_data_plan.xlsx").exists()
     assert Path("output/gee/gee_summary.xlsx").exists()
     assert Path("output/gee/gee_report.md").exists()
+    assert Path("output/gee/hydrolite_inputs/gee_basin_summary.xlsx").exists()
+    assert Path("output/gee/hydrolite_inputs/gee_chirps_rainfall.csv").exists()
+    assert Path("output/gee/hydrolite_inputs/gee_parameter_suggestions.xlsx").exists()
+    assert Path("output/gee/hydrolite_inputs/gee_parameter_suggestions.yaml").exists()
+
+
+def test_gee_hydrolite_input_products_are_parseable():
+    from hydrolite.routing import validate_muskingum_parameters
+
+    rainfall = Path("output/gee/hydrolite_inputs/gee_chirps_rainfall.csv")
+    suggestions = Path("output/gee/hydrolite_inputs/gee_parameter_suggestions.yaml")
+    subbasins = Path("data_demo/gee/gee_subbasins.csv")
+    reaches = Path("data_demo/gee/gee_reaches.csv")
+    if not rainfall.exists() or not suggestions.exists():
+        completed = subprocess.run(
+            [sys.executable, "-m", "hydrolite", "gee", "hydrolite-inputs", "configs/gee.example.yaml"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=90,
+        )
+        assert completed.returncode == 0, completed.stderr
+    rain = __import__("pandas").read_csv(rainfall)
+    assert {"datetime", "subbasin_id", "rain_mm"}.issubset(rain.columns)
+    parsed = yaml.safe_load(suggestions.read_text(encoding="utf-8"))
+    assert "suggested_cn" in parsed
+    if subbasins.exists():
+        sub = __import__("pandas").read_csv(subbasins)
+        assert {"id", "area_km2", "curve_number", "lag_hours"}.issubset(sub.columns)
+    if reaches.exists():
+        reach = __import__("pandas").read_csv(reaches)
+        assert {"id", "K_hours", "X"}.issubset(reach.columns)
+        row = reach.iloc[0]
+        validate_muskingum_parameters(str(row["id"]), float(row["K_hours"]), float(row["X"]), 24.0)
+
+
+def test_demo_gee_validates_if_generated():
+    case = Path("cases/demo_gee.yaml")
+    if case.exists():
+        completed = subprocess.run(
+            [sys.executable, "-m", "hydrolite", "validate", str(case)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+        assert completed.returncode == 0, completed.stderr
 
 
 def test_streamlit_gee_panel_helpers_import():

@@ -1,0 +1,10 @@
+name: demo_gee
+model:
+  time_step_hours: 24.0
+inputs:
+  directory: .
+  rainfall: output/gee/hydrolite_inputs/gee_chirps_rainfall.csv
+  subcatchments: data_demo/gee/gee_subbasins.csv
+  reaches: data_demo/gee/gee_reaches.csv
+outputs:
+  directory: output/demo_gee
