@@ -14,6 +14,15 @@ from hydrolite.gee.export import (
 from hydrolite.gee.diagnostics import build_gee_diagnosis
 from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
 from hydrolite.openhydronet.runner import run_openhydronet_prepare_inputs, run_openhydronet_smoke
+from hydrolite.project import (
+    compare_project_outputs,
+    create_project,
+    export_project_package,
+    project_info,
+    run_project_batch,
+    run_project_case,
+    validate_project,
+)
 from hydrolite.runner import run_case
 from hydrolite.validate import validate_target
 
@@ -53,6 +62,24 @@ def build_parser() -> argparse.ArgumentParser:
         "prepare-inputs", help="Prepare OpenHydroNet-ready input package."
     )
     openhydronet_prepare.add_argument("config", help="Path to OpenHydroNet YAML config.")
+
+    project_parser = subparsers.add_parser("project", help="HydroLite project workflow commands.")
+    project_subparsers = project_parser.add_subparsers(dest="project_command", required=True)
+    project_create = project_subparsers.add_parser("create", help="Create a HydroLite project.")
+    project_create.add_argument("project_dir")
+    project_info_parser = project_subparsers.add_parser("info", help="Show project metadata.")
+    project_info_parser.add_argument("project_dir")
+    project_validate = project_subparsers.add_parser("validate", help="Validate a HydroLite project.")
+    project_validate.add_argument("project_dir")
+    project_run = project_subparsers.add_parser("run", help="Run a case inside a HydroLite project.")
+    project_run.add_argument("project_dir")
+    project_run.add_argument("case_name")
+    project_batch = project_subparsers.add_parser("batch", help="Run all project cases.")
+    project_batch.add_argument("project_dir")
+    project_compare = project_subparsers.add_parser("compare", help="Compare project outputs.")
+    project_compare.add_argument("project_dir")
+    project_export = project_subparsers.add_parser("export", help="Export a project package zip.")
+    project_export.add_argument("project_dir")
 
     return parser
 
@@ -136,6 +163,36 @@ def main(argv: list[str] | None = None) -> int:
             result = run_openhydronet_prepare_inputs(args.config)
             print(f"OpenHydroNet input package status: {result['status']}")
             print(f"Inputs written to: {result['output_dir']}")
+            return 0
+    if args.command == "project":
+        if args.project_command == "create":
+            summary = create_project(args.project_dir)
+            print(f"HydroLite project created. Summary written to: {summary}")
+            return 0
+        if args.project_command == "info":
+            import json
+
+            print(json.dumps(project_info(args.project_dir), indent=2, ensure_ascii=False))
+            return 0
+        if args.project_command == "validate":
+            result = validate_project(args.project_dir)
+            print(f"Project validation written to: {result['xlsx']}")
+            return 0
+        if args.project_command == "run":
+            outputs = run_project_case(args.project_dir, args.case_name)
+            print(f"Project case complete. Outputs written to: {outputs.output_dir}")
+            return 0
+        if args.project_command == "batch":
+            summary_path, rows, failed_cases = run_project_batch(args.project_dir)
+            print(f"Project batch complete. Summary written to: {summary_path}")
+            return 1 if failed_cases else 0
+        if args.project_command == "compare":
+            outputs = compare_project_outputs(args.project_dir)
+            print(f"Project comparison written to: {outputs.output_dir}")
+            return 0
+        if args.project_command == "export":
+            package = export_project_package(args.project_dir)
+            print(f"Project package written to: {package}")
             return 0
     return 2
 

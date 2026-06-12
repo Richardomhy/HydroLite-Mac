@@ -1,0 +1,30 @@
+project:
+auth_mode: auto
+basin_boundary: data_demo/gee/demo_basin.geojson
+datasets:
+  dem:
+    enabled: true
+    gee_id: USGS/SRTMGL1_003
+  landcover:
+    enabled: true
+    gee_id: ESA/WorldCover/v200
+  precipitation:
+    enabled: true
+    gee_id: UCSB-CHG/CHIRPS/DAILY
+  temperature:
+    enabled: true
+    gee_id: ECMWF/ERA5_LAND/DAILY_AGGR
+    band: temperature_2m
+  ndvi:
+    enabled: true
+    gee_id: MODIS/061/MOD13Q1
+  surface_water:
+    enabled: true
+    gee_id: JRC/GSW1_4/GlobalSurfaceWater
+export:
+  output_folder: output/gee
+  scale: 30
+  crs: EPSG:4326
+date_range:
+  start_date: 2024-06-01
+  end_date: 2024-07-01

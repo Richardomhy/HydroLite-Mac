@@ -1,0 +1,28 @@
+project_name: Demo HydroLite Project
+project_id: demo_project
+created_at: '2026-06-12T09:13:29.395866+00:00'
+description: Demo project wrapping HydroLite, GEE, SWMM, and OpenHydroNet-ready workflows.
+author: HydroLite-Mac
+version: '0.1'
+paths:
+  cases_dir: cases
+  configs_dir: configs
+  data_dir: data
+  output_dir: output
+  reports_dir: reports
+  logs_dir: logs
+modules:
+  hydrolite: true
+  swmm: true
+  gee: true
+  openhydronet: true
+default_cases:
+- demo.yaml
+- demo_gee.yaml
+- demo_swmm.yaml
+gee:
+  project_env_var: GEE_PROJECT
+notes:
+- Project cases reference root demo inputs via relative paths.
+- data_raw is never copied into the project package.
+- OpenHydroNet external repositories and model weights are excluded.

@@ -16,6 +16,15 @@ from hydrolite.gee.auth import get_gee_status
 from hydrolite.gee.basin import get_boundary_bbox
 from hydrolite.gee.datasets import list_supported_datasets
 from hydrolite.openhydronet.runner import detect_openhydronet_environment
+from hydrolite.project import (
+    compare_project_outputs,
+    export_project_package,
+    list_project_cases,
+    project_info,
+    run_project_batch,
+    run_project_case,
+    validate_project,
+)
 from hydrolite.runner import run_case
 from hydrolite.validate import validate_target
 
@@ -23,6 +32,7 @@ from hydrolite.validate import validate_target
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CASES_DIR = PROJECT_ROOT / "cases"
 OUTPUT_ROOT = PROJECT_ROOT / "output"
+PROJECTS_ROOT = PROJECT_ROOT / "projects"
 
 
 def is_streamlit_cloud() -> bool:
@@ -46,6 +56,13 @@ def swmm_python_status() -> tuple[bool, str]:
 def scan_case_files(cases_dir: str | Path = CASES_DIR) -> list[Path]:
     root = Path(cases_dir)
     return sorted([*root.glob("*.yaml"), *root.glob("*.yml")])
+
+
+def scan_project_dirs(projects_dir: str | Path = PROJECTS_ROOT) -> list[Path]:
+    root = Path(projects_dir)
+    if not root.exists():
+        return []
+    return sorted(path for path in root.iterdir() if path.is_dir() and (path / "project.yaml").exists())
 
 
 def output_dir_for_case(case_name: str) -> Path:
@@ -130,6 +147,20 @@ def read_validation_outputs(output_root: str | Path = OUTPUT_ROOT) -> dict[str, 
         path = root / name
         if path.exists():
             outputs[key] = path
+    return outputs
+
+
+def read_project_validation_outputs(project_dir: str | Path) -> dict[str, pd.DataFrame | Path]:
+    reports = Path(project_dir) / "reports"
+    workbook = reports / "project_validation.xlsx"
+    outputs: dict[str, pd.DataFrame | Path] = {}
+    if workbook.exists():
+        for sheet in ("project_checks", "case_overview", "case_checks", "case_errors", "case_warnings"):
+            outputs[sheet] = pd.read_excel(workbook, sheet_name=sheet)
+        outputs["project_validation_xlsx"] = workbook
+    report = reports / "project_validation_report.md"
+    if report.exists():
+        outputs["project_validation_report_md"] = report
     return outputs
 
 
@@ -540,6 +571,105 @@ def _show_comparison() -> None:
             _show_download(label, path, mime)
 
 
+def _show_project_workflow() -> None:
+    st.subheader("项目管理")
+    project_dirs = scan_project_dirs()
+    if not project_dirs:
+        st.info("未发现 `projects/` 下的项目。可在终端运行 `python -m hydrolite project create projects/demo_project`。")
+        return
+
+    selected_project = st.selectbox("选择项目", project_dirs, format_func=lambda path: path.name)
+    try:
+        info = project_info(selected_project)
+    except Exception as exc:
+        st.error(f"项目读取失败: {exc}")
+        return
+
+    project = info["project"]
+    st.write(f"project.yaml: `{selected_project / 'project.yaml'}`")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("project_id", str(project.get("project_id", "")))
+    c2.metric("version", str(project.get("version", "")))
+    c3.metric("cases", len(info.get("cases", [])))
+    st.write(str(project.get("description", "")))
+
+    modules = project.get("modules") or {}
+    if isinstance(modules, dict):
+        st.write("模块状态")
+        st.dataframe(pd.DataFrame([{"module": key, "enabled": value} for key, value in modules.items()]), use_container_width=True)
+
+    cases = [path.name for path in list_project_cases(selected_project)]
+    selected_case = st.selectbox("项目情景", cases) if cases else ""
+    cols = st.columns(5)
+    if cols[0].button("校验项目", use_container_width=True):
+        try:
+            result = validate_project(selected_project)
+            st.success(f"项目校验完成: `{result['xlsx']}`")
+        except Exception as exc:
+            st.error(f"项目校验失败: {exc}")
+    if cols[1].button("运行项目情景", use_container_width=True, disabled=not bool(selected_case)):
+        try:
+            outputs = run_project_case(selected_project, selected_case)
+            st.success(f"项目情景运行完成: `{outputs.output_dir}`")
+        except Exception as exc:
+            st.error(f"项目情景运行失败: {exc}")
+    if cols[2].button("批量运行项目", use_container_width=True):
+        try:
+            summary, rows, failed = run_project_batch(selected_project)
+            if failed:
+                st.warning(f"项目批量运行完成但有失败: {len(failed)}；汇总 `{summary}`")
+            else:
+                st.success(f"项目批量运行完成: {len(rows)} 个情景；汇总 `{summary}`")
+        except Exception as exc:
+            st.error(f"项目批量运行失败: {exc}")
+    if cols[3].button("项目对比", use_container_width=True):
+        try:
+            outputs = compare_project_outputs(selected_project)
+            st.success(f"项目对比完成: `{outputs.xlsx}`")
+        except Exception as exc:
+            st.error(f"项目对比失败: {exc}")
+    if cols[4].button("导出项目包", use_container_width=True):
+        try:
+            package = export_project_package(selected_project)
+            st.success(f"项目包已生成: `{package}`")
+        except Exception as exc:
+            st.error(f"项目包导出失败: {exc}")
+
+    validation_outputs = read_project_validation_outputs(selected_project)
+    for key, label in [
+        ("project_checks", "project_checks"),
+        ("case_overview", "case_overview"),
+        ("case_errors", "case_errors"),
+        ("case_warnings", "case_warnings"),
+    ]:
+        df = validation_outputs.get(key)
+        if isinstance(df, pd.DataFrame):
+            st.write(label)
+            st.dataframe(df, use_container_width=True)
+
+    project_output = selected_project / "output"
+    comparison = read_comparison_outputs(project_output)
+    overview = comparison.get("overview")
+    if isinstance(overview, pd.DataFrame):
+        st.write("项目情景对比 overview")
+        st.dataframe(overview, use_container_width=True)
+    summary_md = selected_project / "project_summary.md"
+    if summary_md.exists():
+        st.write("project_summary.md")
+        st.code(summary_md.read_text(encoding="utf-8"), language="markdown")
+
+    package = selected_project / "reports" / f"{project.get('project_id', selected_project.name)}_package.zip"
+    for path, label, mime in [
+        (validation_outputs.get("project_validation_xlsx"), "下载 project_validation.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        (validation_outputs.get("project_validation_report_md"), "下载 project_validation_report.md", "text/markdown"),
+        (comparison.get("scenario_comparison_xlsx"), "下载项目 scenario_comparison.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        (comparison.get("scenario_comparison_csv"), "下载项目 scenario_comparison.csv", "text/csv"),
+        (package, "下载项目包 zip", "application/zip"),
+    ]:
+        if isinstance(path, Path):
+            _show_download(label, path, mime)
+
+
 def _run_script(script: Path) -> tuple[bool, str]:
     return _run_command([sys.executable, str(script)])
 
@@ -820,6 +950,7 @@ def main() -> None:
     _show_validation_summary()
     _show_batch_summary()
     _show_comparison()
+    _show_project_workflow()
     _show_extension_panels()
 
 

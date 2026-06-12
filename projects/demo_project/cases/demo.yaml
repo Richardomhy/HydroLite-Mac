@@ -1,0 +1,10 @@
+name: demo
+model:
+  time_step_hours: 1.0
+inputs:
+  directory: ../../data_demo
+  rainfall: rainfall.csv
+  subcatchments: subcatchments.csv
+  reaches: reaches.csv
+outputs:
+  directory: output/demo

@@ -1,0 +1,21 @@
+name: demo_swmm
+model:
+  time_step_hours: 1.0
+inputs:
+  directory: ../../data_demo
+  rainfall: rainfall.csv
+  subcatchments: subcatchments.csv
+  reaches: reaches.csv
+outputs:
+  directory: output/demo_swmm
+swmm:
+  enabled: true
+  inp_file: ../../data_raw/swmm/demo.inp
+  coupling:
+    enabled: true
+    source_flow_csv: output/demo_swmm/result_flow.csv
+    source_time_column: time
+    source_flow_column: outflow_cms
+    target_node: J1
+    inflow_name: HYDROLITE_INFLOW
+    flow_unit: CMS

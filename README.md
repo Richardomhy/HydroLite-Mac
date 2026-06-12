@@ -34,6 +34,22 @@ python -m hydrolite run cases/demo.yaml
 python -m hydrolite batch cases/
 ```
 
+## Project Workflow
+
+HydroLite can also organize a modeling job as a project folder. A project wraps cases, configs, project-local outputs, reports, and export packaging while preserving the legacy `cases/`, `configs/`, `data_demo/`, and `output/` workflows.
+
+```bash
+python -m hydrolite project create projects/demo_project
+python -m hydrolite project info projects/demo_project
+python -m hydrolite project validate projects/demo_project
+python -m hydrolite project run projects/demo_project demo_gee.yaml
+python -m hydrolite project batch projects/demo_project
+python -m hydrolite project compare projects/demo_project
+python -m hydrolite project export projects/demo_project
+```
+
+Project exports are written to `projects/<project_id>/reports/<project_id>_package.zip`. The export excludes secrets, external repositories, virtual environments, raw external model weights, and generated zip files. See `docs/project_workflow.md`.
+
 ## Start Streamlit UI
 
 ```bash
