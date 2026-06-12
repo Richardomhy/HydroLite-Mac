@@ -10,6 +10,7 @@ from typing import Any
 
 import pandas as pd
 
+from hydrolite.openhydronet.adapter import prepare_openhydronet_inputs
 from hydrolite.openhydronet.config import load_openhydronet_config, validate_openhydronet_config
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -245,3 +246,7 @@ def run_openhydronet_smoke(config_path: str | Path) -> dict[str, Any]:
         "environment": environment,
         "message": message,
     }
+
+
+def run_openhydronet_prepare_inputs(config_path: str | Path) -> dict[str, Any]:
+    return prepare_openhydronet_inputs(config_path)

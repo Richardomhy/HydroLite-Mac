@@ -31,7 +31,22 @@
 - 不影响 HydroLite/SWMM 主流程。
 - 生成 `output/openhydronet/smoke_test_summary.xlsx` 和 `smoke_test_report.md`。
 
-## Phase C：GEE 数据输入
+## Phase C：OpenHydroNet input adapter
+
+目标：
+
+- 将 GEE-HydroLite 联动成果整理为 OpenHydroNet-ready input package。
+- 生成静态属性、气象强迫、HydroLite 模拟流量、metadata、manifest、质量检查和 Markdown 报告。
+- 不训练模型，不运行真实大规模推理。
+
+验收标准：
+
+- `python -m hydrolite openhydronet prepare-inputs configs/openhydronet.example.yaml` 可执行。
+- 输出 `output/openhydronet/inputs/` 下的标准输入包文件。
+- 质量检查能识别温度缺失、真实观测流量缺失等 warning。
+- 不影响 GEE/HydroLite/SWMM 主流程。
+
+## Phase D：GEE 数据输入增强
 
 目标：
 
@@ -45,7 +60,7 @@
 - 有账号时可生成安全的导出任务计划。
 - 不提交 secrets。
 
-## Phase D：本地流域适配
+## Phase E：本地流域适配
 
 目标：
 
@@ -58,7 +73,7 @@
 - 缺字段时有清晰错误。
 - 可复用已有 validation 工作流。
 
-## Phase E：与 HydroLite/SWMM 情景对比
+## Phase F：与 HydroLite/SWMM 情景对比
 
 目标：
 

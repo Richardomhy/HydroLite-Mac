@@ -12,3 +12,13 @@ output:
 forecast:
   horizon_days: 7
   ensemble_members: 1
+input_adapter:
+  enabled: true
+  basin_id: GEE_BASIN_1
+  gauge_id: DEMO_GAUGE_1
+  gee_basin_summary: output/gee/hydrolite_inputs/gee_basin_summary.xlsx
+  gee_rainfall_csv: output/gee/hydrolite_inputs/gee_chirps_rainfall.csv
+  gee_parameter_suggestions: output/gee/hydrolite_inputs/gee_parameter_suggestions.yaml
+  hydrolite_result_flow: output/demo_gee/result_flow.csv
+  basin_boundary: data_demo/gee/demo_basin.geojson
+  output_folder: output/openhydronet/inputs

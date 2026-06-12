@@ -27,9 +27,27 @@ def validate_openhydronet_config(config: dict[str, Any]) -> dict[str, Any]:
         "forecast",
     ]
     missing = [key for key in required if key not in config]
+    adapter = config.get("input_adapter") or {}
+    adapter_missing: list[str] = []
+    if adapter.get("enabled", False):
+        adapter_required = [
+            "basin_id",
+            "gauge_id",
+            "gee_basin_summary",
+            "gee_rainfall_csv",
+            "gee_parameter_suggestions",
+            "hydrolite_result_flow",
+            "output_folder",
+        ]
+        adapter_missing = [key for key in adapter_required if not adapter.get(key)]
     status = "failed" if missing else "passed"
+    if adapter_missing:
+        status = "failed"
     return {
         "status": status,
         "missing": missing,
-        "message": "Configuration is structurally valid." if not missing else f"Missing keys: {missing}",
+        "adapter_missing": adapter_missing,
+        "message": "Configuration is structurally valid."
+        if not missing and not adapter_missing
+        else f"Missing keys: {missing}; missing input_adapter keys: {adapter_missing}",
     }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -160,12 +161,22 @@ def get_gee_panel_payload() -> dict[str, object]:
 
 
 def get_openhydronet_panel_payload() -> dict[str, object]:
+    inputs = OUTPUT_ROOT / "openhydronet" / "inputs"
     return {
         "environment": detect_openhydronet_environment(),
         "config_text": read_text_if_exists(PROJECT_ROOT / "configs" / "openhydronet.example.yaml"),
         "diagnosis_text": read_text_if_exists(OUTPUT_ROOT / "openhydronet_diagnosis.txt"),
         "smoke_summary": OUTPUT_ROOT / "openhydronet" / "smoke_test_summary.xlsx",
         "smoke_report": OUTPUT_ROOT / "openhydronet" / "smoke_test_report.md",
+        "input_package": {
+            "static_attributes": inputs / "static_attributes.csv",
+            "meteorological_forcing": inputs / "meteorological_forcing.csv",
+            "hydrolite_streamflow": inputs / "hydrolite_streamflow.csv",
+            "basin_metadata": inputs / "basin_metadata.json",
+            "input_manifest": inputs / "input_manifest.json",
+            "input_quality_report": inputs / "input_quality_report.xlsx",
+            "openhydronet_input_report": inputs / "openhydronet_input_report.md",
+        },
         "stage": "environment diagnosis / smoke test only",
     }
 
@@ -584,6 +595,14 @@ def _show_openhydronet_panel() -> None:
             st.success(output or "OpenHydroNet smoke test 完成")
         else:
             st.error(output or "OpenHydroNet smoke test 失败")
+    if st.button("生成 OpenHydroNet 输入包", use_container_width=True):
+        ok, output = _run_command(
+            [sys.executable, "-m", "hydrolite", "openhydronet", "prepare-inputs", "configs/openhydronet.example.yaml"]
+        )
+        if ok:
+            st.success(output or "OpenHydroNet 输入包生成完成")
+        else:
+            st.error(output or "OpenHydroNet 输入包生成失败")
     diagnosis = read_text_if_exists(OUTPUT_ROOT / "openhydronet_diagnosis.txt")
     if diagnosis:
         st.write("openhydronet_diagnosis.txt")
@@ -598,6 +617,45 @@ def _show_openhydronet_panel() -> None:
         st.write("smoke_test_report.md")
         st.code(report.read_text(encoding="utf-8"), language="markdown")
         _show_download("下载 smoke_test_report.md", report, "text/markdown")
+    st.divider()
+    st.write("OpenHydroNet-ready input package")
+    st.info("当前为 OpenHydroNet-ready input package，不代表已经完成真实 AI 模型推理或训练。")
+    package = payload["input_package"]
+    manifest = Path(package["input_manifest"])
+    if manifest.exists():
+        st.write("input_manifest.json")
+        st.json(json.loads(manifest.read_text(encoding="utf-8")))
+        _show_download("下载 input_manifest.json", manifest, "application/json")
+    for key, label in [
+        ("static_attributes", "static_attributes.csv"),
+        ("meteorological_forcing", "meteorological_forcing.csv"),
+        ("hydrolite_streamflow", "hydrolite_streamflow.csv"),
+    ]:
+        path = Path(package[key])
+        if path.exists():
+            st.write(label)
+            st.dataframe(pd.read_csv(path).head(200), use_container_width=True)
+            _show_download(f"下载 {label}", path, "text/csv")
+    metadata = Path(package["basin_metadata"])
+    if metadata.exists():
+        st.write("basin_metadata.json")
+        st.json(json.loads(metadata.read_text(encoding="utf-8")))
+        _show_download("下载 basin_metadata.json", metadata, "application/json")
+    quality = Path(package["input_quality_report"])
+    if quality.exists():
+        st.write("input_quality_report.xlsx")
+        for sheet in ("overview", "warnings"):
+            st.dataframe(pd.read_excel(quality, sheet_name=sheet), use_container_width=True)
+        _show_download(
+            "下载 input_quality_report.xlsx",
+            quality,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    input_report = Path(package["openhydronet_input_report"])
+    if input_report.exists():
+        st.write("openhydronet_input_report.md")
+        st.code(input_report.read_text(encoding="utf-8"), language="markdown")
+        _show_download("下载 openhydronet_input_report.md", input_report, "text/markdown")
 
 
 def _show_extension_panels() -> None:

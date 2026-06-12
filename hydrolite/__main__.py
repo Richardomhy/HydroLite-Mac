@@ -13,7 +13,7 @@ from hydrolite.gee.export import (
 )
 from hydrolite.gee.diagnostics import build_gee_diagnosis
 from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
-from hydrolite.openhydronet.runner import run_openhydronet_smoke
+from hydrolite.openhydronet.runner import run_openhydronet_prepare_inputs, run_openhydronet_smoke
 from hydrolite.runner import run_case
 from hydrolite.validate import validate_target
 
@@ -49,6 +49,10 @@ def build_parser() -> argparse.ArgumentParser:
     openhydronet_subparsers.add_parser("diagnose", help="Diagnose OpenHydroNet external repository and environment.")
     openhydronet_smoke = openhydronet_subparsers.add_parser("smoke", help="Run OpenHydroNet smoke test only.")
     openhydronet_smoke.add_argument("config", help="Path to OpenHydroNet YAML config.")
+    openhydronet_prepare = openhydronet_subparsers.add_parser(
+        "prepare-inputs", help="Prepare OpenHydroNet-ready input package."
+    )
+    openhydronet_prepare.add_argument("config", help="Path to OpenHydroNet YAML config.")
 
     return parser
 
@@ -127,6 +131,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"OpenHydroNet smoke status: {result['status']}")
             print(f"Summary written to: {result['summary_path']}")
             print(f"Report written to: {result['report_path']}")
+            return 0
+        if args.openhydronet_command == "prepare-inputs":
+            result = run_openhydronet_prepare_inputs(args.config)
+            print(f"OpenHydroNet input package status: {result['status']}")
+            print(f"Inputs written to: {result['output_dir']}")
             return 0
     return 2
 
