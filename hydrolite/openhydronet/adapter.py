@@ -126,14 +126,43 @@ def _meteorological_forcing(adapter: dict[str, Any]) -> pd.DataFrame:
     rain_col = "rain_mm" if "rain_mm" in rainfall.columns else "rainfall" if "rainfall" in rainfall.columns else ""
     if not rain_col:
         raise ValueError(f"Could not identify rainfall column in {rainfall_path}")
-    return pd.DataFrame(
+    met = pd.DataFrame(
         {
             "datetime": pd.to_datetime(rainfall[time_col], errors="coerce").dt.strftime("%Y-%m-%d %H:%M:%S"),
             "basin_id": adapter["basin_id"],
             "precipitation_mm": pd.to_numeric(rainfall[rain_col], errors="coerce"),
-            "temperature_mean_c": pd.NA,
         }
     )
+    temperature_path = _resolve_path(adapter.get("gee_temperature_csv") or "output/gee/hydrolite_inputs/gee_temperature_daily.csv")
+    if not temperature_path.exists():
+        met["temperature_mean_c"] = pd.NA
+        met["temperature_source"] = ""
+        met["temperature_status"] = "missing_temperature_file"
+        return met
+    temperature = pd.read_csv(temperature_path)
+    temp_time_col = _detect_time_column(temperature)
+    temp_values = (
+        pd.to_numeric(temperature["temperature_mean_c"], errors="coerce")
+        if "temperature_mean_c" in temperature.columns
+        else pd.Series([pd.NA] * len(temperature))
+    )
+    temp_source = temperature["temperature_source"] if "temperature_source" in temperature.columns else pd.Series([""] * len(temperature))
+    temp_status = temperature["status"] if "status" in temperature.columns else pd.Series([""] * len(temperature))
+    temp_basin = temperature["basin_id"] if "basin_id" in temperature.columns else pd.Series([adapter["basin_id"]] * len(temperature))
+    temp = pd.DataFrame(
+        {
+            "datetime": pd.to_datetime(temperature[temp_time_col], errors="coerce").dt.strftime("%Y-%m-%d %H:%M:%S"),
+            "basin_id": temp_basin,
+            "temperature_mean_c": temp_values,
+            "temperature_source": temp_source,
+            "temperature_status": temp_status,
+        }
+    )
+    temp["basin_id"] = temp["basin_id"].fillna(adapter["basin_id"]).astype(str)
+    merged = met.merge(temp, on=["datetime", "basin_id"], how="left")
+    if "temperature_mean_c" not in merged.columns:
+        merged["temperature_mean_c"] = pd.NA
+    return merged
 
 
 def _hydrolite_streamflow(adapter: dict[str, Any]) -> tuple[pd.DataFrame, str]:
@@ -177,6 +206,7 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
     source_files = {
         "gee_basin_summary": str(_resolve_path(adapter["gee_basin_summary"])),
         "gee_rainfall_csv": str(_resolve_path(adapter["gee_rainfall_csv"])),
+        "gee_temperature_csv": str(_resolve_path(adapter.get("gee_temperature_csv") or "output/gee/hydrolite_inputs/gee_temperature_daily.csv")),
         "gee_parameter_suggestions": str(_resolve_path(adapter["gee_parameter_suggestions"])),
         "hydrolite_result_flow": str(_resolve_path(adapter["hydrolite_result_flow"])),
         "basin_boundary": str(_resolve_path(adapter.get("basin_boundary", ""))) if adapter.get("basin_boundary") else "",
@@ -187,6 +217,12 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
     static = _static_attributes(adapter, basin_row, suggestions)
     met = _meteorological_forcing(adapter)
     streamflow, detected_flow_col = _hydrolite_streamflow(adapter)
+    temperature_values = pd.to_numeric(met.get("temperature_mean_c"), errors="coerce")
+    temperature_coverage = float(temperature_values.notna().mean()) if len(met) else 0.0
+    temperature_source = ""
+    if "temperature_source" in met.columns:
+        sources = [str(value) for value in met["temperature_source"].dropna().unique() if str(value)]
+        temperature_source = sources[0] if sources else ""
 
     static_path = output_dir / "static_attributes.csv"
     met_path = output_dir / "meteorological_forcing.csv"
@@ -215,7 +251,9 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
         "data_sources": source_files,
         "notes": [
             "This package is OpenHydroNet-ready input scaffolding, not calibrated AI training data.",
-            "temperature_mean_c is currently NA because temperature data is not connected.",
+            "temperature_mean_c is sourced from GEE ERA5-Land daily temperature when available.",
+            "temperature_mean_c is Celsius; GEE ERA5-Land Kelvin values are converted before packaging.",
+            f"temperature coverage: {temperature_coverage:.1%}",
             f"HydroLite streamflow column detected from result_flow.csv: {detected_flow_col}",
         ],
     }
@@ -235,6 +273,14 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
         "generated_at": generated_at,
         "files": files,
         "source_files": source_files,
+        "temperature": {
+            "source": temperature_source,
+            "unit": "Celsius",
+            "non_null_ratio": temperature_coverage,
+            "min": None if temperature_values.dropna().empty else float(temperature_values.min()),
+            "mean": None if temperature_values.dropna().empty else float(temperature_values.mean()),
+            "max": None if temperature_values.dropna().empty else float(temperature_values.max()),
+        },
         "row_counts": {
             "static_attributes": int(len(static)),
             "meteorological_forcing": int(len(met)),
@@ -243,7 +289,7 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
         "warnings": warning_rows,
         "next_steps": [
             "Add observed streamflow for training/evaluation.",
-            "Add temperature and other meteorological forcings required by the target OpenHydroNet schema.",
+            "Add additional meteorological forcings required by the target OpenHydroNet schema.",
             "Validate the package against the real OpenHydroNet repository schema before training or inference.",
         ],
     }
@@ -261,20 +307,24 @@ def prepare_openhydronet_inputs(config_path: str | Path) -> dict[str, Any]:
                 "",
                 "## 数据来源",
                 *[f"- {key}: `{value}`" for key, value in source_files.items() if value],
+                f"- temperature source: `{temperature_source or 'unavailable'}`",
                 "",
                 "## 字段说明",
                 "- `static_attributes.csv`: 流域静态属性与 GEE 参数建议。",
-                "- `meteorological_forcing.csv`: CHIRPS 降雨；`temperature_mean_c` 暂未接入，当前为 NA。",
+                "- `meteorological_forcing.csv`: CHIRPS 降雨与 ERA5-Land 2 m 日均温度。",
                 "- `hydrolite_streamflow.csv`: HydroLite `demo_gee` 模拟出口流量。",
                 "",
                 "## 质量检查结果",
                 f"- warnings: {len(warning_rows)}",
                 *[f"- WARNING: {row['message']}" for row in warning_rows],
+                f"- temperature non-null ratio: `{temperature_coverage:.2%}`",
+                "- temperature unit: Celsius; ERA5-Land Kelvin values are converted by subtracting 273.15.",
                 "",
                 "## 已知限制",
                 "- 当前输入包不是正式 OpenHydroNet 训练数据。",
-                "- 缺少真实观测流量、温度和真实模型 schema 校验。",
+                "- 缺少真实观测流量和真实模型 schema 校验。",
                 f"- HydroLite 出口流量列自动识别为 `{detected_flow_col}`。",
+                "- temperature_mean_c 单位为摄氏度；GEE ERA5-Land Kelvin 原始值已转换为 Celsius。",
                 "",
                 "## 后续真实推理/训练所需补充数据",
                 "- 真实观测流量与质量控制标识。",

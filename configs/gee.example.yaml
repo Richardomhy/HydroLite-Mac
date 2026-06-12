@@ -11,6 +11,10 @@ datasets:
   precipitation:
     enabled: true
     gee_id: UCSB-CHG/CHIRPS/DAILY
+  temperature:
+    enabled: true
+    gee_id: ECMWF/ERA5_LAND/DAILY_AGGR
+    band: temperature_2m
   ndvi:
     enabled: true
     gee_id: MODIS/061/MOD13Q1

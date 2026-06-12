@@ -123,6 +123,10 @@ def test_openhydronet_prepare_inputs_outputs_are_complete():
         "source",
     }.issubset(pd.read_csv(static).columns)
     assert {"datetime", "basin_id", "precipitation_mm", "temperature_mean_c"}.issubset(pd.read_csv(met).columns)
+    met_df = pd.read_csv(met)
+    temp = pd.to_numeric(met_df["temperature_mean_c"], errors="coerce")
+    if temp.notna().any():
+        assert temp.between(-80, 60).all()
     assert {"datetime", "basin_id", "streamflow_m3s", "source_case"}.issubset(pd.read_csv(flow).columns)
     meta = json.loads(metadata.read_text(encoding="utf-8"))
     assert {"basin_id", "gauge_id", "basin_boundary", "gee_project", "generated_at", "data_sources", "notes"}.issubset(meta)
@@ -137,7 +141,11 @@ def test_openhydronet_prepare_inputs_outputs_are_complete():
         "warnings",
     }.issubset(set(workbook.sheet_names))
     warnings = pd.read_excel(quality, sheet_name="warnings")
-    assert "temperature_mean_c_all_na" in set(warnings["warning_name"])
+    warning_names = set(warnings["warning_name"]) if "warning_name" in warnings.columns else set()
+    if temp.notna().any():
+        assert "temperature_mean_c_all_na" not in warning_names
+    else:
+        assert "temperature_mean_c_all_na" in warning_names
     assert "observed_streamflow_missing" in set(warnings["warning_name"])
     assert _snapshot_data_raw() == before
 
@@ -159,10 +167,12 @@ def test_openhydronet_gitignore_guards_large_external_assets():
 
 
 def test_streamlit_openhydronet_panel_helpers_import():
-    from hydrolite.ui.app import get_openhydronet_panel_payload
+    from hydrolite.ui.app import get_openhydronet_panel_payload, read_openhydronet_temperature_stats
 
     payload = get_openhydronet_panel_payload()
     assert payload["stage"] == "environment diagnosis / smoke test only"
     assert "environment" in payload
     assert "smoke_summary" in payload
     assert "input_package" in payload
+    stats = read_openhydronet_temperature_stats()
+    assert {"status", "non_null_ratio", "min", "mean", "max"}.issubset(stats)

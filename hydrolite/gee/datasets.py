@@ -31,6 +31,15 @@ _DATASETS: dict[str, dict[str, Any]] = {
         "bands": ["precipitation"],
         "notes": "CHIRPS daily rainfall; used for recent 30-day basin precipitation summaries.",
     },
+    "temperature": {
+        "dataset_name": "temperature",
+        "gee_id": "ECMWF/ERA5_LAND/DAILY_AGGR",
+        "data_type": "ImageCollection",
+        "spatial_resolution": "0.1 degree",
+        "temporal_resolution": "daily",
+        "bands": ["temperature_2m"],
+        "notes": "ERA5-Land daily 2 m air temperature. Values are Kelvin in GEE and are converted to Celsius.",
+    },
     "landcover": {
         "dataset_name": "landcover",
         "gee_id": "ESA/WorldCover/v200",
@@ -64,6 +73,9 @@ def get_dataset_metadata(dataset_name: str) -> dict[str, Any]:
         "dem": "DEM",
         "precip": "precipitation",
         "rainfall": "precipitation",
+        "temp": "temperature",
+        "era5": "temperature",
+        "era5_land": "temperature",
     }
     key = aliases.get(normalized, dataset_name)
     for name, metadata in _DATASETS.items():

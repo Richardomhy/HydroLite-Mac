@@ -103,9 +103,14 @@ openhydronet_input_report.md
 - `gee_basin_summary.xlsx` -> `static_attributes.csv` 中的面积、DEM、水体发生率和 GEE project。
 - `gee_parameter_suggestions.yaml` -> `static_attributes.csv` 中的 CN、lag、Muskingum K/X 建议值。
 - `gee_chirps_rainfall.csv` -> `meteorological_forcing.csv` 中的 `precipitation_mm`。
+- `gee_temperature_daily.csv` -> `meteorological_forcing.csv` 中的 `temperature_mean_c`。
 - `output/demo_gee/result_flow.csv` -> `hydrolite_streamflow.csv` 中的 `streamflow_m3s`。
 
 HydroLite 的出口流量列会自动识别，当前 demo_gee 通常识别为 `outflow_cms`。
+
+`temperature_mean_c` 优先来自 GEE ERA5-Land Daily Aggregated `ECMWF/ERA5_LAND/DAILY_AGGR` 的 `temperature_2m`。ERA5-Land 原始温度为 Kelvin，导出时转换为 Celsius。
+
+基础 forcing 当前由 CHIRPS precipitation 与 ERA5-Land temperature 组成，仍不等价于完整 OpenHydroNet 训练 forcing。
 
 ### 质量检查
 
@@ -117,14 +122,14 @@ HydroLite 的出口流量列会自动识别，当前 demo_gee 通常识别为 `o
 - `streamflow_checks`
 - `warnings`
 
-检查内容包括字段完整性、负降雨、负流量、时间字段可解析、降雨和流量时间范围是否重叠、`basin_id` 是否一致、温度字段是否全为空，以及是否缺少真实观测流量。
+检查内容包括字段完整性、负降雨、负流量、时间字段可解析、降雨和流量时间范围是否重叠、`basin_id` 是否一致、温度字段是否全为空、温度数值范围、温度覆盖率，以及是否缺少真实观测流量。
 
 ### 当前限制
 
 当前输入包是 OpenHydroNet-ready 的数据整理成果，不是正式训练数据，也不代表真实 AI 模型推理已经完成。当前仍缺少：
 
 - 真实观测流量；
-- 温度和更多气象强迫变量；
+- 更多气象强迫变量；
 - OpenHydroNet 官方 schema 校验；
 - 模型 checkpoint 和归一化参数；
 - 训练/验证数据版本管理。
@@ -132,6 +137,8 @@ HydroLite 的出口流量列会自动识别，当前 demo_gee 通常识别为 `o
 ### 后续真实 OpenHydroNet 推理
 
 后续接入真实推理前，应先确认外部仓库版本、输入 schema、checkpoint、归一化参数和推理入口。真实推理应继续在隔离环境中运行，不应污染 HydroLite 主环境。
+
+即使 temperature forcing 已接入，只要缺少真实观测流量、模型 checkpoint、归一化参数和官方 schema 校验，当前输入包仍不能作为正式训练数据。
 
 ## 输入数据需求
 

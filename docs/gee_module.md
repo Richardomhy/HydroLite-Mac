@@ -103,6 +103,7 @@ output/gee/hydrolite_inputs/
 gee_basin_summary.xlsx
 gee_basin_summary.csv
 gee_chirps_rainfall.csv
+gee_temperature_daily.csv
 gee_parameter_suggestions.xlsx
 gee_parameter_suggestions.yaml
 gee_to_hydrolite_report.md
@@ -116,6 +117,21 @@ gee_to_hydrolite_report.md
 - `rain_mm`
 
 其中 `subbasin_id` 当前使用 `GEE_BASIN_1`。
+
+`gee_temperature_daily.csv` 用于 OpenHydroNet meteorological forcing，包含：
+
+- `datetime`
+- `basin_id`
+- `temperature_mean_c`
+- `temperature_source`
+
+温度数据优先来自 GEE `ECMWF/ERA5_LAND/DAILY_AGGR` 的 `temperature_2m`。ERA5-Land 在 GEE 中的温度单位为 Kelvin，HydroLite 在导出时转换为摄氏度：
+
+```text
+temperature_mean_c = temperature_2m_kelvin - 273.15
+```
+
+如果 GEE 温度数据不可访问，仍会生成字段完整的 `gee_temperature_daily.csv`，但 `temperature_mean_c` 可能为空，并在报告中记录状态。
 
 ## 参数建议说明
 

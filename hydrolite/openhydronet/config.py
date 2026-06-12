@@ -35,6 +35,7 @@ def validate_openhydronet_config(config: dict[str, Any]) -> dict[str, Any]:
             "gauge_id",
             "gee_basin_summary",
             "gee_rainfall_csv",
+            "gee_temperature_csv",
             "gee_parameter_suggestions",
             "hydrolite_result_flow",
             "output_folder",

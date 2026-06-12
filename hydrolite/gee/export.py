@@ -326,6 +326,106 @@ def export_chirps_timeseries(config_path: str | Path) -> pd.DataFrame:
         )
 
 
+def export_temperature_timeseries(config_path: str | Path) -> pd.DataFrame:
+    config = _load_config(config_path)
+    init = initialize_gee(project=config.get("project") or None)
+    columns = ["datetime", "basin_id", "temperature_mean_c", "temperature_source", "status", "error_message"]
+    metadata = get_dataset_metadata("temperature")
+    source = metadata["gee_id"]
+    if init["status"] != "available":
+        return pd.DataFrame(
+            [
+                {
+                    "datetime": "",
+                    "basin_id": "GEE_BASIN_1",
+                    "temperature_mean_c": pd.NA,
+                    "temperature_source": source,
+                    "status": init["status"],
+                    "error_message": init.get("error_message", ""),
+                }
+            ],
+            columns=columns,
+        )
+    try:
+        import ee
+
+        start, end = _date_range(config)
+        geometry = _geometry_from_geojson(_basin_boundary(config))
+        dataset_config = (config.get("datasets") or {}).get("temperature") or {}
+        gee_id = dataset_config.get("gee_id") or source
+        band = dataset_config.get("band") or metadata["bands"][0]
+        collection = ee.ImageCollection(gee_id).filterDate(start, end).select(band)
+        count = int(collection.size().getInfo())
+        if count == 0:
+            return pd.DataFrame(
+                [
+                    {
+                        "datetime": "",
+                        "basin_id": "GEE_BASIN_1",
+                        "temperature_mean_c": pd.NA,
+                        "temperature_source": gee_id,
+                        "status": "failed",
+                        "error_message": f"No ERA5-Land images found for {start} to {end}.",
+                    }
+                ],
+                columns=columns,
+            )
+
+        def summarize_image(image):
+            value_k = image.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=geometry,
+                scale=11_000,
+                maxPixels=1_000_000,
+            ).get(band)
+            return ee.Feature(None, {"datetime": image.date().format("YYYY-MM-dd"), "temperature_mean_k": value_k})
+
+        features = collection.map(summarize_image).getInfo().get("features", [])
+        rows = []
+        for feature in features:
+            props = feature.get("properties", {})
+            value_k = props.get("temperature_mean_k")
+            if value_k is None:
+                continue
+            dt = str(props.get("datetime"))
+            rows.append(
+                {
+                    "datetime": dt,
+                    "basin_id": "GEE_BASIN_1",
+                    "temperature_mean_c": float(value_k) - 273.15,
+                    "temperature_source": gee_id,
+                    "status": "available",
+                    "error_message": "",
+                }
+            )
+        if not rows:
+            rows.append(
+                {
+                    "datetime": "",
+                    "basin_id": "GEE_BASIN_1",
+                    "temperature_mean_c": pd.NA,
+                    "temperature_source": gee_id,
+                    "status": "failed",
+                    "error_message": "ERA5-Land returned no usable temperature values for this basin.",
+                }
+            )
+        return pd.DataFrame(rows, columns=columns)
+    except Exception as exc:
+        return pd.DataFrame(
+            [
+                {
+                    "datetime": "",
+                    "basin_id": "GEE_BASIN_1",
+                    "temperature_mean_c": pd.NA,
+                    "temperature_source": source,
+                    "status": "failed",
+                    "error_message": str(exc),
+                }
+            ],
+            columns=columns,
+        )
+
+
 def export_dem_summary(config_path: str | Path) -> pd.DataFrame:
     return pd.DataFrame(summarize_dem_over_basin(config_path))
 
@@ -408,6 +508,32 @@ def generate_hydrolite_rainfall_csv(config_path: str | Path) -> pd.DataFrame:
     return export_chirps_timeseries(config_path)
 
 
+def generate_gee_temperature_csv(config_path: str | Path) -> pd.DataFrame:
+    return export_temperature_timeseries(config_path)
+
+
+def _has_usable_numeric_rows(frame: pd.DataFrame, value_column: str) -> bool:
+    if value_column not in frame.columns:
+        return False
+    if "status" in frame.columns and not (frame["status"] == "available").any():
+        return False
+    return pd.to_numeric(frame[value_column], errors="coerce").notna().any()
+
+
+def _write_or_preserve_timeseries(frame: pd.DataFrame, path: Path, value_column: str) -> pd.DataFrame:
+    if _has_usable_numeric_rows(frame, value_column) or not path.exists():
+        frame.to_csv(path, index=False)
+        return frame
+    try:
+        existing = pd.read_csv(path)
+        if _has_usable_numeric_rows(existing, value_column):
+            return existing
+    except Exception:
+        pass
+    frame.to_csv(path, index=False)
+    return frame
+
+
 def _write_demo_gee_files(output_dir: Path, rainfall_path: Path, suggestions: dict[str, Any]) -> dict[str, Path] | None:
     rainfall = pd.read_csv(rainfall_path)
     usable = rainfall[rainfall["status"] == "available"] if "status" in rainfall.columns else rainfall
@@ -468,12 +594,15 @@ def write_hydrolite_gee_outputs(config_path: str | Path) -> dict[str, Path]:
     basin_xlsx = root / "gee_basin_summary.xlsx"
     basin_csv = root / "gee_basin_summary.csv"
     rainfall_csv = root / "gee_chirps_rainfall.csv"
+    temperature_csv = root / "gee_temperature_daily.csv"
     suggestions_xlsx = root / "gee_parameter_suggestions.xlsx"
     suggestions_yaml = root / "gee_parameter_suggestions.yaml"
     report_md = root / "gee_to_hydrolite_report.md"
 
-    rainfall = generate_hydrolite_rainfall_csv(config_path)
-    rainfall.to_csv(rainfall_csv, index=False)
+    rainfall = _write_or_preserve_timeseries(generate_hydrolite_rainfall_csv(config_path), rainfall_csv, "rain_mm")
+    temperature = _write_or_preserve_timeseries(
+        generate_gee_temperature_csv(config_path), temperature_csv, "temperature_mean_c"
+    )
     basin_row, _metrics = _basin_summary_rows(config_path, rainfall)
     basin = pd.DataFrame([basin_row])
     basin.to_excel(basin_xlsx, index=False)
@@ -482,6 +611,7 @@ def write_hydrolite_gee_outputs(config_path: str | Path) -> dict[str, Path]:
     pd.DataFrame([suggestions]).to_excel(suggestions_xlsx, index=False)
     suggestions_yaml.write_text(yaml.safe_dump(suggestions, sort_keys=False, allow_unicode=True), encoding="utf-8")
     demo_files = _write_demo_gee_files(root, rainfall_csv, suggestions)
+    temperature_status_counts = temperature["status"].value_counts().to_dict() if "status" in temperature.columns else {}
     report_md.write_text(
         "\n".join(
             [
@@ -490,7 +620,12 @@ def write_hydrolite_gee_outputs(config_path: str | Path) -> dict[str, Path]:
                 f"Config: `{config_path}`",
                 f"Basin summary: `{basin_xlsx}`",
                 f"Rainfall CSV: `{rainfall_csv}`",
+                f"Temperature CSV: `{temperature_csv}`",
                 f"Parameter suggestions: `{suggestions_xlsx}`",
+                "",
+                "Temperature source: ERA5-Land daily 2 m air temperature when available.",
+                "Temperature units: GEE Kelvin values are converted to Celsius in `temperature_mean_c`.",
+                f"Temperature status counts: `{temperature_status_counts}`",
                 "",
                 "The suggested CN, lag time, and Muskingum parameters are transparent initial heuristics only.",
                 "They are not calibrated model parameters and should be reviewed before decision use.",
@@ -505,6 +640,7 @@ def write_hydrolite_gee_outputs(config_path: str | Path) -> dict[str, Path]:
         "gee_basin_summary_xlsx": basin_xlsx,
         "gee_basin_summary_csv": basin_csv,
         "gee_chirps_rainfall_csv": rainfall_csv,
+        "gee_temperature_daily_csv": temperature_csv,
         "gee_parameter_suggestions_xlsx": suggestions_xlsx,
         "gee_parameter_suggestions_yaml": suggestions_yaml,
         "gee_to_hydrolite_report_md": report_md,

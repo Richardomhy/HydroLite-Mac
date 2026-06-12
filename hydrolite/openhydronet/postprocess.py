@@ -84,6 +84,47 @@ def build_input_quality_report(
             ],
             ignore_index=True,
         )
+    if "temperature_mean_c" in meteorological_forcing.columns:
+        temperature = pd.to_numeric(meteorological_forcing["temperature_mean_c"], errors="coerce")
+        non_null = temperature.notna()
+        parse_ok = non_null.sum() > 0
+        in_range = bool(((temperature[non_null] >= -80) & (temperature[non_null] <= 60)).all()) if parse_ok else False
+        coverage = float(non_null.mean()) if len(temperature) else 0.0
+        met_checks = pd.concat(
+            [
+                met_checks,
+                pd.DataFrame(
+                    [
+                        {
+                            "dataset": "meteorological_forcing",
+                            "check_name": "temperature_numeric",
+                            "status": "passed" if parse_ok else "warning",
+                            "message": "temperature_mean_c has numeric values"
+                            if parse_ok
+                            else "temperature_mean_c has no numeric values",
+                            "severity": "info" if parse_ok else "warning",
+                        },
+                        {
+                            "dataset": "meteorological_forcing",
+                            "check_name": "temperature_reasonable_range_c",
+                            "status": "passed" if in_range else "warning",
+                            "message": "temperature_mean_c is within -80 to 60 Celsius"
+                            if in_range
+                            else "temperature_mean_c is missing or outside -80 to 60 Celsius",
+                            "severity": "info" if in_range else "warning",
+                        },
+                        {
+                            "dataset": "meteorological_forcing",
+                            "check_name": "temperature_coverage",
+                            "status": "passed" if coverage >= 0.8 else "warning",
+                            "message": f"temperature coverage is {coverage:.1%}",
+                            "severity": "info" if coverage >= 0.8 else "warning",
+                        },
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
     if "streamflow_m3s" in hydrolite_streamflow.columns:
         has_negative = (pd.to_numeric(hydrolite_streamflow["streamflow_m3s"], errors="coerce") < 0).any()
         flow_checks = pd.concat(
@@ -169,11 +210,13 @@ def build_input_quality_report(
         }
     )
 
-    if "temperature_mean_c" in meteorological_forcing.columns and meteorological_forcing["temperature_mean_c"].isna().all():
+    if "temperature_mean_c" in meteorological_forcing.columns and pd.to_numeric(
+        meteorological_forcing["temperature_mean_c"], errors="coerce"
+    ).isna().all():
         warnings.append(
             {
                 "warning_name": "temperature_mean_c_all_na",
-                "message": "temperature_mean_c is all NA because temperature data is not connected yet.",
+                "message": "temperature_mean_c is all NA because temperature data is unavailable or did not align by date.",
                 "severity": "warning",
             }
         )

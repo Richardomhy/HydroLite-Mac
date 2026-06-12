@@ -153,6 +153,7 @@ def get_gee_panel_payload() -> dict[str, object]:
             "gee_basin_summary_xlsx": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_basin_summary.xlsx",
             "gee_basin_summary_csv": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_basin_summary.csv",
             "gee_chirps_rainfall_csv": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_chirps_rainfall.csv",
+            "gee_temperature_daily_csv": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_temperature_daily.csv",
             "gee_parameter_suggestions_xlsx": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_parameter_suggestions.xlsx",
             "gee_parameter_suggestions_yaml": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_parameter_suggestions.yaml",
             "gee_to_hydrolite_report_md": OUTPUT_ROOT / "gee" / "hydrolite_inputs" / "gee_to_hydrolite_report.md",
@@ -178,6 +179,25 @@ def get_openhydronet_panel_payload() -> dict[str, object]:
             "openhydronet_input_report": inputs / "openhydronet_input_report.md",
         },
         "stage": "environment diagnosis / smoke test only",
+    }
+
+
+def read_openhydronet_temperature_stats(path: str | Path = OUTPUT_ROOT / "openhydronet" / "inputs" / "meteorological_forcing.csv") -> dict[str, object]:
+    met_path = Path(path)
+    if not met_path.exists():
+        return {"status": "missing", "non_null_ratio": 0.0, "min": None, "mean": None, "max": None}
+    df = pd.read_csv(met_path)
+    if "temperature_mean_c" not in df.columns:
+        return {"status": "missing_column", "non_null_ratio": 0.0, "min": None, "mean": None, "max": None}
+    values = pd.to_numeric(df["temperature_mean_c"], errors="coerce")
+    if values.notna().sum() == 0:
+        return {"status": "all_na", "non_null_ratio": 0.0, "min": None, "mean": None, "max": None}
+    return {
+        "status": "available",
+        "non_null_ratio": float(values.notna().mean()),
+        "min": float(values.min()),
+        "mean": float(values.mean()),
+        "max": float(values.max()),
     }
 
 
@@ -554,6 +574,9 @@ def _show_gee_data_center() -> None:
                 elif path.suffix == ".csv":
                     df = pd.read_csv(path)
                     st.dataframe(df.head(200), use_container_width=True)
+                    if path.name == "gee_temperature_daily.csv":
+                        status_counts = df["status"].value_counts().to_dict() if "status" in df.columns else {}
+                        st.write(f"温度数据状态: `{status_counts}`")
                     _show_download(f"下载 {path.name}", path, "text/csv")
                 elif path.suffix in {".yaml", ".yml"}:
                     st.code(path.read_text(encoding="utf-8"), language="yaml")
@@ -634,7 +657,22 @@ def _show_openhydronet_panel() -> None:
         path = Path(package[key])
         if path.exists():
             st.write(label)
-            st.dataframe(pd.read_csv(path).head(200), use_container_width=True)
+            df = pd.read_csv(path)
+            st.dataframe(df.head(200), use_container_width=True)
+            if key == "meteorological_forcing":
+                stats = read_openhydronet_temperature_stats(path)
+                cols = st.columns(4)
+                cols[0].metric("温度非空比例", f"{stats['non_null_ratio']:.1%}")
+                cols[1].metric("温度最小值", "" if stats["min"] is None else f"{stats['min']:.2f} C")
+                cols[2].metric("温度均值", "" if stats["mean"] is None else f"{stats['mean']:.2f} C")
+                cols[3].metric("温度最大值", "" if stats["max"] is None else f"{stats['max']:.2f} C")
+                if stats["status"] == "all_na":
+                    st.warning("temperature_mean_c 仍为全 NA，请检查 GEE 温度数据访问或日期对齐。")
+                if stats["status"] == "available" and "datetime" in df.columns:
+                    chart_df = df[["datetime", "temperature_mean_c"]].copy()
+                    chart_df["datetime"] = pd.to_datetime(chart_df["datetime"], errors="coerce")
+                    chart_df["temperature_mean_c"] = pd.to_numeric(chart_df["temperature_mean_c"], errors="coerce")
+                    st.line_chart(chart_df.dropna().set_index("datetime"))
             _show_download(f"下载 {label}", path, "text/csv")
     metadata = Path(package["basin_metadata"])
     if metadata.exists():

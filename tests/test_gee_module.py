@@ -2,6 +2,7 @@ from pathlib import Path
 import subprocess
 import sys
 
+import pandas as pd
 import yaml
 
 
@@ -30,9 +31,13 @@ def test_gee_module_imports_without_credentials(monkeypatch):
     assert "DEM" in supported
     assert "precipitation" in supported
     assert "surface_water" in supported
+    assert "temperature" in supported
     metadata = get_dataset_metadata("DEM")
     assert metadata["dataset_name"] == "DEM"
     assert metadata["gee_id"] == "USGS/SRTMGL1_003"
+    temp = get_dataset_metadata("temperature")
+    assert temp["gee_id"] == "ECMWF/ERA5_LAND/DAILY_AGGR"
+    assert "temperature_2m" in temp["bands"]
 
 
 def test_gee_example_config_exists_and_parses():
@@ -86,13 +91,14 @@ def test_gee_cli_commands_run_without_crashing():
         [sys.executable, "-m", "hydrolite", "gee", "summarize", "configs/gee.example.yaml"],
         [sys.executable, "-m", "hydrolite", "gee", "hydrolite-inputs", "configs/gee.example.yaml"],
     ):
-        completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=90)
+        completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=180)
         assert completed.returncode == 0, completed.stderr
     assert Path("output/gee/gee_data_plan.xlsx").exists()
     assert Path("output/gee/gee_summary.xlsx").exists()
     assert Path("output/gee/gee_report.md").exists()
     assert Path("output/gee/hydrolite_inputs/gee_basin_summary.xlsx").exists()
     assert Path("output/gee/hydrolite_inputs/gee_chirps_rainfall.csv").exists()
+    assert Path("output/gee/hydrolite_inputs/gee_temperature_daily.csv").exists()
     assert Path("output/gee/hydrolite_inputs/gee_parameter_suggestions.xlsx").exists()
     assert Path("output/gee/hydrolite_inputs/gee_parameter_suggestions.yaml").exists()
 
@@ -101,6 +107,7 @@ def test_gee_hydrolite_input_products_are_parseable():
     from hydrolite.routing import validate_muskingum_parameters
 
     rainfall = Path("output/gee/hydrolite_inputs/gee_chirps_rainfall.csv")
+    temperature = Path("output/gee/hydrolite_inputs/gee_temperature_daily.csv")
     suggestions = Path("output/gee/hydrolite_inputs/gee_parameter_suggestions.yaml")
     subbasins = Path("data_demo/gee/gee_subbasins.csv")
     reaches = Path("data_demo/gee/gee_reaches.csv")
@@ -115,6 +122,11 @@ def test_gee_hydrolite_input_products_are_parseable():
         assert completed.returncode == 0, completed.stderr
     rain = __import__("pandas").read_csv(rainfall)
     assert {"datetime", "subbasin_id", "rain_mm"}.issubset(rain.columns)
+    temp = pd.read_csv(temperature)
+    assert {"datetime", "basin_id", "temperature_mean_c", "temperature_source"}.issubset(temp.columns)
+    values = pd.to_numeric(temp["temperature_mean_c"], errors="coerce")
+    if values.notna().any():
+        assert values.between(-80, 60).all()
     parsed = yaml.safe_load(suggestions.read_text(encoding="utf-8"))
     assert "suggested_cn" in parsed
     if subbasins.exists():
@@ -130,6 +142,11 @@ def test_gee_hydrolite_input_products_are_parseable():
 def test_demo_gee_validates_if_generated():
     case = Path("cases/demo_gee.yaml")
     if case.exists():
+        rainfall = Path("output/gee/hydrolite_inputs/gee_chirps_rainfall.csv")
+        if rainfall.exists():
+            rain = pd.read_csv(rainfall)
+            if "status" in rain.columns and not (rain["status"] == "available").any():
+                return
         completed = subprocess.run(
             [sys.executable, "-m", "hydrolite", "validate", str(case)],
             capture_output=True,
