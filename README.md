@@ -76,6 +76,28 @@ python scripts/diagnose_streamlit_local.py
 
 The diagnosis is written to `output/streamlit_local_diagnosis.txt`.
 
+## HydroLite Studio UI
+
+The Streamlit interface is organized as **HydroLite Studio**, a project-centered workbench. It includes:
+
+- 项目首页
+- 数据与校验
+- 情景运行
+- GEE 数据中心
+- SWMM 联动
+- OpenHydroNet AI 输入
+- 结果对比
+- 报告与导出
+- 系统诊断
+
+Recommended UI workflow:
+
+```text
+项目首页 -> 数据与校验 -> 情景运行 -> 结果对比 -> 报告与导出
+```
+
+Use the GEE, SWMM, and OpenHydroNet pages only when those modules are needed. See `docs/ui_workbench.md` for page-by-page guidance and local/cloud differences.
+
 ## Deploy to Streamlit Community Cloud
 
 GitHub Pages cannot run Streamlit or Python services. Use GitHub for source hosting and Streamlit Community Cloud for the running app.
