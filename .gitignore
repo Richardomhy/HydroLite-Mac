@@ -8,6 +8,13 @@ env/
 output/
 outputs/
 logs/
+projects/*/output/
+projects/*/logs/
+projects/*/reports/*.zip
+projects/*/reports/*.xlsx
+projects/*/reports/*.csv
+projects/*/reports/*.html
+projects/*/reports/*.md
 .streamlit/
 .streamlit/secrets.toml
 *.log
