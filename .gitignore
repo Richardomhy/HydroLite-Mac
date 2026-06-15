@@ -15,6 +15,7 @@ projects/*/reports/*.xlsx
 projects/*/reports/*.csv
 projects/*/reports/*.html
 projects/*/reports/*.md
+projects/wizard_demo_project/
 .streamlit/
 .streamlit/secrets.toml
 *.log

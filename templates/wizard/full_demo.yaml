@@ -1,0 +1,21 @@
+project:
+  name: Full Demo Wizard Project
+  id: wizard_full_demo
+  description: Demo project with HydroLite, SWMM, GEE, and OpenHydroNet modules enabled.
+  author: HydroLite Studio
+modules:
+  hydrolite: true
+  swmm: true
+  gee: true
+  openhydronet: true
+case:
+  name: wizard_full_demo
+  time_step_hours: 1.0
+data:
+  mode: reference
+  rainfall_csv: data_demo/rainfall.csv
+  subbasin_csv: data_demo/subcatchments.csv
+  reach_csv: data_demo/reaches.csv
+  observed_streamflow_csv: data_demo/observed/demo_observed_streamflow.csv
+  swmm_inp: data_raw/swmm/demo.inp
+  basin_boundary: data_demo/gee/demo_basin.geojson

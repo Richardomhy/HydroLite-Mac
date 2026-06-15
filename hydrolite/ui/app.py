@@ -23,6 +23,7 @@ from hydrolite.ui.pages import (
     gee_center,
     openhydronet_center,
     project_home,
+    project_wizard,
     report_export,
     scenario_run,
     swmm_center,
@@ -47,6 +48,7 @@ from hydrolite.openhydronet.runner import detect_openhydronet_environment
 
 PAGES = {
     "项目首页": project_home.render,
+    "项目向导": project_wizard.render,
     "数据与校验": data_validation.render,
     "情景运行": scenario_run.render,
     "GEE 数据中心": gee_center.render,

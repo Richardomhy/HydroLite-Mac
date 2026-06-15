@@ -1,0 +1,21 @@
+project:
+  name: HydroLite SWMM Wizard Project
+  id: wizard_hydrolite_swmm
+  description: HydroLite project with SWMM coupling enabled.
+  author: HydroLite Studio
+modules:
+  hydrolite: true
+  swmm: true
+  gee: false
+  openhydronet: false
+case:
+  name: wizard_swmm
+  time_step_hours: 1.0
+data:
+  mode: reference
+  rainfall_csv: data_demo/rainfall.csv
+  subbasin_csv: data_demo/subcatchments.csv
+  reach_csv: data_demo/reaches.csv
+  observed_streamflow_csv: ""
+  swmm_inp: data_raw/swmm/demo.inp
+  basin_boundary: ""

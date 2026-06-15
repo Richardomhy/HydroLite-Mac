@@ -27,6 +27,7 @@ from hydrolite.project import (
 )
 from hydrolite.runner import run_case
 from hydrolite.validate import validate_target
+from hydrolite.wizard import create_project_from_wizard, preview_wizard, validate_wizard_config
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -85,6 +86,17 @@ def build_parser() -> argparse.ArgumentParser:
     project_compare.add_argument("project_dir")
     project_export = project_subparsers.add_parser("export", help="Export a project package zip.")
     project_export.add_argument("project_dir")
+
+    wizard_parser = subparsers.add_parser("wizard", help="HydroLite project wizard commands.")
+    wizard_subparsers = wizard_parser.add_subparsers(dest="wizard_command", required=True)
+    wizard_validate = wizard_subparsers.add_parser("validate", help="Validate a wizard template.")
+    wizard_validate.add_argument("template")
+    wizard_preview = wizard_subparsers.add_parser("preview", help="Preview a wizard template without creating files.")
+    wizard_preview.add_argument("template")
+    wizard_create = wizard_subparsers.add_parser("create", help="Create a project from a wizard template.")
+    wizard_create.add_argument("template")
+    wizard_create.add_argument("project_dir")
+    wizard_create.add_argument("--force", action="store_true", help="Allow writing into an existing project directory.")
 
     return parser
 
@@ -212,6 +224,28 @@ def main(argv: list[str] | None = None) -> int:
         if args.project_command == "export":
             package = export_project_package(args.project_dir)
             print(f"Project package written to: {package}")
+            return 0
+    if args.command == "wizard":
+        if args.wizard_command == "validate":
+            result = validate_wizard_config(args.template)
+            print(f"Wizard validation status: {result['status']}")
+            for message in result["errors"]:
+                print(f"ERROR {message}")
+            for message in result["warnings"]:
+                print(f"WARNING {message}")
+            return 1 if result["errors"] else 0
+        if args.wizard_command == "preview":
+            import json
+
+            print(json.dumps(preview_wizard(args.template), indent=2, ensure_ascii=False, default=str))
+            return 0
+        if args.wizard_command == "create":
+            result = create_project_from_wizard(args.template, args.project_dir, force=args.force)
+            print(f"Wizard project created: {result['project_dir']}")
+            print(f"Project YAML: {result['project_yaml']}")
+            print(f"Case file: {result['case_file']}")
+            print(f"Wizard summary: {result['wizard_summary']}")
+            print(f"Validation workbook: {result['validation_xlsx']}")
             return 0
     return 2
 

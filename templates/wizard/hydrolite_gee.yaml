@@ -1,0 +1,21 @@
+project:
+  name: HydroLite GEE Wizard Project
+  id: wizard_hydrolite_gee
+  description: HydroLite project with GEE module enabled.
+  author: HydroLite Studio
+modules:
+  hydrolite: true
+  swmm: false
+  gee: true
+  openhydronet: false
+case:
+  name: wizard_gee
+  time_step_hours: 1.0
+data:
+  mode: reference
+  rainfall_csv: data_demo/rainfall.csv
+  subbasin_csv: data_demo/subcatchments.csv
+  reach_csv: data_demo/reaches.csv
+  observed_streamflow_csv: ""
+  swmm_inp: ""
+  basin_boundary: data_demo/gee/demo_basin.geojson
