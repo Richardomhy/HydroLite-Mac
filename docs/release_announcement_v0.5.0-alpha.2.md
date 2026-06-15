@@ -4,6 +4,14 @@ HydroLite Studio v0.5.0-alpha.2 is the first public demo-ready alpha release of 
 
 This release focuses on a professional project-centered workflow rather than new numerical algorithms.
 
+## Links
+
+- Online demo: https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
+- GitHub repository: https://github.com/Richardomhy/HydroLite-Mac.git
+- Current version: `v0.5.0-alpha.2`
+
+The online demo is best for reviewing the interface and example outputs. Run locally for complete GEE authentication, SWMM backend control, and OpenHydroNet external-environment workflows.
+
 ## Highlights
 
 - Project-centered Streamlit workbench: HydroLite Studio.
@@ -17,6 +25,14 @@ This release focuses on a professional project-centered workflow rather than new
 - Project export package and release manifest.
 
 ## Quick Demo
+
+Online:
+
+```text
+https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
+```
+
+Local:
 
 ```bash
 python -m hydrolite version

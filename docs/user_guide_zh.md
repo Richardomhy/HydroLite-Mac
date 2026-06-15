@@ -44,6 +44,24 @@ python -m streamlit --version
 
 ## 3. 快速运行
 
+### 3.1 在线版
+
+可直接访问 HydroLite Studio 在线演示：
+
+```text
+https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
+```
+
+在线版适合演示界面、查看示例项目、浏览已有结果和报告。由于 Streamlit Cloud 环境限制，完整的 GEE 认证、SWMM 隔离求解器和 OpenHydroNet 外部仓库工作流建议在本地运行。
+
+GitHub 仓库：
+
+```text
+https://github.com/Richardomhy/HydroLite-Mac.git
+```
+
+### 3.2 本地版
+
 完整本地流程：
 
 ```bash
@@ -61,6 +79,8 @@ python -m streamlit run streamlit_app.py --server.headless true
 http://localhost:8501
 http://127.0.0.1:8501
 ```
+
+本地版适合运行完整 GEE/SWMM/OpenHydroNet 工作流，包括本地 GEE 认证、macOS SWMM 隔离环境和外部 OpenHydroNet 仓库诊断。
 
 如果本地 Streamlit 打不开，可先诊断：
 
@@ -507,6 +527,18 @@ GitHub Pages 不能运行 Streamlit/Python 服务。推荐方式是：
 GitHub 托管代码 + Streamlit Community Cloud 运行应用
 ```
 
+当前已部署在线版：
+
+```text
+https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
+```
+
+当前 GitHub 仓库：
+
+```text
+https://github.com/Richardomhy/HydroLite-Mac.git
+```
+
 Streamlit Cloud 配置：
 
 - Repository：你的 GitHub 仓库，例如 `Richardomhy/HydroLite-Mac`
@@ -519,6 +551,8 @@ Streamlit Cloud 配置：
 - 云端通常没有 macOS 隔离 SWMM 环境。
 - 如果云端 SWMM 二进制包不可用，界面仍可展示已有输出、校验结果、批量汇总和情景对比。
 - 非 SWMM 的 HydroLite 水文流程不依赖 SWMM 后端。
+- 云端不适合保存或提交 Google credentials、tokens、API keys、`.streamlit/secrets.toml`、外部 OpenHydroNet 仓库或模型权重。
+- 如需完整 GEE、SWMM、OpenHydroNet 工作流，建议回到本地环境运行。
 
 ## 13. 常见问题
 
@@ -625,4 +659,3 @@ output/comparison/scenario_comparison.xlsx
 output/comparison/hydrolite_report.md
 output/comparison/*.png
 ```
-

@@ -1,7 +1,13 @@
 # HydroLite Studio v0.5.0-alpha
 
 [![Release](https://img.shields.io/badge/release-v0.5.0--alpha.2-blue)](https://github.com/Richardomhy/HydroLite-Mac/releases/tag/v0.5.0-alpha.2)
-[![Streamlit](https://img.shields.io/badge/Streamlit-Cloud%20ready-ff4b4b)](streamlit_app.py)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Cloud%20demo-ff4b4b)](https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app)
+
+- GitHub repository: https://github.com/Richardomhy/HydroLite-Mac.git
+- Streamlit Cloud online demo: https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
+- Current public version: `v0.5.0-alpha.2`
+
+The online version is best for demos and viewing example outputs; the local version is recommended for complete GEE, SWMM, and OpenHydroNet workflows.
 
 HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.5.0-alpha adds a project-centered professional workbench for data validation, scenario runs, GEE data products, SWMM coupling, OpenHydroNet-ready input packages, scenario comparison, reports, and project export.
 
@@ -9,6 +15,7 @@ Latest public demo release: **v0.5.0-alpha.2**.
 
 Quick demo entry points:
 
+- 在线体验：https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
 - 中文快速开始：`docs/quickstart_zh.md`
 - 中文演示脚本：`docs/demo_script_zh.md`
 - GitHub Release 发布说明：`docs/release_announcement_v0.5.0-alpha.2.md`

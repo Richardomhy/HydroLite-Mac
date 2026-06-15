@@ -2,7 +2,27 @@
 
 适用版本：v0.5.0-alpha.2
 
-## 1. 安装依赖
+## 1. 在线体验入口
+
+无需本地安装，可直接打开：
+
+```text
+https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
+```
+
+在线版适合快速演示、查看示例项目、浏览结果表格和报告。由于云端环境限制，GEE 认证、SWMM 二进制后端、OpenHydroNet 外部仓库等完整工作流建议在本地运行。
+
+GitHub 仓库：
+
+```text
+https://github.com/Richardomhy/HydroLite-Mac.git
+```
+
+## 2. 本地完整运行入口
+
+本地版适合完整 GEE/SWMM/OpenHydroNet 工作流、隔离 SWMM 求解器、GEE 认证和项目导出。
+
+## 3. 安装依赖
 
 ```bash
 cd "/Users/minghenyu/Documents/hydrolite 模型"
@@ -11,14 +31,14 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-## 2. 检查版本和环境
+## 4. 检查版本和环境
 
 ```bash
 python -m hydrolite version
 python -m hydrolite healthcheck
 ```
 
-## 3. 启动 HydroLite Studio
+## 5. 启动 HydroLite Studio
 
 ```bash
 python -m streamlit run streamlit_app.py --server.headless true
@@ -30,7 +50,7 @@ python -m streamlit run streamlit_app.py --server.headless true
 http://localhost:8501
 ```
 
-## 4. 载入 demo 项目
+## 6. 载入 demo 项目
 
 在侧边栏确认项目路径：
 
@@ -44,13 +64,19 @@ projects/demo_project
 python -m hydrolite project create projects/demo_project
 ```
 
-## 5. 推荐演示流程
+## 7. 在线版与本地版区别
+
+- 在线版：适合演示 UI、查看 demo 输出、阅读报告和熟悉工作流；
+- 本地版：适合运行完整模型、配置 GEE、使用 SWMM 隔离求解器、准备 OpenHydroNet 外部仓库；
+- 两者都不应提交 secrets、credentials、external 仓库或模型权重。
+
+## 8. 推荐演示流程
 
 ```text
 项目首页 -> 数据与校验 -> 情景运行 -> GEE 数据中心 -> SWMM 联动 -> OpenHydroNet AI 输入 -> 结果对比 -> 报告与导出
 ```
 
-## 6. CLI 演示流程
+## 9. CLI 演示流程
 
 ```bash
 python -m hydrolite project validate projects/demo_project
@@ -60,7 +86,7 @@ python -m hydrolite project compare projects/demo_project
 python -m hydrolite project export projects/demo_project
 ```
 
-## 7. 安全边界
+## 10. 安全边界
 
 - 不修改 `data_raw/` 原始数据；
 - 不提交 Google credentials、token、API key；

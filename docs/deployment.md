@@ -13,6 +13,18 @@ Use GitHub + Streamlit Community Cloud:
 3. Create a Streamlit Community Cloud app from the GitHub repository.
 4. Set the main file path to `streamlit_app.py`.
 
+Current deployed public app:
+
+```text
+https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
+```
+
+Current GitHub repository:
+
+```text
+https://github.com/Richardomhy/HydroLite-Mac.git
+```
+
 ## GitHub Repository Setup
 
 ```bash
@@ -31,6 +43,16 @@ Replace `<你的GitHub仓库URL>` with your own repository URL.
 - Branch: `main`
 - Main file path: `streamlit_app.py`
 - Python version: 3.11 is recommended
+
+If the app is redeployed under a new Streamlit URL or custom domain, update:
+
+- `README.md`
+- `docs/release_announcement_v0.5.0-alpha.2.md`
+- `docs/quickstart_zh.md`
+- `docs/user_guide_zh.md`
+- `docs/demo_walkthrough.md`
+- `docs/deployment.md`
+- `hydrolite/ui/pages/project_home.py`
 
 ## Dependency Files
 
