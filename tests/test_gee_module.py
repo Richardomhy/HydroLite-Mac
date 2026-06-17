@@ -17,6 +17,20 @@ def _snapshot_data_raw() -> dict[str, tuple[int, int]]:
     }
 
 
+def _snapshot_files(paths: list[Path]) -> dict[Path, str | None]:
+    return {path: path.read_text(encoding="utf-8") if path.exists() else None for path in paths}
+
+
+def _restore_files(snapshot: dict[Path, str | None]) -> None:
+    for path, text in snapshot.items():
+        if text is None:
+            if path.exists():
+                path.unlink()
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+
 def test_gee_module_imports_without_credentials(monkeypatch):
     monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
     monkeypatch.delenv("GEE_PROJECT", raising=False)
@@ -85,14 +99,19 @@ def test_diagnose_gee_runs_and_writes_output():
 
 
 def test_gee_cli_commands_run_without_crashing():
-    for command in (
-        [sys.executable, "-m", "hydrolite", "gee", "diagnose"],
-        [sys.executable, "-m", "hydrolite", "gee", "plan", "configs/gee.example.yaml"],
-        [sys.executable, "-m", "hydrolite", "gee", "summarize", "configs/gee.example.yaml"],
-        [sys.executable, "-m", "hydrolite", "gee", "hydrolite-inputs", "configs/gee.example.yaml"],
-    ):
-        completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=180)
-        assert completed.returncode == 0, completed.stderr
+    demo_inputs = [Path("data_demo/gee/gee_subbasins.csv"), Path("data_demo/gee/gee_reaches.csv")]
+    snapshot = _snapshot_files(demo_inputs)
+    try:
+        for command in (
+            [sys.executable, "-m", "hydrolite", "gee", "diagnose"],
+            [sys.executable, "-m", "hydrolite", "gee", "plan", "configs/gee.example.yaml"],
+            [sys.executable, "-m", "hydrolite", "gee", "summarize", "configs/gee.example.yaml"],
+            [sys.executable, "-m", "hydrolite", "gee", "hydrolite-inputs", "configs/gee.example.yaml"],
+        ):
+            completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=180)
+            assert completed.returncode == 0, completed.stderr
+    finally:
+        _restore_files(snapshot)
     assert Path("output/gee/gee_data_plan.xlsx").exists()
     assert Path("output/gee/gee_summary.xlsx").exists()
     assert Path("output/gee/gee_report.md").exists()

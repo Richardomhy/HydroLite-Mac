@@ -7,6 +7,14 @@ import sys
 from hydrolite.__version__ import __app_name__, __release_date__, __version__
 from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
+from hydrolite.export_report import (
+    export_project_report_bundle,
+    render_project_report_all,
+    render_project_report_docx,
+    render_project_report_html,
+    render_project_report_markdown,
+    render_project_report_pdf,
+)
 from hydrolite.gee.export import (
     create_gee_data_plan,
     write_gee_summary_outputs,
@@ -97,6 +105,19 @@ def build_parser() -> argparse.ArgumentParser:
     wizard_create.add_argument("template")
     wizard_create.add_argument("project_dir")
     wizard_create.add_argument("--force", action="store_true", help="Allow writing into an existing project directory.")
+
+    report_parser = subparsers.add_parser("report", help="Project report export commands.")
+    report_subparsers = report_parser.add_subparsers(dest="report_command", required=True)
+    for command, help_text in (
+        ("project", "Generate Markdown, Word, HTML, PDF/fallback, and report bundle."),
+        ("markdown", "Generate project_report.md."),
+        ("docx", "Generate project_report.docx."),
+        ("html", "Generate project_report.html."),
+        ("pdf", "Generate project_report.pdf or a PDF unavailable note."),
+        ("bundle", "Generate project_report_bundle.zip."),
+    ):
+        report_command = report_subparsers.add_parser(command, help=help_text)
+        report_command.add_argument("project_dir")
 
     return parser
 
@@ -246,6 +267,28 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Case file: {result['case_file']}")
             print(f"Wizard summary: {result['wizard_summary']}")
             print(f"Validation workbook: {result['validation_xlsx']}")
+            return 0
+    if args.command == "report":
+        if args.report_command == "project":
+            outputs = render_project_report_all(args.project_dir)
+            print("Project report outputs:")
+            for name, path in outputs.items():
+                print(f"- {name}: {path}")
+            return 0
+        if args.report_command == "markdown":
+            print(f"Project Markdown report written to: {render_project_report_markdown(args.project_dir)}")
+            return 0
+        if args.report_command == "docx":
+            print(f"Project Word report written to: {render_project_report_docx(args.project_dir)}")
+            return 0
+        if args.report_command == "html":
+            print(f"Project HTML report written to: {render_project_report_html(args.project_dir)}")
+            return 0
+        if args.report_command == "pdf":
+            print(f"Project PDF report output written to: {render_project_report_pdf(args.project_dir)}")
+            return 0
+        if args.report_command == "bundle":
+            print(f"Project report bundle written to: {export_project_report_bundle(args.project_dir)}")
             return 0
     return 2
 

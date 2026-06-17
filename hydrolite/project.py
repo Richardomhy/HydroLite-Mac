@@ -26,6 +26,13 @@ PACKAGE_EXCLUDES = (
     "__pycache__/",
 )
 MODEL_WEIGHT_SUFFIXES = {".pt", ".pth", ".ckpt", ".onnx"}
+REPORT_PACKAGE_ASSETS = (
+    "project_report.md",
+    "project_report.docx",
+    "project_report.html",
+    "project_report.pdf",
+    "project_report_pdf_unavailable.md",
+)
 
 
 def _project_path(project_dir: str | Path) -> Path:
@@ -287,18 +294,26 @@ def export_project_package(project_dir: str | Path) -> Path:
         dirs["output_dir"] / "comparison",
         dirs["reports_dir"],
         project_path / "project_summary.md",
+        *[reports_dir / name for name in REPORT_PACKAGE_ASSETS],
     ]
+    written: set[str] = set()
     with zipfile.ZipFile(package, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for root in include_roots:
             if not root.exists():
                 continue
             if root.is_file():
                 if _safe_package_member(root):
-                    archive.write(root, root.relative_to(project_path))
+                    arcname = root.relative_to(project_path).as_posix()
+                    if arcname not in written:
+                        archive.write(root, root.relative_to(project_path))
+                        written.add(arcname)
                 continue
             for path in root.rglob("*"):
                 if path.is_file() and _safe_package_member(path):
-                    archive.write(path, path.relative_to(project_path))
+                    arcname = path.relative_to(project_path).as_posix()
+                    if arcname not in written:
+                        archive.write(path, path.relative_to(project_path))
+                        written.add(arcname)
     return package
 
 

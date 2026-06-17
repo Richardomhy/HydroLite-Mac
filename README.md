@@ -177,6 +177,7 @@ For a guided public demonstration, follow `docs/demo_script_zh.md`.
 
 - `docs/ui_workbench.md`: HydroLite Studio workbench guide.
 - `docs/project_wizard.md`: project wizard and data import wizard guide.
+- `docs/report_export.md`: one-click Markdown, Word, HTML, PDF, and report bundle export.
 - `docs/project_workflow.md`: project folder workflow.
 - `docs/release_notes_v0.5.0-alpha.md`: release notes.
 - `docs/release_announcement_v0.5.0-alpha.2.md`: GitHub Release announcement.
@@ -219,6 +220,16 @@ Single-case outputs are written to `output/<case_name>/`:
 Batch runs also write:
 
 - `output/batch_summary.xlsx`: per-case status, runtime, output folder, peak flow, volume, water balance error, and error message.
+
+## Project Report Export
+
+Project reports can be generated from existing validation, batch, comparison, SWMM, GEE, OpenHydroNet, and observed-flow outputs:
+
+```bash
+python -m hydrolite report project projects/demo_project
+```
+
+This writes `project_report.md`, `project_report.docx`, `project_report.html`, `project_report.pdf` when a PDF backend is available, or `project_report_pdf_unavailable.md` as a fallback. A safe `project_report_bundle.zip` is also generated for sharing. See `docs/report_export.md`.
 
 ## Raw Data Safety
 
