@@ -62,6 +62,8 @@ https://github.com/Richardomhy/HydroLite-Mac.git
 
 第一次使用推荐从 Streamlit 左侧导航的 **教程与 Demo** 页面开始。该页面会引导你加载 `projects/demo_project`，完成校验、运行、GEE/SWMM/OpenHydroNet 查看、结果对比和报告导出。
 
+真实项目建议先从 **数据模板** 页面下载 `templates/data` 标准模板，按字段整理流域、降雨、河道、观测流量、SWMM 映射和 GEE 边界数据，再使用项目向导创建项目。
+
 ### 3.2 本地版
 
 完整本地流程：

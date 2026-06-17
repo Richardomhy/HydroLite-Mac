@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "name": "HydroLite basin boundary example - not real project data",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "basin_id": "EXAMPLE_BASIN",
+        "note": "Small synthetic polygon for template validation only."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [120.0000, 30.0000],
+            [120.0200, 30.0000],
+            [120.0200, 30.0150],
+            [120.0000, 30.0150],
+            [120.0000, 30.0000]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -88,6 +88,14 @@ Optional:
 
 The wizard can reference input files or copy them into the project data folder. The default templates use reference mode.
 
+For real projects, first download the standard templates in `templates/data/`, organize your CSV/GeoJSON files, and validate them with:
+
+```bash
+python -m hydrolite templates validate <your_dataset_dir>
+```
+
+Then return to the project wizard and reference the prepared files.
+
 ## Local and Cloud Differences
 
 Local:

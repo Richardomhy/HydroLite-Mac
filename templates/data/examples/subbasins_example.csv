@@ -1,0 +1,4 @@
+subbasin_id,area_km2,cn,initial_abstraction_ratio,lag_time_hr,outlet_reach_id
+S1,1.25,78,0.20,1.5,R1
+S2,0.80,82,0.20,1.0,R1
+S3,1.10,75,0.20,2.0,R2

@@ -178,6 +178,7 @@ For a guided public demonstration, follow `docs/demo_script_zh.md`.
 - `docs/ui_workbench.md`: HydroLite Studio workbench guide.
 - `docs/project_wizard.md`: project wizard and data import wizard guide.
 - `docs/tutorial_demo.md`: guided in-app tutorial and demo mode.
+- `docs/data_templates.md`: real project CSV/GeoJSON templates and validation guide.
 - `docs/report_export.md`: one-click Markdown, Word, HTML, PDF, and report bundle export.
 - `docs/project_workflow.md`: project folder workflow.
 - `docs/release_notes_v0.5.0-alpha.md`: release notes.
@@ -245,6 +246,18 @@ python -m hydrolite tutorial summary projects/demo_project
 ```
 
 See `docs/tutorial_demo.md`.
+
+## Real Project Data Templates
+
+Before creating a real project, download the standard templates under `templates/data/`, organize rainfall, subbasins, reaches, observed streamflow, SWMM inflow mapping, and GEE basin boundary files, then use the project wizard.
+
+```bash
+python -m hydrolite templates list
+python -m hydrolite templates export-all templates_export/
+python -m hydrolite templates validate templates/data/examples/
+```
+
+See `docs/data_templates.md`.
 
 ## Raw Data Safety
 

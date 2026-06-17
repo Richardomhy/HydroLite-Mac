@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "name": "HydroLite basin boundary template - not real coordinates",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "basin_id": "TEMPLATE_BASIN",
+        "note": "Template/example polygon only. Replace with your basin boundary."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [0.0000, 0.0000],
+            [0.0100, 0.0000],
+            [0.0100, 0.0100],
+            [0.0000, 0.0100],
+            [0.0000, 0.0000]
+          ]
+        ]
+      }
+    }
+  ]
+}

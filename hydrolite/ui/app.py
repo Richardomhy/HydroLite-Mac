@@ -18,6 +18,7 @@ from hydrolite.ui.components import (
 )
 from hydrolite.ui.pages import (
     comparison,
+    data_templates,
     data_validation,
     diagnostics,
     gee_center,
@@ -50,6 +51,7 @@ from hydrolite.openhydronet.runner import detect_openhydronet_environment
 PAGES = {
     "项目首页": project_home.render,
     "教程与 Demo": tutorial_demo.render,
+    "数据模板": data_templates.render,
     "项目向导": project_wizard.render,
     "数据与校验": data_validation.render,
     "情景运行": scenario_run.render,

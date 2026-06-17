@@ -20,6 +20,8 @@ https://github.com/Richardomhy/HydroLite-Mac.git
 
 第一次使用推荐打开 Streamlit 后先进入左侧导航的 **教程与 Demo** 页面，按照引导完成一次完整软件演示。
 
+真实项目建议先进入 **数据模板** 页面下载 `templates/data` 标准模板，整理数据后再使用项目向导创建项目。
+
 ## 2. 本地完整运行入口
 
 本地版适合完整 GEE/SWMM/OpenHydroNet 工作流、隔离 SWMM 求解器、GEE 认证和项目导出。
@@ -83,6 +85,13 @@ python -m hydrolite project create projects/demo_project
 ```bash
 python -m hydrolite tutorial list
 python -m hydrolite tutorial checklist projects/demo_project
+```
+
+下载和校验真实项目数据模板：
+
+```bash
+python -m hydrolite templates export-all templates_export/
+python -m hydrolite templates validate templates/data/examples/
 ```
 
 ## 9. CLI 演示流程

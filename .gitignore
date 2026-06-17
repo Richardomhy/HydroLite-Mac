@@ -8,6 +8,7 @@ env/
 output/
 outputs/
 logs/
+templates_export/
 projects/*/output/
 projects/*/logs/
 projects/*/reports/*.zip

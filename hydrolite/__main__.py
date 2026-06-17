@@ -7,6 +7,13 @@ import sys
 from hydrolite.__version__ import __app_name__, __release_date__, __version__
 from hydrolite.batch import run_batch
 from hydrolite.compare import run_compare
+from hydrolite.data_templates import (
+    export_all_data_templates,
+    export_data_template,
+    list_data_templates,
+    validate_project_input_dataset,
+    write_data_template_summary,
+)
 from hydrolite.export_report import (
     export_project_report_bundle,
     render_project_report_all,
@@ -134,6 +141,19 @@ def build_parser() -> argparse.ArgumentParser:
     tutorial_summary.add_argument("project_dir")
     tutorial_reset = tutorial_subparsers.add_parser("reset", help="Reset guided demo progress only.")
     tutorial_reset.add_argument("project_dir")
+
+    templates_parser = subparsers.add_parser("templates", help="Real project data template commands.")
+    templates_subparsers = templates_parser.add_subparsers(dest="templates_command", required=True)
+    templates_subparsers.add_parser("list", help="List available data templates.")
+    templates_export = templates_subparsers.add_parser("export", help="Export a single data template.")
+    templates_export.add_argument("template_name")
+    templates_export.add_argument("output_dir")
+    templates_export_all = templates_subparsers.add_parser("export-all", help="Export all standard and example data templates.")
+    templates_export_all.add_argument("output_dir")
+    templates_validate = templates_subparsers.add_parser("validate", help="Validate a project input dataset directory.")
+    templates_validate.add_argument("dataset_dir")
+    templates_summary = templates_subparsers.add_parser("summary", help="Write a data template summary workbook and report.")
+    templates_summary.add_argument("output_dir")
 
     return parser
 
@@ -326,6 +346,33 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.tutorial_command == "reset":
             print(f"Demo progress reset: {reset_demo_progress(args.project_dir)}")
+            return 0
+    if args.command == "templates":
+        if args.templates_command == "list":
+            for row in list_data_templates():
+                print(f"{row['template_name']}: {row['template_path']}")
+                print(f"  fields: {', '.join(row['required_fields']) or 'GeoJSON Polygon/MultiPolygon'}")
+            return 0
+        if args.templates_command == "export":
+            print(f"Data template exported to: {export_data_template(args.template_name, args.output_dir)}")
+            return 0
+        if args.templates_command == "export-all":
+            paths = export_all_data_templates(args.output_dir)
+            print(f"Exported {len(paths)} data template files to: {Path(args.output_dir).resolve()}")
+            return 0
+        if args.templates_command == "validate":
+            result = validate_project_input_dataset(args.dataset_dir)
+            print(f"Data template validation status: {result['status']}")
+            for check in result["checks"]:
+                print(
+                    f"- {check['template_name']}: {check['status']} "
+                    f"rows={check['rows']} errors={len(check['errors'])} warnings={len(check['warnings'])}"
+                )
+            return 1 if result["status"] == "failed" else 0
+        if args.templates_command == "summary":
+            outputs = write_data_template_summary(args.output_dir)
+            print(f"Data template summary written to: {outputs['md']}")
+            print(f"Data template workbook written to: {outputs['xlsx']}")
             return 0
     return 2
 

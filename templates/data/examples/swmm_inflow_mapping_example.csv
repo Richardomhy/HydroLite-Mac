@@ -1,0 +1,3 @@
+hydrolite_output_id,swmm_node_id,scale_factor
+outflow_cms,J1,1.0
+S1,J2,0.5

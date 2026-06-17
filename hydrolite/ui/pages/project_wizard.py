@@ -65,6 +65,7 @@ def render(context: WorkbenchContext) -> None:
     st.header("项目向导")
     st.caption("按步骤创建项目、选择数据、生成情景 YAML，并自动运行项目校验。")
     st.info("项目向导不新增模型算法；仅生成 project.yaml、case YAML 和项目摘要。")
+    st.info("不知道数据格式？请先前往 `数据模板` 页面下载标准模板，整理 CSV/GeoJSON 后再创建项目。")
 
     template_name = st.selectbox("模板选择", list(TEMPLATE_OPTIONS.keys()))
     template_path = TEMPLATE_OPTIONS[template_name]
