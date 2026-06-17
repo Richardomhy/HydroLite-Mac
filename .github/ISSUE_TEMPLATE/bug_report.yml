@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible HydroLite Studio bug.
+title: "[Bug]: "
+labels: ["bug", "beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not upload credentials, tokens, API keys, private raw data, service accounts, or model weights."
+  - type: input
+    id: version
+    attributes:
+      label: HydroLite version
+      placeholder: "0.6.0-beta"
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options: ["Streamlit Cloud", "Local"]
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "macOS 15, Ubuntu, Windows, Streamlit Cloud"
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "python --version"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: data_type
+    attributes:
+      label: Input data type
+      options: ["Demo data", "Rainfall CSV", "Subbasins CSV", "Reaches CSV", "Observed flow CSV", "SWMM INP", "GEE boundary", "OpenHydroNet input", "Other"]
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message
+      render: shell
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or logs
+  - type: checkboxes
+    id: sensitive
+    attributes:
+      label: Sensitive data reminder
+      options:
+        - label: I confirm this issue does not include credentials, tokens, API keys, private raw data, service accounts, or model weights.
+          required: true

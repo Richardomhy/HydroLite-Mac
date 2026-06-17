@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest a HydroLite Studio improvement.
+title: "[Feature]: "
+labels: ["enhancement", "beta-feedback"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: HydroLite version
+      placeholder: "0.6.0-beta"
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options: ["Streamlit Cloud", "Local", "Both"]
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: ["UI", "Project wizard", "Data templates", "Validation", "Reports", "GEE", "SWMM", "OpenHydroNet-ready inputs", "Documentation", "Other"]
+  - type: checkboxes
+    id: sensitive
+    attributes:
+      label: Sensitive data reminder
+      options:
+        - label: I confirm this request does not include credentials, tokens, API keys, private raw data, service accounts, or model weights.
+          required: true

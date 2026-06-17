@@ -55,6 +55,7 @@ def render(context: WorkbenchContext) -> None:
     route_cols[0].info("路线 A：在线快速体验。浏览项目、结果、图表和报告，不强制认证 GEE/SWMM/OpenHydroNet。")
     route_cols[1].success("路线 B：本地完整演示。运行校验、批量计算、GEE 摘要、SWMM 隔离求解器和输入包生成。")
     route_cols[2].warning("路线 C：工程交付演示。重点展示项目向导、结果对比、Word/HTML/Markdown 报告和项目包。")
+    st.info("完成 Demo 后，建议进入左侧 `Beta 反馈` 页面提交体验反馈；请勿上传敏感数据、账号、token 或涉密工程资料。")
 
     if context.is_cloud:
         st.info("当前看起来是 Streamlit Cloud 环境：GEE 认证、SWMM 后端和 OpenHydroNet 外部仓库不会被强制执行；可优先展示已有 demo 输出。")

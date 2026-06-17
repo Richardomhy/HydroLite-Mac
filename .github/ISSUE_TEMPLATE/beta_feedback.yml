@@ -1,0 +1,57 @@
+name: Beta feedback
+description: Share structured feedback after testing v0.6.0-beta.
+title: "[Beta feedback]: "
+labels: ["beta-feedback"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: HydroLite version
+      placeholder: "0.6.0-beta"
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Local or online version
+      options: ["Streamlit Cloud", "Local", "Both"]
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Tested workflow
+      placeholder: "Tutorial, data templates, project wizard, batch run, comparison, report export..."
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots or logs
+  - type: checkboxes
+    id: sensitive
+    attributes:
+      label: Sensitive data reminder
+      options:
+        - label: I confirm this feedback does not include credentials, tokens, API keys, private raw data, service accounts, or model weights.
+          required: true

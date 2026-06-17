@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: HydroLite Studio online demo
+    url: https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
+    about: Open the Streamlit Cloud demo before filing a UI feedback issue.
+  - name: Documentation
+    url: https://github.com/Richardomhy/HydroLite-Mac
+    about: Read README and docs before filing a duplicate issue.

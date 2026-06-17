@@ -14,10 +14,10 @@ def render(context: WorkbenchContext) -> None:
     st.header("项目首页")
     st.caption("以项目为中心查看 HydroLite、GEE、SWMM 与 OpenHydroNet 输入工作流。")
     st.info(
-        "公开演示版本：HydroLite Studio v0.5.0-alpha.2。在线版："
+        "公开演示版本：HydroLite Studio v0.6.0-beta。在线版："
         "https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app 。GitHub："
         "https://github.com/Richardomhy/HydroLite-Mac.git 。推荐流程："
-        "项目首页 -> 数据与校验 -> 情景运行 -> GEE 数据中心 -> SWMM 联动 -> "
+        "项目首页 -> 教程与 Demo -> 数据与校验 -> 情景运行 -> GEE 数据中心 -> SWMM 联动 -> "
         "OpenHydroNet AI 输入 -> 结果对比 -> 报告与导出。"
     )
     st.caption("在线版适合演示和查看示例；本地版适合完整 GEE/SWMM/OpenHydroNet 工作流。")
@@ -26,6 +26,10 @@ def render(context: WorkbenchContext) -> None:
         "外部 OpenHydroNet 仓库或模型权重；OpenHydroNet 页面仅生成 input package，不执行真实 AI 预测。"
     )
     st.success("第一次使用？进入左侧导航的 `教程与 Demo` 页面，按步骤完成一次完整软件演示。")
+    st.info(
+        "Beta 测试反馈：完成演示后可进入左侧 `Beta 反馈` 页面，通过 GitHub Issues 提交 bug、功能建议、"
+        "数据模板问题或整体体验反馈。提交前请勿上传敏感数据。"
+    )
     if not context.project_loaded:
         st.error(context.error_message)
         st.info("请先在终端运行 `python -m hydrolite project create projects/demo_project`，或输入已有项目路径。")

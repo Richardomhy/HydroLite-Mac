@@ -17,6 +17,7 @@ from hydrolite.ui.components import (
     read_water_balance,
 )
 from hydrolite.ui.pages import (
+    beta_feedback,
     comparison,
     data_templates,
     data_validation,
@@ -51,6 +52,7 @@ from hydrolite.openhydronet.runner import detect_openhydronet_environment
 PAGES = {
     "项目首页": project_home.render,
     "教程与 Demo": tutorial_demo.render,
+    "Beta 反馈": beta_feedback.render,
     "数据模板": data_templates.render,
     "项目向导": project_wizard.render,
     "数据与校验": data_validation.render,

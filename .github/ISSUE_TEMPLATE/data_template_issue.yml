@@ -1,0 +1,47 @@
+name: Data template issue
+description: Report missing fields, confusing units, or validation problems in templates/data.
+title: "[Data template]: "
+labels: ["data-template", "beta-feedback"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: HydroLite version
+      placeholder: "0.6.0-beta"
+    validations:
+      required: true
+  - type: dropdown
+    id: template
+    attributes:
+      label: Template
+      options: ["rainfall", "subbasins", "reaches", "observed_streamflow", "swmm_inflow_mapping", "gee_basin_boundary", "Other"]
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Local or online version
+      options: ["Streamlit Cloud", "Local", "Both"]
+  - type: textarea
+    id: issue
+    attributes:
+      label: What is wrong or unclear?
+    validations:
+      required: true
+  - type: textarea
+    id: data_shape
+    attributes:
+      label: Input data type or column names
+      placeholder: "Do not paste sensitive data; describe fields only."
+  - type: textarea
+    id: error
+    attributes:
+      label: Validation error or warning
+      render: shell
+  - type: checkboxes
+    id: sensitive
+    attributes:
+      label: Sensitive data reminder
+      options:
+        - label: I confirm this issue does not include credentials, tokens, API keys, private raw data, service accounts, or model weights.
+          required: true

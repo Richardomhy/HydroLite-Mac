@@ -6,6 +6,7 @@ import sys
 
 from hydrolite.__version__ import __app_name__, __release_date__, __version__
 from hydrolite.batch import run_batch
+from hydrolite.beta import beta_checklist, beta_info, beta_smoke_local
 from hydrolite.compare import run_compare
 from hydrolite.data_templates import (
     export_all_data_templates,
@@ -154,6 +155,12 @@ def build_parser() -> argparse.ArgumentParser:
     templates_validate.add_argument("dataset_dir")
     templates_summary = templates_subparsers.add_parser("summary", help="Write a data template summary workbook and report.")
     templates_summary.add_argument("output_dir")
+
+    beta_parser = subparsers.add_parser("beta", help="Beta release verification and feedback commands.")
+    beta_subparsers = beta_parser.add_subparsers(dest="beta_command", required=True)
+    beta_subparsers.add_parser("info", help="Show beta release links and docs.")
+    beta_subparsers.add_parser("checklist", help="Show post-release beta verification checklist.")
+    beta_subparsers.add_parser("smoke-local", help="Run lightweight local beta smoke checks.")
 
     return parser
 
@@ -373,6 +380,30 @@ def main(argv: list[str] | None = None) -> int:
             outputs = write_data_template_summary(args.output_dir)
             print(f"Data template summary written to: {outputs['md']}")
             print(f"Data template workbook written to: {outputs['xlsx']}")
+            return 0
+    if args.command == "beta":
+        if args.beta_command == "info":
+            info = beta_info()
+            print(f"version: {info['version']}")
+            print(f"github_url: {info['github_url']}")
+            print(f"streamlit_url: {info['streamlit_url']}")
+            print(f"release_tag: {info['release_tag']}")
+            print("docs:")
+            for name, path in info["docs"].items():
+                print(f"- {name}: {path}")
+            return 0
+        if args.beta_command == "checklist":
+            for item in beta_checklist():
+                print(f"- [{item['area']}] {item['check']}")
+            return 0
+        if args.beta_command == "smoke-local":
+            result = beta_smoke_local()
+            print(f"version: {result['version']}")
+            print(f"healthcheck_status: {result['healthcheck_status']}")
+            print(f"healthcheck_report: {result['healthcheck_report']}")
+            print(f"readme_exists: {result['readme_exists']}")
+            print(f"release_dir_exists: {result['release_dir_exists']}")
+            print(f"streamlit_app_exists: {result['streamlit_app_exists']}")
             return 0
     return 2
 
