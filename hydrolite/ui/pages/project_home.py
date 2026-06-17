@@ -25,6 +25,7 @@ def render(context: WorkbenchContext) -> None:
         "安全说明：演示不会修改 data_raw 原始数据；不会提交 Google credentials、tokens、API keys、"
         "外部 OpenHydroNet 仓库或模型权重；OpenHydroNet 页面仅生成 input package，不执行真实 AI 预测。"
     )
+    st.success("第一次使用？进入左侧导航的 `教程与 Demo` 页面，按步骤完成一次完整软件演示。")
     if not context.project_loaded:
         st.error(context.error_message)
         st.info("请先在终端运行 `python -m hydrolite project create projects/demo_project`，或输入已有项目路径。")

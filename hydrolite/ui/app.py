@@ -27,6 +27,7 @@ from hydrolite.ui.pages import (
     report_export,
     scenario_run,
     swmm_center,
+    tutorial_demo,
 )
 from hydrolite.ui.state import (
     CASES_DIR,
@@ -48,6 +49,7 @@ from hydrolite.openhydronet.runner import detect_openhydronet_environment
 
 PAGES = {
     "项目首页": project_home.render,
+    "教程与 Demo": tutorial_demo.render,
     "项目向导": project_wizard.render,
     "数据与校验": data_validation.render,
     "情景运行": scenario_run.render,

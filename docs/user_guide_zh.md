@@ -60,6 +60,8 @@ GitHub 仓库：
 https://github.com/Richardomhy/HydroLite-Mac.git
 ```
 
+第一次使用推荐从 Streamlit 左侧导航的 **教程与 Demo** 页面开始。该页面会引导你加载 `projects/demo_project`，完成校验、运行、GEE/SWMM/OpenHydroNet 查看、结果对比和报告导出。
+
 ### 3.2 本地版
 
 完整本地流程：

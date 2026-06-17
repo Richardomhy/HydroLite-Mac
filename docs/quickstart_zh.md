@@ -18,6 +18,8 @@ GitHub 仓库：
 https://github.com/Richardomhy/HydroLite-Mac.git
 ```
 
+第一次使用推荐打开 Streamlit 后先进入左侧导航的 **教程与 Demo** 页面，按照引导完成一次完整软件演示。
+
 ## 2. 本地完整运行入口
 
 本地版适合完整 GEE/SWMM/OpenHydroNet 工作流、隔离 SWMM 求解器、GEE 认证和项目导出。
@@ -73,7 +75,14 @@ python -m hydrolite project create projects/demo_project
 ## 8. 推荐演示流程
 
 ```text
-项目首页 -> 数据与校验 -> 情景运行 -> GEE 数据中心 -> SWMM 联动 -> OpenHydroNet AI 输入 -> 结果对比 -> 报告与导出
+教程与 Demo -> 项目首页 -> 数据与校验 -> 情景运行 -> GEE 数据中心 -> SWMM 联动 -> OpenHydroNet AI 输入 -> 结果对比 -> 报告与导出
+```
+
+也可以使用 CLI 查看教程清单：
+
+```bash
+python -m hydrolite tutorial list
+python -m hydrolite tutorial checklist projects/demo_project
 ```
 
 ## 9. CLI 演示流程

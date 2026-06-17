@@ -34,6 +34,12 @@ from hydrolite.project import (
     validate_project,
 )
 from hydrolite.runner import run_case
+from hydrolite.tutorial import (
+    generate_demo_summary,
+    get_demo_checklist,
+    get_demo_steps,
+    reset_demo_progress,
+)
 from hydrolite.validate import validate_target
 from hydrolite.wizard import create_project_from_wizard, preview_wizard, validate_wizard_config
 
@@ -118,6 +124,16 @@ def build_parser() -> argparse.ArgumentParser:
     ):
         report_command = report_subparsers.add_parser(command, help=help_text)
         report_command.add_argument("project_dir")
+
+    tutorial_parser = subparsers.add_parser("tutorial", help="Guided demo tutorial commands.")
+    tutorial_subparsers = tutorial_parser.add_subparsers(dest="tutorial_command", required=True)
+    tutorial_subparsers.add_parser("list", help="List guided demo steps.")
+    tutorial_checklist = tutorial_subparsers.add_parser("checklist", help="Check guided demo success files.")
+    tutorial_checklist.add_argument("project_dir")
+    tutorial_summary = tutorial_subparsers.add_parser("summary", help="Generate guided demo summary markdown.")
+    tutorial_summary.add_argument("project_dir")
+    tutorial_reset = tutorial_subparsers.add_parser("reset", help="Reset guided demo progress only.")
+    tutorial_reset.add_argument("project_dir")
 
     return parser
 
@@ -289,6 +305,27 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.report_command == "bundle":
             print(f"Project report bundle written to: {export_project_report_bundle(args.project_dir)}")
+            return 0
+    if args.command == "tutorial":
+        if args.tutorial_command == "list":
+            for step in get_demo_steps():
+                print(f"{step['step_id']}: {step['title']} [{step['page_name']}]")
+                print(f"  CLI: {step['cli_equivalent']}")
+            return 0
+        if args.tutorial_command == "checklist":
+            rows = get_demo_checklist(args.project_dir)
+            for row in rows:
+                print(
+                    f"{row['step_id']}: {row['status']} "
+                    f"files={row['success_file_count']}/{row['expected_file_count']} "
+                    f"marked_complete={row['marked_complete']}"
+                )
+            return 0
+        if args.tutorial_command == "summary":
+            print(f"Demo summary written to: {generate_demo_summary(args.project_dir)}")
+            return 0
+        if args.tutorial_command == "reset":
+            print(f"Demo progress reset: {reset_demo_progress(args.project_dir)}")
             return 0
     return 2
 

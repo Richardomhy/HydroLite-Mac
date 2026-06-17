@@ -10,6 +10,8 @@ https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
 
 Use the online version to present the UI, demo project, example outputs, reports, and safety boundaries. Cloud execution may not provide the full local GEE/SWMM/OpenHydroNet backend environment.
 
+For a first-time audience, start from the `教程与 Demo` page. It provides Route A for online quick review, Route B for local full workflow, and Route C for engineering deliverables.
+
 ## 2. Local Demo
 
 For the complete local workflow, run:
@@ -31,6 +33,8 @@ projects/demo_project
 ```
 
 Open “项目首页” and confirm the project name, modules, cases, and `project_summary.md`.
+
+You can also open “教程与 Demo” and use the built-in checklist while presenting each step.
 
 ## 4. Validate Project
 

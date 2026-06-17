@@ -177,6 +177,7 @@ For a guided public demonstration, follow `docs/demo_script_zh.md`.
 
 - `docs/ui_workbench.md`: HydroLite Studio workbench guide.
 - `docs/project_wizard.md`: project wizard and data import wizard guide.
+- `docs/tutorial_demo.md`: guided in-app tutorial and demo mode.
 - `docs/report_export.md`: one-click Markdown, Word, HTML, PDF, and report bundle export.
 - `docs/project_workflow.md`: project folder workflow.
 - `docs/release_notes_v0.5.0-alpha.md`: release notes.
@@ -230,6 +231,20 @@ python -m hydrolite report project projects/demo_project
 ```
 
 This writes `project_report.md`, `project_report.docx`, `project_report.html`, `project_report.pdf` when a PDF backend is available, or `project_report_pdf_unavailable.md` as a fallback. A safe `project_report_bundle.zip` is also generated for sharing. See `docs/report_export.md`.
+
+## Guided Demo
+
+First-time users should start from the Streamlit `教程与 Demo` page. It provides a step-by-step route through `projects/demo_project`, validation, scenario runs, GEE, SWMM, OpenHydroNet input packaging, comparison, report export, and online/local deployment differences.
+
+CLI helpers are also available:
+
+```bash
+python -m hydrolite tutorial list
+python -m hydrolite tutorial checklist projects/demo_project
+python -m hydrolite tutorial summary projects/demo_project
+```
+
+See `docs/tutorial_demo.md`.
 
 ## Raw Data Safety
 
