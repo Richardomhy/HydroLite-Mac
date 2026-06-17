@@ -21,9 +21,9 @@ def test_version_imports():
     from hydrolite import __version__
     from hydrolite.__version__ import __app_name__, __release_date__
 
-    assert __version__ == "0.6.0-dev"
+    assert __version__ == "0.6.0-beta"
     assert __app_name__ == "HydroLite Studio"
-    assert __release_date__ == "2026-06-15"
+    assert __release_date__ == "2026-06-17"
 
 
 def test_version_cli_executes():
@@ -36,7 +36,7 @@ def test_version_cli_executes():
     )
     assert completed.returncode == 0, completed.stderr
     assert "HydroLite Studio" in completed.stdout
-    assert "0.6.0-dev" in completed.stdout
+    assert "0.6.0-beta" in completed.stdout
 
 
 def test_healthcheck_cli_generates_outputs():
@@ -61,8 +61,8 @@ def test_release_manifest_can_generate(tmp_path: Path):
     manifest = build_release_manifest(tmp_path, test_summary="unit test")
     data = json.loads(manifest.read_text(encoding="utf-8"))
     assert data["app_name"] == "HydroLite Studio"
-    assert data["version"] == "0.6.0-dev"
-    assert data["release_date"] == "2026-06-15"
+    assert data["version"] == "0.6.0-beta"
+    assert data["release_date"] == "2026-06-17"
     assert "demo_project_package.zip" in data["files"]
     assert release_directory_is_safe(tmp_path) is False
 
@@ -78,7 +78,7 @@ def test_release_directory_has_no_secrets_external_or_weights_if_present():
 def test_streamlit_sidebar_can_read_version():
     import hydrolite.ui.app as app
 
-    assert app.__version__ == "0.6.0-dev"
+    assert app.__version__ == "0.6.0-beta"
 
 
 def test_no_tracked_secrets_large_weights_or_external_repo():

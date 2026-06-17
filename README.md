@@ -1,19 +1,19 @@
-# HydroLite Studio v0.6.0-dev
+# HydroLite Studio v0.6.0-beta
 
-[![Release](https://img.shields.io/badge/release-v0.5.0--alpha.2-blue)](https://github.com/Richardomhy/HydroLite-Mac/releases/tag/v0.5.0-alpha.2)
+[![Release](https://img.shields.io/badge/release-v0.6.0--beta-blue)](https://github.com/Richardomhy/HydroLite-Mac/releases/tag/v0.6.0-beta)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Cloud%20demo-ff4b4b)](https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app)
 
 - GitHub repository: https://github.com/Richardomhy/HydroLite-Mac.git
 - Streamlit Cloud online demo: https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
-- Current public version: `v0.5.0-alpha.2`
+- Current version: `v0.6.0-beta`
 
-The online version is best for demos and viewing example outputs; the local version is recommended for complete GEE, SWMM, and OpenHydroNet workflows.
+The online version is best for demos, tutorials, data template downloads, and viewing example outputs; the local version is recommended for complete GEE, SWMM, OpenHydroNet-ready input, and project delivery workflows.
 
-HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.6.0-dev starts the next usability phase by adding a project wizard and data import wizard for users who do not want to hand-edit YAML files.
+HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.6.0-beta freezes the first beta of the project-centered workbench: project workflow, data templates, project wizard, guided demo, comparison, and report export are now packaged for broader testing.
 
-Latest public demo release: **v0.5.0-alpha.2**.
+Latest beta release: **v0.6.0-beta**.
 
-Current development version: **v0.6.0-dev**.
+Previous stable alpha tag: **v0.5.0-alpha.2**.
 
 Quick demo entry points:
 
@@ -21,8 +21,43 @@ Quick demo entry points:
 - 中文快速开始：`docs/quickstart_zh.md`
 - 中文演示脚本：`docs/demo_script_zh.md`
 - GitHub Release 发布说明：`docs/release_announcement_v0.5.0-alpha.2.md`
+- Beta 发布说明：`docs/release_announcement_v0.6.0-beta.md`
 - FAQ：`docs/faq_zh.md`
+- 数据模板：`docs/data_templates.md`
 - 项目向导：`docs/project_wizard.md`
+
+## Beta Feature Overview
+
+- Project workflow with project-local cases, configs, outputs, reports, and package export.
+- Streamlit professional workbench with pages for tutorial, data templates, validation, scenarios, GEE, SWMM, OpenHydroNet-ready inputs, comparison, and reports.
+- Project wizard for creating projects without hand-editing YAML.
+- Real-project CSV/GeoJSON data templates and data specification validation.
+- Guided tutorial and demo mode for first-time users.
+- One-click Markdown, Word, HTML, PDF fallback, and report bundle export.
+- GEE data center outputs and HydroLite input product handoff.
+- SWMM coupling and result extraction with graceful backend fallback.
+- OpenHydroNet-ready input package generation without training or large inference.
+- Observed streamflow import and model evaluation metrics.
+
+## Recommended Demo Flow
+
+```text
+教程与 Demo -> 数据模板 -> 项目向导 -> 数据与校验 -> 情景运行 -> GEE 数据中心 -> SWMM 联动 -> OpenHydroNet AI 输入 -> 结果对比 -> 报告与导出
+```
+
+## Real Project Workflow
+
+1. 下载 `templates/data/` 数据模板；
+2. 整理 rainfall、subbasins、reaches、observed streamflow、SWMM mapping 和 GEE boundary；
+3. 使用项目向导创建项目；
+4. 校验数据与项目；
+5. 运行单情景或批量情景；
+6. 查看结果对比；
+7. 导出 Markdown / Word / HTML / PDF fallback 报告和项目包。
+
+## Beta Feedback
+
+Beta users can use `docs/beta_user_feedback.md` to report usability issues, missing checks, documentation gaps, UI problems, or local environment failures.
 
 ## Quick Start
 
@@ -186,6 +221,11 @@ For a guided public demonstration, follow `docs/demo_script_zh.md`.
 - `docs/quickstart_zh.md`: Chinese quick start.
 - `docs/demo_script_zh.md`: Chinese demo presenter script.
 - `docs/faq_zh.md`: Chinese FAQ.
+- `docs/release_notes_v0.6.0-beta.md`: beta release notes.
+- `docs/release_announcement_v0.6.0-beta.md`: beta user-facing announcement.
+- `docs/beta_test_plan.md`: beta test plan.
+- `docs/beta_user_feedback.md`: beta feedback template.
+- `docs/v0.6.0_beta_checklist.md`: beta release checklist.
 - `docs/installation_guide.md`: install and deployment guide.
 - `docs/demo_walkthrough.md`: end-to-end demo.
 - `docs/known_limitations.md`: limitations and non-use cases.

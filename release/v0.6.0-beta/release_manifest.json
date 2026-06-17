@@ -1,0 +1,102 @@
+{
+  "app_name": "HydroLite Studio",
+  "version": "0.6.0-beta",
+  "release_date": "2026-06-17",
+  "git_commit": "tag:v0.6.0-beta",
+  "git_tag": "v0.6.0-beta",
+  "github_url": "https://github.com/Richardomhy/HydroLite-Mac.git",
+  "streamlit_url": "https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app",
+  "files": [
+    {
+      "name": "beta_test_plan.md",
+      "size_bytes": 2553
+    },
+    {
+      "name": "beta_user_feedback.md",
+      "size_bytes": 923
+    },
+    {
+      "name": "data_templates.md",
+      "size_bytes": 4835
+    },
+    {
+      "name": "data_templates_bundle.zip",
+      "size_bytes": 3200
+    },
+    {
+      "name": "demo_project_package.zip",
+      "size_bytes": 404853
+    },
+    {
+      "name": "installation_guide.md",
+      "size_bytes": 2391
+    },
+    {
+      "name": "project_report_bundle.zip",
+      "size_bytes": 406019
+    },
+    {
+      "name": "project_wizard.md",
+      "size_bytes": 3458
+    },
+    {
+      "name": "quickstart_zh.md",
+      "size_bytes": 3053
+    },
+    {
+      "name": "release_announcement_v0.6.0-beta.md",
+      "size_bytes": 1909
+    },
+    {
+      "name": "release_manifest.json",
+      "size_bytes": 2540
+    },
+    {
+      "name": "release_notes_v0.6.0-beta.md",
+      "size_bytes": 3542
+    },
+    {
+      "name": "report_export.md",
+      "size_bytes": 3440
+    },
+    {
+      "name": "tutorial_demo.md",
+      "size_bytes": 3634
+    },
+    {
+      "name": "user_guide_zh.md",
+      "size_bytes": 15081
+    },
+    {
+      "name": "v0.6.0_beta_checklist.md",
+      "size_bytes": 1635
+    }
+  ],
+  "test_summary": {
+    "version": "passed: 0.6.0-beta",
+    "healthcheck": "passed with gee_status warning and no failed checks",
+    "templates": "passed",
+    "wizard": "passed",
+    "tutorial": "passed",
+    "project_workflow": "passed",
+    "report_export": "passed",
+    "project_export": "passed",
+    "legacy_workflow": "passed",
+    "pytest": "passed: 134 tests",
+    "streamlit_startup": "passed"
+  },
+  "known_limitations": [
+    "GEE requires user authentication and project access for real data.",
+    "SWMM depends on optional local or isolated backends.",
+    "OpenHydroNet integration prepares inputs and does not train or run large inference.",
+    "PDF export falls back to a Markdown note when no PDF backend is available."
+  ],
+  "security_checks": {
+    "no_secrets": true,
+    "no_external_repo": true,
+    "no_model_weights": true,
+    "no_checkpoints": true,
+    "no_data_raw_copy": true
+  },
+  "generated_at": "2026-06-17T13:02:16.581134+00:00"
+}
