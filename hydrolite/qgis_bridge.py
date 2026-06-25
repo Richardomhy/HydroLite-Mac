@@ -10,9 +10,41 @@ import subprocess
 import sys
 from typing import Any
 
+import pandas as pd
+
+from hydrolite.data_templates import validate_project_input_dataset
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEMO_GIS_DIR = PROJECT_ROOT / "data_demo" / "gis"
+
+FIELD_ALIASES = {
+    "subbasins": {
+        "subbasin_id": ["subbasin_id", "sub_id", "id", "name", "basin_id"],
+        "area_km2": ["area_km2", "area", "area_sqkm", "area_km", "Shape_Area"],
+        "cn": ["cn", "curve_number", "CN"],
+        "initial_abstraction_ratio": ["initial_abstraction_ratio", "ia_ratio", "lambda"],
+        "lag_time_hr": ["lag_time_hr", "lag_hr", "lag_time", "tc_hr", "lag_hours"],
+        "outlet_reach_id": ["outlet_reach_id", "reach_id", "outlet", "outlet_id"],
+    },
+    "reaches": {
+        "reach_id": ["reach_id", "rid", "id", "name"],
+        "upstream_reach_id": ["upstream_reach_id", "upstream", "from_id", "from_node"],
+        "downstream_reach_id": ["downstream_reach_id", "downstream", "to_id", "to_node"],
+        "length_km": ["length_km", "length", "len_km", "Shape_Length"],
+        "slope": ["slope", "slope_m_m", "gradient"],
+        "muskingum_k_hr": ["muskingum_k_hr", "k_hr", "K", "k_hours"],
+        "muskingum_x": ["muskingum_x", "x", "X"],
+    },
+}
+
+DEFAULTS = {
+    "initial_abstraction_ratio": 0.2,
+    "cn": 75,
+    "lag_time_hr": 1.0,
+    "muskingum_k_hr": 2.0,
+    "muskingum_x": 0.2,
+}
 
 
 def _unique(paths: list[Path]) -> list[Path]:
@@ -139,6 +171,149 @@ def _geojson_layer_info(path: Path) -> dict[str, Any]:
         "fields": fields,
         "bounds": bounds,
     }
+
+
+def _geojson_features(path: str | Path) -> list[dict[str, Any]]:
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if data.get("type") == "FeatureCollection":
+        return [feature for feature in data.get("features", []) if isinstance(feature, dict)]
+    if data.get("type") == "Feature":
+        return [data]
+    return []
+
+
+def infer_hydrolite_field_mapping(layer_path: str | Path, target_template: str) -> dict[str, Any]:
+    features = _geojson_features(layer_path)
+    fields = sorted({key for feature in features for key in (feature.get("properties") or {}).keys()})
+    aliases = FIELD_ALIASES[target_template]
+    mapping: dict[str, str | None] = {}
+    warnings: list[str] = []
+    lower_lookup = {field.lower(): field for field in fields}
+    for target, candidates in aliases.items():
+        match = next((lower_lookup[name.lower()] for name in candidates if name.lower() in lower_lookup), None)
+        mapping[target] = match
+        if match is None:
+            warnings.append(f"No source field found for {target}.")
+    return {"target_template": target_template, "layer_path": str(layer_path), "source_fields": fields, "mapping": mapping, "warnings": warnings}
+
+
+def _mapped_rows(layer_path: str | Path, target_template: str, mapping: dict[str, str | None] | None = None) -> tuple[list[dict[str, Any]], list[str]]:
+    features = _geojson_features(layer_path)
+    inferred = infer_hydrolite_field_mapping(layer_path, target_template)
+    mapping = mapping or inferred["mapping"]
+    warnings = list(inferred["warnings"])
+    rows: list[dict[str, Any]] = []
+    id_field = "subbasin_id" if target_template == "subbasins" else "reach_id"
+    prefix = "SUB" if target_template == "subbasins" else "R"
+    targets = list(FIELD_ALIASES[target_template])
+    for index, feature in enumerate(features, start=1):
+        props = feature.get("properties") or {}
+        row: dict[str, Any] = {}
+        for target in targets:
+            source = mapping.get(target)
+            row[target] = props.get(source) if source else DEFAULTS.get(target, "")
+        if not row.get(id_field):
+            row[id_field] = f"{prefix}{index}"
+            warnings.append(f"{id_field} missing for row {index}; generated {row[id_field]}.")
+        if target_template == "subbasins":
+            if not row.get("area_km2"):
+                warnings.append(f"area_km2 missing for {row[id_field]}; left blank.")
+            source = mapping.get("area_km2")
+            if source and source.lower() == "shape_area" and pd.notna(row["area_km2"]):
+                value = float(row["area_km2"])
+                if value > 10000:
+                    row["area_km2"] = value / 1_000_000
+                    warnings.append("Shape_Area appears to be square meters; converted to km2.")
+        if target_template == "reaches":
+            if not row.get("length_km"):
+                warnings.append(f"length_km missing for {row[id_field]}; left blank.")
+            source = mapping.get("length_km")
+            if source and source.lower() == "shape_length" and pd.notna(row["length_km"]):
+                value = float(row["length_km"])
+                if value > 1000:
+                    row["length_km"] = value / 1000
+                    warnings.append("Shape_Length appears to be meters; converted to km.")
+        rows.append(row)
+    return rows, sorted(set(warnings))
+
+
+def convert_geojson_to_subbasins_csv(layer_path: str | Path, output_csv: str | Path, mapping: dict[str, str | None] | None = None) -> dict[str, Any]:
+    rows, warnings = _mapped_rows(layer_path, "subbasins", mapping)
+    output = Path(output_csv)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows, columns=list(FIELD_ALIASES["subbasins"])).to_csv(output, index=False)
+    return {"status": "success", "output_csv": str(output), "rows": len(rows), "warnings": warnings}
+
+
+def convert_geojson_to_reaches_csv(layer_path: str | Path, output_csv: str | Path, mapping: dict[str, str | None] | None = None) -> dict[str, Any]:
+    rows, warnings = _mapped_rows(layer_path, "reaches", mapping)
+    output = Path(output_csv)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows, columns=list(FIELD_ALIASES["reaches"])).to_csv(output, index=False)
+    return {"status": "success", "output_csv": str(output), "rows": len(rows), "warnings": warnings}
+
+
+def export_basin_boundary_geojson(layer_path: str | Path, output_geojson: str | Path) -> dict[str, Any]:
+    return qgis_export_vector(layer_path, output_geojson, output_format="GeoJSON")
+
+
+def validate_qgis_to_hydrolite_outputs(output_dir: str | Path) -> dict[str, Any]:
+    return validate_project_input_dataset(output_dir)
+
+
+def write_qgis_to_hydrolite_report(output_dir: str | Path, conversion_result: dict[str, Any]) -> dict[str, Path]:
+    root = Path(output_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    validation = validate_qgis_to_hydrolite_outputs(root)
+    report = root / "qgis_to_hydrolite_mapping_report.md"
+    summary = root / "qgis_to_hydrolite_summary.xlsx"
+    manifest = root / "qgis_to_hydrolite_manifest.json"
+    report.write_text(
+        "\n".join(
+            [
+                "# QGIS to HydroLite Input Conversion",
+                "",
+                f"- status: `{conversion_result.get('status', 'success')}`",
+                f"- output_dir: `{root}`",
+                f"- validation_status: `{validation['status']}`",
+                "",
+                "This conversion uses GeoJSON properties and HydroLite data templates. It is not a full QGIS plugin.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    pd.DataFrame(validation["checks"]).to_excel(summary, index=False)
+    manifest.write_text(
+        json.dumps({"conversion": conversion_result, "validation": validation}, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return {"report": report, "summary": summary, "manifest": manifest}
+
+
+def convert_qgis_layers_to_hydrolite_inputs(
+    subbasins_layer: str | Path,
+    reaches_layer: str | Path,
+    basin_layer: str | Path,
+    output_dir: str | Path,
+    mappings: dict[str, dict[str, str | None]] | None = None,
+) -> dict[str, Any]:
+    root = Path(output_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    mappings = mappings or {}
+    rainfall = root / "rainfall.csv"
+    if not rainfall.exists():
+        pd.DataFrame([{"time": "2026-01-01 00:00", "rainfall_mm": 0.0}]).to_csv(rainfall, index=False)
+    result = {
+        "status": "success",
+        "output_dir": str(root),
+        "rainfall_placeholder": str(rainfall),
+        "subbasins": convert_geojson_to_subbasins_csv(subbasins_layer, root / "subbasins.csv", mappings.get("subbasins")),
+        "reaches": convert_geojson_to_reaches_csv(reaches_layer, root / "reaches.csv", mappings.get("reaches")),
+        "basin_boundary": export_basin_boundary_geojson(basin_layer, root / "basin_boundary.geojson"),
+    }
+    result["reports"] = {key: str(path) for key, path in write_qgis_to_hydrolite_report(root, result).items()}
+    return result
 
 
 def qgis_layer_info(input_path: str | Path) -> dict[str, Any]:

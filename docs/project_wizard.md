@@ -2,6 +2,8 @@
 
 HydroLite Studio v0.6.0-dev introduces a project wizard and data import wizard for users who do not want to hand-edit YAML files.
 
+If project data comes from QGIS, first run `python -m hydrolite qgis to-hydrolite ...` to convert GeoJSON layers into HydroLite templates, then reference the converted CSV/GeoJSON files in the wizard. See `docs/qgis_to_hydrolite_inputs.md`.
+
 ## Goal
 
 The wizard helps users:

@@ -8,6 +8,8 @@
         "reach_id": "R1",
         "from_node": "N1",
         "to_node": "N2",
+        "length_km": 3.1,
+        "slope": 0.002,
         "k_hours": 2.0,
         "x": 0.2
       },

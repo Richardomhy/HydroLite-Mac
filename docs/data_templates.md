@@ -2,6 +2,8 @@
 
 HydroLite Studio v0.6.0-dev 提供 `templates/data/` 标准模板，帮助真实工程项目在建模前整理流域、降雨、河道、观测流量、SWMM 入流映射和 GEE 边界数据。
 
+QGIS 用户可以先把子流域、河道和流域边界导出为 GeoJSON，再使用 `python -m hydrolite qgis to-hydrolite ...` 转换为本页模板。详见 `docs/qgis_to_hydrolite_inputs.md`。当前转换是 qgis_process / GeoJSON 文件级自动化，不是完整 QGIS 插件。
+
 ## 目的
 
 - 明确每类输入数据需要哪些字段；

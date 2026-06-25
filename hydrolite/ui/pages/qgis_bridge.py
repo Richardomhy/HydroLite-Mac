@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
 from hydrolite.qgis_bridge import (
     DEMO_GIS_DIR,
     build_qgis_diagnosis,
+    convert_qgis_layers_to_hydrolite_inputs,
+    infer_hydrolite_field_mapping,
     qgis_bridge_demo,
     qgis_export_attributes_csv,
     qgis_export_vector,
@@ -13,6 +17,7 @@ from hydrolite.qgis_bridge import (
     qgis_process_algorithms,
     qgis_process_version,
     qgis_validate_vector_layer,
+    validate_qgis_to_hydrolite_outputs,
     write_qgis_diagnosis,
 )
 from hydrolite.ui.components import read_text_if_exists, show_download, show_json
@@ -79,6 +84,38 @@ def render(context: WorkbenchContext) -> None:
     show_download("下载 qgis_bridge_demo_report.md", demo_report, "text/markdown")
     show_download("下载 demo_subbasins_export.geojson", demo_geojson, "application/geo+json")
     show_download("下载 demo_subbasins_attributes.csv", demo_csv, "text/csv")
+
+    st.subheader("QGIS 图层转 HydroLite 输入")
+    st.caption("当前转换基于 GeoJSON 属性字段；面积/长度建议先在 QGIS 中计算好。HydroLite 不在此阶段做复杂投影面积计算。")
+    subbasins_layer = st.text_input("subbasins GeoJSON", value=str(DEMO_GIS_DIR / "demo_subbasins.geojson"))
+    reaches_layer = st.text_input("reaches GeoJSON", value=str(DEMO_GIS_DIR / "demo_reaches.geojson"))
+    basin_layer = st.text_input("basin boundary GeoJSON", value=str(DEMO_GIS_DIR / "demo_basin_boundary.geojson"))
+    conversion_dir = st.text_input("输出目录", value=str(OUTPUT_ROOT / "qgis_to_hydrolite"))
+
+    conv_cols = st.columns(3)
+    if conv_cols[0].button("推断字段映射", use_container_width=True):
+        show_json(
+            {
+                "subbasins": infer_hydrolite_field_mapping(subbasins_layer, "subbasins"),
+                "reaches": infer_hydrolite_field_mapping(reaches_layer, "reaches"),
+            }
+        )
+    if conv_cols[1].button("转换为 HydroLite 输入", use_container_width=True):
+        result = convert_qgis_layers_to_hydrolite_inputs(subbasins_layer, reaches_layer, basin_layer, conversion_dir)
+        show_json(result)
+    if conv_cols[2].button("校验转换结果", use_container_width=True):
+        show_json(validate_qgis_to_hydrolite_outputs(conversion_dir))
+
+    converted = Path(conversion_dir)
+    st.write("转换后建议进入 `数据模板` 或 `项目向导` 页面继续校验和建项目。")
+    for label, path, mime in [
+        ("下载 subbasins.csv", converted / "subbasins.csv", "text/csv"),
+        ("下载 reaches.csv", converted / "reaches.csv", "text/csv"),
+        ("下载 basin_boundary.geojson", converted / "basin_boundary.geojson", "application/geo+json"),
+        ("下载 mapping report", converted / "qgis_to_hydrolite_mapping_report.md", "text/markdown"),
+        ("下载 manifest", converted / "qgis_to_hydrolite_manifest.json", "application/json"),
+    ]:
+        show_download(label, path, mime)
 
     st.subheader("PyQGIS")
     st.write(f"candidate python: `{pyqgis['python']}`")

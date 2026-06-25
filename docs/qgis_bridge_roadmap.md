@@ -52,6 +52,8 @@ QGIS Bridge 不直接绕过模板。它应生成或读取：
 
 当前 qgis_process Bridge MVP 已覆盖版本检查、算法列表预览、示例 GeoJSON 图层信息读取、示例图层校验、GeoJSON 导出和属性 CSV 导出。它仍不是完整 QGIS 插件。
 
+QGIS/GeoJSON 图层转 HydroLite 输入模板是文件级自动化：读取 GeoJSON properties，生成 `subbasins.csv`、`reaches.csv` 和 `basin_boundary.geojson`，仍不是完整 QGIS 插件。
+
 ## 暂不直接依赖第三方 ChatGPT/QGIS 插件的原因
 
 - 第三方插件生命周期不可控。

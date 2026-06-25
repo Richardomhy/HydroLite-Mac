@@ -43,7 +43,12 @@ from hydrolite.project import (
 )
 from hydrolite.qgis_bridge import (
     build_qgis_diagnosis,
+    convert_geojson_to_reaches_csv,
+    convert_geojson_to_subbasins_csv,
+    convert_qgis_layers_to_hydrolite_inputs,
     detect_qgis_process_candidates,
+    export_basin_boundary_geojson,
+    infer_hydrolite_field_mapping,
     qgis_bridge_demo,
     qgis_export_attributes_csv,
     qgis_export_vector,
@@ -52,6 +57,7 @@ from hydrolite.qgis_bridge import (
     qgis_process_version,
     qgis_validate_vector_layer,
     recommend_qgis_bridge_mode,
+    validate_qgis_to_hydrolite_outputs,
     write_qgis_diagnosis,
 )
 from hydrolite.runner import run_case
@@ -114,6 +120,25 @@ def build_parser() -> argparse.ArgumentParser:
     qgis_export_csv_parser.add_argument("input_path")
     qgis_export_csv_parser.add_argument("output_csv")
     qgis_subparsers.add_parser("demo", help="Run QGIS process bridge demo.")
+    qgis_infer = qgis_subparsers.add_parser("infer-mapping", help="Infer HydroLite field mapping.")
+    qgis_infer.add_argument("layer_path")
+    qgis_infer.add_argument("target_template", choices=["subbasins", "reaches"])
+    qgis_convert_subbasins = qgis_subparsers.add_parser("convert-subbasins", help="Convert GeoJSON to subbasins.csv.")
+    qgis_convert_subbasins.add_argument("layer_path")
+    qgis_convert_subbasins.add_argument("output_csv")
+    qgis_convert_reaches = qgis_subparsers.add_parser("convert-reaches", help="Convert GeoJSON to reaches.csv.")
+    qgis_convert_reaches.add_argument("layer_path")
+    qgis_convert_reaches.add_argument("output_csv")
+    qgis_export_basin = qgis_subparsers.add_parser("export-basin", help="Export basin boundary GeoJSON.")
+    qgis_export_basin.add_argument("layer_path")
+    qgis_export_basin.add_argument("output_geojson")
+    qgis_to_hydrolite = qgis_subparsers.add_parser("to-hydrolite", help="Convert QGIS/GeoJSON layers to HydroLite inputs.")
+    qgis_to_hydrolite.add_argument("subbasins_layer")
+    qgis_to_hydrolite.add_argument("reaches_layer")
+    qgis_to_hydrolite.add_argument("basin_layer")
+    qgis_to_hydrolite.add_argument("output_dir")
+    qgis_validate_hydrolite = qgis_subparsers.add_parser("validate-hydrolite", help="Validate converted HydroLite inputs.")
+    qgis_validate_hydrolite.add_argument("output_dir")
 
     openhydronet_parser = subparsers.add_parser("openhydronet", help="OpenHydroNet AI flood forecasting commands.")
     openhydronet_subparsers = openhydronet_parser.add_subparsers(dest="openhydronet_command", required=True)
@@ -324,6 +349,47 @@ def main(argv: list[str] | None = None) -> int:
             summary = qgis_bridge_demo()
             print(f"QGIS bridge demo written to: {summary['outputs']['report']}")
             print(f"Summary written to: {summary['outputs']['summary']}")
+            return 0
+        if args.qgis_command == "infer-mapping":
+            import json
+
+            print(json.dumps(infer_hydrolite_field_mapping(args.layer_path, args.target_template), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "convert-subbasins":
+            import json
+
+            print(json.dumps(convert_geojson_to_subbasins_csv(args.layer_path, args.output_csv), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "convert-reaches":
+            import json
+
+            print(json.dumps(convert_geojson_to_reaches_csv(args.layer_path, args.output_csv), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "export-basin":
+            import json
+
+            print(json.dumps(export_basin_boundary_geojson(args.layer_path, args.output_geojson), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "to-hydrolite":
+            import json
+
+            print(
+                json.dumps(
+                    convert_qgis_layers_to_hydrolite_inputs(
+                        args.subbasins_layer,
+                        args.reaches_layer,
+                        args.basin_layer,
+                        args.output_dir,
+                    ),
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+        if args.qgis_command == "validate-hydrolite":
+            import json
+
+            print(json.dumps(validate_qgis_to_hydrolite_outputs(args.output_dir), indent=2, ensure_ascii=False))
             return 0
         diagnosis = build_qgis_diagnosis()
         if args.qgis_command == "recommend":

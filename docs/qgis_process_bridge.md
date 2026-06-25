@@ -90,3 +90,5 @@ data_demo/gis/
 ## 与完整 QGIS 插件的关系
 
 qgis_process Bridge 是文件和命令行层面的 MVP。完整 QGIS 插件可在后续阶段开发，但不应复制 HydroLite 模型算法，也不应绕过数据模板校验。
+
+下一步的 GeoJSON 图层转 HydroLite 模板见 `docs/qgis_to_hydrolite_inputs.md`。
