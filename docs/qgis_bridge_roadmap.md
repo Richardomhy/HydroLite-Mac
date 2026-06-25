@@ -4,6 +4,8 @@
 
 QGIS Bridge 的目标是让 HydroLite 能与 QGIS 工程资料互通：从 QGIS 图层导出 HydroLite 数据模板，导入子流域、河网和流域边界，并把 HydroLite 输出结果回写到 QGIS 可读格式。
 
+当前阶段只做 QGIS Bridge 可行性诊断，不等于已经实现完整 QGIS 插件。
+
 ## 插件方式与 qgis_process 方式对比
 
 | 方式 | 优点 | 缺点 | 建议 |

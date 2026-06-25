@@ -41,6 +41,12 @@ from hydrolite.project import (
     run_project_case,
     validate_project,
 )
+from hydrolite.qgis_bridge import (
+    build_qgis_diagnosis,
+    detect_qgis_process_candidates,
+    recommend_qgis_bridge_mode,
+    write_qgis_diagnosis,
+)
 from hydrolite.runner import run_case
 from hydrolite.tutorial import (
     generate_demo_summary,
@@ -81,6 +87,12 @@ def build_parser() -> argparse.ArgumentParser:
     gee_summary.add_argument("config", help="Path to GEE YAML config.")
     gee_inputs = gee_subparsers.add_parser("hydrolite-inputs", help="Generate HydroLite inputs from GEE outputs.")
     gee_inputs.add_argument("config", help="Path to GEE YAML config.")
+
+    qgis_parser = subparsers.add_parser("qgis", help="QGIS Bridge feasibility diagnostics.")
+    qgis_subparsers = qgis_parser.add_subparsers(dest="qgis_command", required=True)
+    qgis_subparsers.add_parser("diagnose", help="Write QGIS Bridge diagnosis outputs.")
+    qgis_subparsers.add_parser("paths", help="List qgis_process candidate paths.")
+    qgis_subparsers.add_parser("recommend", help="Recommend QGIS Bridge integration mode.")
 
     openhydronet_parser = subparsers.add_parser("openhydronet", help="OpenHydroNet AI flood forecasting commands.")
     openhydronet_subparsers = openhydronet_parser.add_subparsers(dest="openhydronet_command", required=True)
@@ -246,6 +258,24 @@ def main(argv: list[str] | None = None) -> int:
         if args.gee_command == "hydrolite-inputs":
             outputs = write_hydrolite_gee_outputs(args.config)
             print(f"GEE HydroLite inputs written to: {outputs['gee_to_hydrolite_report_md'].parent}")
+            return 0
+    if args.command == "qgis":
+        if args.qgis_command == "paths":
+            for item in detect_qgis_process_candidates():
+                print(f"{item['path']} exists={item['exists']} executable={item['executable']}")
+            return 0
+        diagnosis = build_qgis_diagnosis()
+        if args.qgis_command == "recommend":
+            recommendation = recommend_qgis_bridge_mode(diagnosis)
+            print(f"mode: {recommendation['mode']}")
+            print(f"reason: {recommendation['reason']}")
+            return 0
+        if args.qgis_command == "diagnose":
+            outputs = write_qgis_diagnosis()
+            recommendation = diagnosis["recommendation"]
+            print(f"QGIS diagnosis written to: {outputs['md']}")
+            print(f"JSON written to: {outputs['json']}")
+            print(f"recommended_mode: {recommendation['mode']}")
             return 0
     if args.command == "openhydronet":
         if args.openhydronet_command == "diagnose":
