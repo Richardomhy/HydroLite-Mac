@@ -70,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("version", help="Show HydroLite Studio version information.")
     subparsers.add_parser("healthcheck", help="Run HydroLite Studio release healthcheck.")
+    subparsers.add_parser("roadmap", help="Show HydroLite Studio v0.7.0 roadmap document paths.")
 
     gee_parser = subparsers.add_parser("gee", help="GEE data center commands.")
     gee_subparsers = gee_parser.add_subparsers(dest="gee_command", required=True)
@@ -212,6 +213,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"HydroLite healthcheck status: {status}")
         print(f"Report written to: {outputs.report_md}")
         print(f"Summary written to: {outputs.summary_xlsx}")
+        return 0
+    if args.command == "roadmap":
+        root = Path(__file__).resolve().parents[1]
+        print(f"current_stable_version: {__version__}")
+        print("v0.7.0_goal: GIS/QGIS bridge, real project import, lightweight calibration, report templates, and desktop launcher planning.")
+        print(f"roadmap: {root / 'docs' / 'roadmap_v0.7.0.md'}")
+        print(f"milestones: {root / 'docs' / 'milestones_v0.7.0.md'}")
+        print(f"issue_backlog: {root / 'docs' / 'issue_backlog_v0.7.0.md'}")
         return 0
     if args.command == "gee":
         if args.gee_command == "diagnose":

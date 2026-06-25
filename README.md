@@ -17,6 +17,8 @@ Previous beta tag: **v0.6.0-beta**.
 
 Previous stable alpha tag: **v0.5.0-alpha.2**.
 
+Next development plan: **v0.7.0 roadmap**. This is planning only, not released functionality. Start with `docs/roadmap_v0.7.0.md`.
+
 Quick demo entry points:
 
 - 在线体验：https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
@@ -27,6 +29,7 @@ Quick demo entry points:
 - FAQ：`docs/faq_zh.md`
 - 数据模板：`docs/data_templates.md`
 - 项目向导：`docs/project_wizard.md`
+- v0.7.0 路线图：`docs/roadmap_v0.7.0.md`
 
 ## Beta Feature Overview
 
@@ -40,6 +43,19 @@ Quick demo entry points:
 - SWMM coupling and result extraction with graceful backend fallback.
 - OpenHydroNet-ready input package generation without training or large inference.
 - Observed streamflow import and model evaluation metrics.
+
+## v0.7.0 Planning
+
+v0.6.0-beta.1 is the current stable beta. v0.7.0 is the next development plan, focused on GIS/QGIS Bridge, real project import, lightweight calibration, report templates, desktop launcher evaluation, and QGIS/SWAT/GEE collaboration notes.
+
+Planning documents:
+
+- `docs/roadmap_v0.7.0.md`
+- `docs/milestones_v0.7.0.md`
+- `docs/issue_backlog_v0.7.0.md`
+- `docs/qgis_bridge_roadmap.md`
+- `docs/calibration_roadmap.md`
+- `docs/desktop_app_roadmap.md`
 
 ## Recommended Demo Flow
 
@@ -66,6 +82,7 @@ Beta users can use the Streamlit `Beta 反馈` page, GitHub Issue templates, and
 ```bash
 python -m hydrolite version
 python -m hydrolite healthcheck
+python -m hydrolite roadmap
 python -m streamlit run streamlit_app.py --server.headless true
 ```
 
@@ -235,6 +252,12 @@ For a guided public demonstration, follow `docs/demo_script_zh.md`.
 - `docs/beta_feedback_workflow.md`: beta feedback triage workflow.
 - `docs/v0.6.0_beta_checklist.md`: beta release checklist.
 - `docs/v0.6.0_beta_1_checklist.md`: beta.1 patch release checklist.
+- `docs/roadmap_v0.7.0.md`: v0.7.0 planning roadmap.
+- `docs/milestones_v0.7.0.md`: v0.7.0 milestone plan.
+- `docs/issue_backlog_v0.7.0.md`: GitHub Issue backlog draft.
+- `docs/qgis_bridge_roadmap.md`: QGIS Bridge plan.
+- `docs/calibration_roadmap.md`: lightweight calibration plan.
+- `docs/desktop_app_roadmap.md`: desktop app evaluation plan.
 - `docs/installation_guide.md`: install and deployment guide.
 - `docs/demo_walkthrough.md`: end-to-end demo.
 - `docs/known_limitations.md`: limitations and non-use cases.
