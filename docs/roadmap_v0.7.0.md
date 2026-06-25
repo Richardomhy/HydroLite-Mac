@@ -2,7 +2,7 @@
 
 ## 总目标
 
-v0.7.0 的目标是把 v0.6.0-beta.1 已经稳定的项目工作台继续推进到“真实项目准备与 GIS 协同”阶段：让用户更容易从 QGIS、Excel/CSV、GEE 和已有工程资料进入 HydroLite，再输出可复核的校验、率定和报告成果。
+v0.7.0 的目标是把 v0.6.0-beta.1 已经稳定的项目工作台继续推进到“真实项目准备与 GIS 协同”阶段：让用户更容易从 QGIS、Excel/CSV、GEE 和已有工程资料进入 HydroLite，再输出可复核的校验、率定和报告成果。当前 QGIS 方向仍是 `qgis_process` / GeoJSON 文件级自动化，不是完整 QGIS 插件；QGIS 转项目工作流见 `docs/qgis_project_workflow.md`。
 
 ## 与 v0.6.0-beta.1 的关系
 

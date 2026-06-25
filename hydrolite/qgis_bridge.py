@@ -11,6 +11,7 @@ import sys
 from typing import Any
 
 import pandas as pd
+import yaml
 
 from hydrolite.data_templates import validate_project_input_dataset
 
@@ -313,6 +314,164 @@ def convert_qgis_layers_to_hydrolite_inputs(
         "basin_boundary": export_basin_boundary_geojson(basin_layer, root / "basin_boundary.geojson"),
     }
     result["reports"] = {key: str(path) for key, path in write_qgis_to_hydrolite_report(root, result).items()}
+    return result
+
+
+def copy_qgis_outputs_to_project(qgis_output_dir: str | Path, project_dir: str | Path, rainfall_csv: str | Path | None = None) -> dict[str, Any]:
+    source = Path(qgis_output_dir).expanduser().resolve()
+    project = Path(project_dir).expanduser().resolve()
+    data_dir = project / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    required = ["subbasins.csv", "reaches.csv"]
+    missing = [name for name in required if not (source / name).exists()]
+    if missing:
+        raise FileNotFoundError(f"QGIS output missing required files: {', '.join(missing)}")
+    copied: dict[str, str] = {}
+    for name in ["subbasins.csv", "reaches.csv", "basin_boundary.geojson", "qgis_to_hydrolite_manifest.json"]:
+        src = source / name
+        if src.exists():
+            dst = data_dir / name
+            shutil.copy2(src, dst)
+            copied[name] = str(dst)
+    rainfall_source = Path(rainfall_csv).expanduser().resolve() if rainfall_csv else PROJECT_ROOT / "data_demo" / "rainfall.csv"
+    shutil.copy2(rainfall_source, data_dir / "rainfall.csv")
+    copied["rainfall.csv"] = str(data_dir / "rainfall.csv")
+    return {"data_dir": str(data_dir), "copied": copied, "rainfall_source": str(rainfall_source)}
+
+
+def generate_project_yaml_from_qgis_outputs(qgis_output_dir: str | Path, project_dir: str | Path, project_name: str | None = None) -> Path:
+    project = Path(project_dir).expanduser().resolve()
+    project.mkdir(parents=True, exist_ok=True)
+    data = {
+        "project_name": project_name or project.name,
+        "project_id": project.name,
+        "description": "HydroLite project created from QGIS/GeoJSON converted inputs.",
+        "paths": {
+            "cases_dir": "cases",
+            "configs_dir": "configs",
+            "data_dir": "data",
+            "output_dir": "output",
+            "reports_dir": "reports",
+            "logs_dir": "logs",
+        },
+        "modules": {"hydrolite": True, "swmm": False, "gee": False, "openhydronet": False, "qgis_bridge": True},
+        "default_cases": ["qgis_demo.yaml"],
+        "qgis_source": str(Path(qgis_output_dir).expanduser().resolve()),
+    }
+    path = project / "project.yaml"
+    path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return path
+
+
+def generate_case_from_qgis_outputs(qgis_output_dir: str | Path, project_dir: str | Path, rainfall_csv: str | Path | None = None) -> Path:
+    project = Path(project_dir).expanduser().resolve()
+    case = {
+        "name": "qgis_demo",
+        "model": {"time_step_hours": 1.0},
+        "inputs": {
+            "directory": "data",
+            "rainfall": "rainfall.csv",
+            "subcatchments": "subbasins.csv",
+            "reaches": "reaches.csv",
+        },
+        "outputs": {"directory": "output/qgis_demo"},
+    }
+    path = project / "cases" / "qgis_demo.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(case, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return path
+
+
+def write_qgis_project_summary(project_dir: str | Path, result: dict[str, Any]) -> Path:
+    project = Path(project_dir).expanduser().resolve()
+    reports = project / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
+    path = reports / "qgis_project_summary.md"
+    manifest = project / "data" / "qgis_to_hydrolite_manifest.json"
+    batch = result.get("batch") or {}
+    compare = result.get("compare") or {}
+    report = result.get("report") or {}
+    path.write_text(
+        "\n".join(
+            [
+                "# QGIS to HydroLite Project Summary",
+                "",
+                f"- project_dir: `{project}`",
+                f"- status: `{result.get('status', 'success')}`",
+                f"- project_yaml: `{result.get('project_yaml', '')}`",
+                f"- case_yaml: `{result.get('case_yaml', '')}`",
+                f"- rainfall: `{result.get('rainfall_source', '')}`",
+                f"- qgis_manifest: `{manifest if manifest.exists() else 'not available'}`",
+                f"- validation_status: `{result.get('validation_status', '')}`",
+                f"- batch_status: `{batch.get('status', '')}`",
+                f"- compare_status: `{compare.get('status', '')}`",
+                f"- report_status: `{'success' if report else ''}`",
+                "",
+                "This project was created from QGIS/GeoJSON converted inputs. It is not a full QGIS plugin workflow.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def create_project_from_qgis_outputs(
+    qgis_output_dir: str | Path,
+    project_dir: str | Path,
+    rainfall_csv: str | Path | None = None,
+    project_name: str | None = None,
+    run_validate: bool = True,
+) -> dict[str, Any]:
+    from hydrolite.project import validate_project
+
+    project = Path(project_dir).expanduser().resolve()
+    if project.exists() and any(project.iterdir()):
+        raise FileExistsError(f"Project already exists and is not empty: {project}")
+    for name in ("cases", "configs", "data", "output", "reports", "logs"):
+        (project / name).mkdir(parents=True, exist_ok=True)
+    copied = copy_qgis_outputs_to_project(qgis_output_dir, project, rainfall_csv)
+    project_yaml = generate_project_yaml_from_qgis_outputs(qgis_output_dir, project, project_name)
+    case_yaml = generate_case_from_qgis_outputs(qgis_output_dir, project, rainfall_csv)
+    result: dict[str, Any] = {
+        "status": "success",
+        "project_dir": str(project),
+        "project_yaml": str(project_yaml),
+        "case_yaml": str(case_yaml),
+        "rainfall_source": copied["rainfall_source"],
+        "copied": copied["copied"],
+        "warnings": [],
+    }
+    if run_validate:
+        validation = validate_project(project)
+        result["validation_status"] = "success"
+        result["validation_xlsx"] = str(validation["xlsx"])
+    result["summary"] = str(write_qgis_project_summary(project, result))
+    return result
+
+
+def run_qgis_project_workflow(
+    qgis_output_dir: str | Path,
+    project_dir: str | Path,
+    rainfall_csv: str | Path | None = None,
+    run_batch: bool = False,
+    run_compare: bool = False,
+    run_report: bool = False,
+) -> dict[str, Any]:
+    from hydrolite.export_report import render_project_report_all
+    from hydrolite.project import compare_project_outputs, run_project_batch, validate_project
+
+    result = create_project_from_qgis_outputs(qgis_output_dir, project_dir, rainfall_csv=rainfall_csv, run_validate=True)
+    project = Path(project_dir).expanduser().resolve()
+    result["validation"] = str(validate_project(project)["xlsx"])
+    if run_batch:
+        summary_path, rows, failed = run_project_batch(project)
+        result["batch"] = {"status": "failed" if failed else "success", "summary": str(summary_path), "failed": failed, "rows": rows}
+    if run_compare:
+        result["compare"] = {"status": "success", "output_dir": str(compare_project_outputs(project).output_dir)}
+    if run_report:
+        result["report"] = {key: str(path) for key, path in render_project_report_all(project).items()}
+    result["summary"] = str(write_qgis_project_summary(project, result))
     return result
 
 

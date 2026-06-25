@@ -247,7 +247,7 @@ def _validate_rainfall(case_file: Path, case_name: str, path: Path | None, rows:
         _add(rows, case_file, case_name, "rainfall_csv", "read", "failed", f"Cannot read rainfall CSV: {exc}", "fatal")
         return None, None, None
     time_col = _column(df, ["time", "datetime", "date"])
-    rain_col = _column(df, ["rainfall", "rain_mm"])
+    rain_col = _column(df, ["rainfall", "rain_mm", "rainfall_mm"])
     subbasin_col = _column(df, ["subbasin_id"])
     if time_col is None:
         _add(rows, case_file, case_name, "rainfall_csv", "time_column", "failed", "Missing time/datetime column.", "fatal")
@@ -294,7 +294,7 @@ def _validate_subbasins(
     id_col = _column(df, ["subbasin_id", "id"])
     area_col = _column(df, ["area_km2"])
     cn_col = _column(df, ["cn", "curve_number"])
-    lag_col = _column(df, ["lag_hours"])
+    lag_col = _column(df, ["lag_hours", "lag_time_hr"])
     for label, column in [("subbasin_id", id_col), ("area_km2", area_col), ("cn", cn_col), ("lag_hours", lag_col)]:
         _add(rows, case_file, case_name, "subbasin_csv", f"{label}_column", "passed" if column else "failed", f"{label} column {'found' if column else 'missing'}.", "info" if column else "fatal")
     if area_col and (pd.to_numeric(df[area_col], errors="coerce") <= 0).any():
@@ -332,8 +332,8 @@ def _validate_reaches(case_file: Path, case_name: str, path: Path | None, dt_hou
         _add(rows, case_file, case_name, "reach_csv", "read", "failed", f"Cannot read reach CSV: {exc}", "fatal")
         return
     reach_col = _column(df, ["reach_id", "id"])
-    k_col = _column(df, ["k_hours", "K_hours"])
-    x_col = _column(df, ["x", "X"])
+    k_col = _column(df, ["k_hours", "K_hours", "muskingum_k_hr"])
+    x_col = _column(df, ["x", "X", "muskingum_x"])
     for label, column in [("reach_id", reach_col), ("k_hours", k_col), ("x", x_col)]:
         _add(rows, case_file, case_name, "reach_csv", f"{label}_column", "passed" if column else "failed", f"{label} column {'found' if column else 'missing'}.", "info" if column else "fatal")
     if not (reach_col and k_col and x_col):

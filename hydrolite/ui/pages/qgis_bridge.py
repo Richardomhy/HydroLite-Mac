@@ -9,6 +9,7 @@ from hydrolite.qgis_bridge import (
     DEMO_GIS_DIR,
     build_qgis_diagnosis,
     convert_qgis_layers_to_hydrolite_inputs,
+    create_project_from_qgis_outputs,
     infer_hydrolite_field_mapping,
     qgis_bridge_demo,
     qgis_export_attributes_csv,
@@ -17,6 +18,7 @@ from hydrolite.qgis_bridge import (
     qgis_process_algorithms,
     qgis_process_version,
     qgis_validate_vector_layer,
+    run_qgis_project_workflow,
     validate_qgis_to_hydrolite_outputs,
     write_qgis_diagnosis,
 )
@@ -116,6 +118,44 @@ def render(context: WorkbenchContext) -> None:
         ("下载 manifest", converted / "qgis_to_hydrolite_manifest.json", "application/json"),
     ]:
         show_download(label, path, mime)
+
+    st.subheader("从 QGIS 转换结果创建 HydroLite 项目")
+    project_dir = st.text_input("项目目录", value="projects/qgis_demo_project")
+    project_rainfall = st.text_input("rainfall_csv（可选）", value="")
+    project_name = st.text_input("项目名称（可选）", value="QGIS Demo Project")
+    project_cols = st.columns(2)
+    project_result = None
+    if project_cols[0].button("创建项目", use_container_width=True):
+        try:
+            project_result = create_project_from_qgis_outputs(
+                conversion_dir,
+                project_dir,
+                rainfall_csv=project_rainfall or None,
+                project_name=project_name or None,
+            )
+            st.success(f"项目已创建: `{project_result['project_dir']}`")
+        except Exception as exc:  # noqa: BLE001
+            st.error(str(exc))
+    if project_cols[1].button("运行完整工作流", use_container_width=True):
+        try:
+            project_result = run_qgis_project_workflow(
+                conversion_dir,
+                project_dir,
+                rainfall_csv=project_rainfall or None,
+                run_batch=True,
+                run_compare=True,
+                run_report=True,
+            )
+            st.success(f"工作流完成: `{project_result['project_dir']}`")
+        except Exception as exc:  # noqa: BLE001
+            st.error(str(exc))
+    if project_result:
+        show_json(project_result)
+    project_path = Path(project_dir)
+    st.write("下一步：进入 `项目首页` 或 `报告与导出` 页面查看项目成果。")
+    st.code(read_text_if_exists(project_path / "project.yaml"), language="yaml")
+    st.markdown(read_text_if_exists(project_path / "reports" / "qgis_project_summary.md"))
+    show_download("下载 qgis_project_summary.md", project_path / "reports" / "qgis_project_summary.md", "text/markdown")
 
     st.subheader("PyQGIS")
     st.write(f"candidate python: `{pyqgis['python']}`")

@@ -11,7 +11,7 @@
 - `qgis_to_hydrolite_summary.xlsx`
 - `qgis_to_hydrolite_manifest.json`
 
-当前仍是 `qgis_process` / GeoJSON 文件级自动化，不是完整 QGIS 插件。
+当前仍是 `qgis_process` / GeoJSON 文件级自动化，不是完整 QGIS 插件。转换结果可以继续用于一键创建 HydroLite 项目，见 `docs/qgis_project_workflow.md`。
 
 为兼容 HydroLite 数据模板校验，转换目录会写入一个 0 降雨的 `rainfall.csv` 占位文件。真实项目应在项目向导中替换为实际降雨资料。
 

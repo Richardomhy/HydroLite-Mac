@@ -50,7 +50,7 @@ v0.6.0-beta.1 is the current stable beta. v0.7.0 is the next development plan, f
 
 The first v0.7.0 step is QGIS Bridge feasibility diagnosis only. It checks QGIS/QGIS-LTR/qgis_process/PyQGIS availability and does not implement a full QGIS plugin.
 
-The current QGIS Bridge MVP uses `qgis_process` for command-line checks and small GeoJSON/CSV demo exports. It is still not a full QGIS plugin. It can also convert QGIS-exported GeoJSON layers into HydroLite input templates; see `docs/qgis_to_hydrolite_inputs.md`.
+The current QGIS Bridge MVP uses `qgis_process` for command-line checks and small GeoJSON/CSV demo exports. It is still not a full QGIS plugin. It can also convert QGIS-exported GeoJSON layers into HydroLite input templates and create a runnable HydroLite project from those converted outputs; see `docs/qgis_to_hydrolite_inputs.md` and `docs/qgis_project_workflow.md`.
 
 Planning documents:
 
@@ -61,6 +61,7 @@ Planning documents:
 - `docs/qgis_bridge_diagnosis.md`
 - `docs/qgis_process_bridge.md`
 - `docs/qgis_to_hydrolite_inputs.md`
+- `docs/qgis_project_workflow.md`
 - `docs/calibration_roadmap.md`
 - `docs/desktop_app_roadmap.md`
 

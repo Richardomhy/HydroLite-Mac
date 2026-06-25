@@ -46,6 +46,7 @@ from hydrolite.qgis_bridge import (
     convert_geojson_to_reaches_csv,
     convert_geojson_to_subbasins_csv,
     convert_qgis_layers_to_hydrolite_inputs,
+    create_project_from_qgis_outputs,
     detect_qgis_process_candidates,
     export_basin_boundary_geojson,
     infer_hydrolite_field_mapping,
@@ -57,6 +58,7 @@ from hydrolite.qgis_bridge import (
     qgis_process_version,
     qgis_validate_vector_layer,
     recommend_qgis_bridge_mode,
+    run_qgis_project_workflow,
     validate_qgis_to_hydrolite_outputs,
     write_qgis_diagnosis,
 )
@@ -139,6 +141,18 @@ def build_parser() -> argparse.ArgumentParser:
     qgis_to_hydrolite.add_argument("output_dir")
     qgis_validate_hydrolite = qgis_subparsers.add_parser("validate-hydrolite", help="Validate converted HydroLite inputs.")
     qgis_validate_hydrolite.add_argument("output_dir")
+    qgis_create_project = qgis_subparsers.add_parser("create-project", help="Create a HydroLite project from QGIS converted inputs.")
+    qgis_create_project.add_argument("qgis_output_dir")
+    qgis_create_project.add_argument("project_dir")
+    qgis_create_project.add_argument("--rainfall-csv", default=None)
+    qgis_create_project.add_argument("--project-name", default=None)
+    qgis_project_workflow = qgis_subparsers.add_parser("project-workflow", help="Create and run a HydroLite project from QGIS converted inputs.")
+    qgis_project_workflow.add_argument("qgis_output_dir")
+    qgis_project_workflow.add_argument("project_dir")
+    qgis_project_workflow.add_argument("--rainfall-csv", default=None)
+    qgis_project_workflow.add_argument("--run-batch", action="store_true")
+    qgis_project_workflow.add_argument("--run-compare", action="store_true")
+    qgis_project_workflow.add_argument("--run-report", action="store_true")
 
     openhydronet_parser = subparsers.add_parser("openhydronet", help="OpenHydroNet AI flood forecasting commands.")
     openhydronet_subparsers = openhydronet_parser.add_subparsers(dest="openhydronet_command", required=True)
@@ -390,6 +404,42 @@ def main(argv: list[str] | None = None) -> int:
             import json
 
             print(json.dumps(validate_qgis_to_hydrolite_outputs(args.output_dir), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "create-project":
+            import json
+
+            print(
+                json.dumps(
+                    create_project_from_qgis_outputs(
+                        args.qgis_output_dir,
+                        args.project_dir,
+                        rainfall_csv=args.rainfall_csv,
+                        project_name=args.project_name,
+                    ),
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+        if args.qgis_command == "project-workflow":
+            import json
+
+            run_all = not (args.run_batch or args.run_compare or args.run_report)
+            print(
+                json.dumps(
+                    run_qgis_project_workflow(
+                        args.qgis_output_dir,
+                        args.project_dir,
+                        rainfall_csv=args.rainfall_csv,
+                        run_batch=args.run_batch or run_all,
+                        run_compare=args.run_compare or run_all,
+                        run_report=args.run_report or run_all,
+                    ),
+                    indent=2,
+                    ensure_ascii=False,
+                    default=str,
+                )
+            )
             return 0
         diagnosis = build_qgis_diagnosis()
         if args.qgis_command == "recommend":
