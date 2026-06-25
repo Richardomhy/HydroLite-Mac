@@ -8,8 +8,9 @@ import zipfile
 from hydrolite.__version__ import __version__
 
 
-RELEASE_DIR = Path("release/v0.6.0-beta")
+RELEASE_DIR = Path("release/v0.6.0-beta.1")
 ALPHA_TAG_COMMIT = "e81f194cbca58c3a88f8176b6da114d6a46ee1c6"
+BETA_TAG_COMMIT = "67a386dd0de53ef7c22bdbd054adaf7c5aef122b"
 
 
 def _snapshot_data_raw() -> dict[str, tuple[int, int]]:
@@ -36,18 +37,18 @@ def _unsafe_name(name: str) -> bool:
 
 
 def test_beta_version():
-    assert __version__ == "0.6.0-beta"
+    assert __version__ == "0.6.0-beta.1"
 
 
 def test_beta_release_files_exist_and_manifest_readable():
     assert RELEASE_DIR.exists()
-    assert Path("docs/release_notes_v0.6.0-beta.md").exists()
+    assert Path("docs/release_notes_v0.6.0-beta.1.md").exists()
     manifest = RELEASE_DIR / "release_manifest.json"
     assert manifest.exists()
     data = json.loads(manifest.read_text(encoding="utf-8"))
     assert data["app_name"] == "HydroLite Studio"
-    assert data["version"] == "0.6.0-beta"
-    assert data["git_tag"] == "v0.6.0-beta"
+    assert data["version"] == "0.6.0-beta.1"
+    assert data["git_tag"] == "v0.6.0-beta.1"
 
 
 def test_beta_release_bundles_exist_and_are_safe():
@@ -93,3 +94,15 @@ def test_alpha_tag_not_moved():
     )
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip() == ALPHA_TAG_COMMIT
+
+
+def test_beta_tag_not_moved():
+    completed = subprocess.run(
+        ["git", "rev-parse", "v0.6.0-beta"],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == BETA_TAG_COMMIT

@@ -9,7 +9,7 @@ from hydrolite.healthcheck import build_healthcheck, healthcheck_status
 
 GITHUB_URL = "https://github.com/Richardomhy/HydroLite-Mac.git"
 STREAMLIT_URL = "https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app"
-RELEASE_TAG = "v0.6.0-beta"
+RELEASE_TAG = "v0.6.0-beta.1"
 ALPHA_TAG = "v0.5.0-alpha.2"
 
 
@@ -34,7 +34,7 @@ def beta_info(project_root: str | Path = ".") -> dict[str, Any]:
 
 def beta_checklist() -> list[dict[str, str]]:
     return [
-        {"area": "GitHub Release", "check": "Confirm v0.6.0-beta tag and release assets are visible."},
+        {"area": "GitHub Release", "check": "Confirm v0.6.0-beta.1 tag and release assets are visible."},
         {"area": "Release assets", "check": "Download release notes, demo package, report bundle, and data template bundle."},
         {"area": "Streamlit Cloud", "check": "Open online URL and confirm the workbench loads."},
         {"area": "Home page", "check": "Confirm version, beta feedback entry, and safety notes are visible."},
@@ -55,6 +55,6 @@ def beta_smoke_local(project_root: str | Path = ".") -> dict[str, Any]:
         "healthcheck_status": healthcheck_status(health),
         "healthcheck_report": str(health.report_md),
         "readme_exists": (root / "README.md").exists(),
-        "release_dir_exists": (root / "release" / "v0.6.0-beta").exists(),
+        "release_dir_exists": (root / "release" / "v0.6.0-beta.1").exists(),
         "streamlit_app_exists": (root / "streamlit_app.py").exists(),
     }

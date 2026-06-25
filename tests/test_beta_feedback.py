@@ -64,7 +64,7 @@ def test_beta_feedback_docs_exist():
 def test_beta_info_cli_executes():
     completed = _run_hydrolite("beta", "info")
     assert completed.returncode == 0, completed.stderr
-    assert "version: 0.6.0-beta" in completed.stdout
+    assert "version: 0.6.0-beta.1" in completed.stdout
     assert "github_url: https://github.com/Richardomhy/HydroLite-Mac.git" in completed.stdout
     assert "streamlit_url: https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app" in completed.stdout
 
@@ -80,7 +80,7 @@ def test_beta_smoke_local_cli_executes():
     before = _snapshot_data_raw()
     completed = _run_hydrolite("beta", "smoke-local")
     assert completed.returncode == 0, completed.stderr
-    assert "version: 0.6.0-beta" in completed.stdout
+    assert "version: 0.6.0-beta.1" in completed.stdout
     assert "healthcheck_status:" in completed.stdout
     assert "streamlit_app_exists: True" in completed.stdout
     assert _snapshot_data_raw() == before

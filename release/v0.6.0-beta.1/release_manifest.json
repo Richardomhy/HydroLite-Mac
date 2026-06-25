@@ -1,0 +1,53 @@
+{
+  "app_name": "HydroLite Studio",
+  "version": "0.6.0-beta.1",
+  "release_date": "2026-06-25",
+  "git_commit": "tag:v0.6.0-beta.1",
+  "git_tag": "v0.6.0-beta.1",
+  "github_url": "https://github.com/Richardomhy/HydroLite-Mac.git",
+  "streamlit_url": "https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app",
+  "included_features": [
+    "GitHub Issue templates",
+    "Beta feedback Streamlit page",
+    "Beta CLI info/checklist/smoke-local",
+    "Cloud and local smoke test docs",
+    "Post-release validation workflow"
+  ],
+  "patch_changes": [
+    "Promoted beta feedback workflow into v0.6.0-beta.1 patch release.",
+    "Kept v0.6.0-beta model algorithms and project workflow unchanged."
+  ],
+  "files": [
+    "beta_feedback_workflow.md",
+    "beta_test_plan.md",
+    "beta_user_feedback.md",
+    "cloud_smoke_test.md",
+    "data_templates_bundle.zip",
+    "demo_project_package.zip",
+    "local_smoke_test.md",
+    "post_release_validation.md",
+    "project_report_bundle.zip",
+    "release_announcement_v0.6.0-beta.1.md",
+    "release_notes_v0.6.0-beta.1.md",
+    "v0.6.0_beta_1_checklist.md"
+  ],
+  "test_summary": "version, beta CLI, healthcheck, project workflow, report export, templates validate, tutorial checklist, pytest, and Streamlit startup verified for v0.6.0-beta.1",
+  "warnings": [
+    "Patch release; no model algorithms changed.",
+    "GEE, SWMM, and OpenHydroNet backends remain environment-dependent optional integrations.",
+    "OpenHydroNet prepares inputs only and does not train or run large inference."
+  ],
+  "security_checks": {
+    "no_secrets": true,
+    "no_external_repo": true,
+    "no_model_weights": true,
+    "no_checkpoints": true,
+    "no_data_raw": true
+  },
+  "known_limitations": [
+    "GEE, SWMM, and OpenHydroNet backends remain optional environment-dependent integrations.",
+    "OpenHydroNet support prepares input packages only and does not train or run large inference.",
+    "Online Streamlit is for demo and feedback; full workflows are recommended locally."
+  ],
+  "generated_at": "2026-06-25T02:56:25.265591+00:00"
+}

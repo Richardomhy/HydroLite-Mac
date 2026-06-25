@@ -14,7 +14,7 @@ def render(context: WorkbenchContext) -> None:
     st.header("项目首页")
     st.caption("以项目为中心查看 HydroLite、GEE、SWMM 与 OpenHydroNet 输入工作流。")
     st.info(
-        "公开演示版本：HydroLite Studio v0.6.0-beta。在线版："
+        "公开演示版本：HydroLite Studio v0.6.0-beta.1。在线版："
         "https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app 。GitHub："
         "https://github.com/Richardomhy/HydroLite-Mac.git 。推荐流程："
         "项目首页 -> 教程与 Demo -> 数据与校验 -> 情景运行 -> GEE 数据中心 -> SWMM 联动 -> "

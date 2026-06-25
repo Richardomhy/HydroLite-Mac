@@ -1,17 +1,19 @@
-# HydroLite Studio v0.6.0-beta
+# HydroLite Studio v0.6.0-beta.1
 
-[![Release](https://img.shields.io/badge/release-v0.6.0--beta-blue)](https://github.com/Richardomhy/HydroLite-Mac/releases/tag/v0.6.0-beta)
+[![Release](https://img.shields.io/badge/release-v0.6.0--beta.1-blue)](https://github.com/Richardomhy/HydroLite-Mac/releases/tag/v0.6.0-beta.1)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Cloud%20demo-ff4b4b)](https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app)
 
 - GitHub repository: https://github.com/Richardomhy/HydroLite-Mac.git
 - Streamlit Cloud online demo: https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
-- Current version: `v0.6.0-beta`
+- Current version: `v0.6.0-beta.1`
 
 The online version is best for demos, tutorials, data template downloads, and viewing example outputs; the local version is recommended for complete GEE, SWMM, OpenHydroNet-ready input, and project delivery workflows.
 
-HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.6.0-beta freezes the first beta of the project-centered workbench: project workflow, data templates, project wizard, guided demo, comparison, and report export are now packaged for broader testing.
+HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.6.0-beta.1 is a patch release that keeps the v0.6.0-beta model workflow unchanged and adds the beta feedback loop, Issue templates, smoke test docs, and post-release validation materials.
 
-Latest beta release: **v0.6.0-beta**.
+Latest beta release: **v0.6.0-beta.1**.
+
+Previous beta tag: **v0.6.0-beta**.
 
 Previous stable alpha tag: **v0.5.0-alpha.2**.
 
@@ -21,7 +23,7 @@ Quick demo entry points:
 - 中文快速开始：`docs/quickstart_zh.md`
 - 中文演示脚本：`docs/demo_script_zh.md`
 - GitHub Release 发布说明：`docs/release_announcement_v0.5.0-alpha.2.md`
-- Beta 发布说明：`docs/release_announcement_v0.6.0-beta.md`
+- Beta 发布说明：`docs/release_announcement_v0.6.0-beta.1.md`
 - FAQ：`docs/faq_zh.md`
 - 数据模板：`docs/data_templates.md`
 - 项目向导：`docs/project_wizard.md`
@@ -57,7 +59,7 @@ Quick demo entry points:
 
 ## Beta Feedback
 
-Beta users can use `docs/beta_user_feedback.md` to report usability issues, missing checks, documentation gaps, UI problems, or local environment failures.
+Beta users can use the Streamlit `Beta 反馈` page, GitHub Issue templates, and `docs/beta_feedback_workflow.md` to report usability issues, missing checks, documentation gaps, UI problems, or local environment failures.
 
 ## Quick Start
 
@@ -223,9 +225,16 @@ For a guided public demonstration, follow `docs/demo_script_zh.md`.
 - `docs/faq_zh.md`: Chinese FAQ.
 - `docs/release_notes_v0.6.0-beta.md`: beta release notes.
 - `docs/release_announcement_v0.6.0-beta.md`: beta user-facing announcement.
+- `docs/release_notes_v0.6.0-beta.1.md`: beta.1 patch release notes.
+- `docs/release_announcement_v0.6.0-beta.1.md`: beta.1 user-facing announcement.
 - `docs/beta_test_plan.md`: beta test plan.
 - `docs/beta_user_feedback.md`: beta feedback template.
+- `docs/post_release_validation.md`: post-release validation checklist.
+- `docs/cloud_smoke_test.md`: Streamlit Cloud smoke test.
+- `docs/local_smoke_test.md`: local smoke test.
+- `docs/beta_feedback_workflow.md`: beta feedback triage workflow.
 - `docs/v0.6.0_beta_checklist.md`: beta release checklist.
+- `docs/v0.6.0_beta_1_checklist.md`: beta.1 patch release checklist.
 - `docs/installation_guide.md`: install and deployment guide.
 - `docs/demo_walkthrough.md`: end-to-end demo.
 - `docs/known_limitations.md`: limitations and non-use cases.

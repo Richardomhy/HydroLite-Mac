@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from datetime import datetime, timezone
 import json
 import shutil
 import subprocess
@@ -11,9 +12,9 @@ from hydrolite.__version__ import __app_name__, __release_date__, __version__
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-RELEASE_DIR = PROJECT_ROOT / "release"
+RELEASE_DIR = PROJECT_ROOT / "release" / f"v{__version__}"
 FORBIDDEN_SUFFIXES = (".pt", ".pth", ".ckpt", ".onnx")
-FORBIDDEN_PARTS = ("secrets.toml", "credentials", "service-account", "external/")
+FORBIDDEN_PARTS = ("secrets.toml", "credentials", "service-account", "external/", "data_raw", "checkpoint")
 
 
 def current_git_commit() -> str:
@@ -71,6 +72,20 @@ def build_release_manifest(
         "version": __version__,
         "release_date": __release_date__,
         "git_commit": current_git_commit(),
+        "git_tag": f"v{__version__}",
+        "github_url": "https://github.com/Richardomhy/HydroLite-Mac.git",
+        "streamlit_url": "https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app",
+        "included_features": [
+            "GitHub Issue templates",
+            "Beta feedback Streamlit page",
+            "Beta CLI info/checklist/smoke-local",
+            "Cloud and local smoke test docs",
+            "Post-release validation workflow",
+        ],
+        "patch_changes": [
+            "Promoted beta feedback workflow into v0.6.0-beta.1 patch release.",
+            "Kept v0.6.0-beta model algorithms and project workflow unchanged.",
+        ],
         "files": files,
         "test_summary": test_summary,
         "warnings": warnings or [
@@ -82,7 +97,15 @@ def build_release_manifest(
             "no_secrets": release_directory_is_safe(root),
             "no_external_repo": release_directory_is_safe(root),
             "no_model_weights": release_directory_is_safe(root),
+            "no_checkpoints": release_directory_is_safe(root),
+            "no_data_raw": release_directory_is_safe(root),
         },
+        "known_limitations": [
+            "GEE, SWMM, and OpenHydroNet backends remain optional environment-dependent integrations.",
+            "OpenHydroNet support prepares input packages only and does not train or run large inference.",
+            "Online Streamlit is for demo and feedback; full workflows are recommended locally.",
+        ],
+        "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     path = root / "release_manifest.json"
     path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
