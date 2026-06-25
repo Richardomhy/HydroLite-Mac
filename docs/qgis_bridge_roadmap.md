@@ -50,6 +50,8 @@ QGIS Bridge 不直接绕过模板。它应生成或读取：
 3. 将子流域/河网图层字段映射到 HydroLite CSV 模板。
 4. 将 HydroLite 结果 CSV 生成 QGIS 可加载的 CSV/GeoJSON。
 
+当前 qgis_process Bridge MVP 已覆盖版本检查、算法列表预览、示例 GeoJSON 图层信息读取、示例图层校验、GeoJSON 导出和属性 CSV 导出。它仍不是完整 QGIS 插件。
+
 ## 暂不直接依赖第三方 ChatGPT/QGIS 插件的原因
 
 - 第三方插件生命周期不可控。

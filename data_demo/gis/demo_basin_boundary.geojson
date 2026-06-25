@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "name": "demo_basin_boundary",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "basin_id": "DEMO_BASIN",
+        "name": "Demo Basin"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[0, 0], [0.08, 0], [0.08, 0.06], [0, 0.06], [0, 0]]]
+      }
+    }
+  ]
+}

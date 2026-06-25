@@ -44,6 +44,13 @@ from hydrolite.project import (
 from hydrolite.qgis_bridge import (
     build_qgis_diagnosis,
     detect_qgis_process_candidates,
+    qgis_bridge_demo,
+    qgis_export_attributes_csv,
+    qgis_export_vector,
+    qgis_layer_info,
+    qgis_process_algorithms,
+    qgis_process_version,
+    qgis_validate_vector_layer,
     recommend_qgis_bridge_mode,
     write_qgis_diagnosis,
 )
@@ -93,6 +100,20 @@ def build_parser() -> argparse.ArgumentParser:
     qgis_subparsers.add_parser("diagnose", help="Write QGIS Bridge diagnosis outputs.")
     qgis_subparsers.add_parser("paths", help="List qgis_process candidate paths.")
     qgis_subparsers.add_parser("recommend", help="Recommend QGIS Bridge integration mode.")
+    qgis_subparsers.add_parser("version", help="Show qgis_process version.")
+    qgis_algorithms = qgis_subparsers.add_parser("algorithms", help="List QGIS Processing algorithms.")
+    qgis_algorithms.add_argument("--filter", default=None)
+    qgis_layer_info_parser = qgis_subparsers.add_parser("layer-info", help="Read vector layer information.")
+    qgis_layer_info_parser.add_argument("input_path")
+    qgis_validate_layer = qgis_subparsers.add_parser("validate-layer", help="Validate a vector layer.")
+    qgis_validate_layer.add_argument("input_path")
+    qgis_export_vector_parser = qgis_subparsers.add_parser("export-vector", help="Export vector layer.")
+    qgis_export_vector_parser.add_argument("input_path")
+    qgis_export_vector_parser.add_argument("output_path")
+    qgis_export_csv_parser = qgis_subparsers.add_parser("export-csv", help="Export vector attributes to CSV.")
+    qgis_export_csv_parser.add_argument("input_path")
+    qgis_export_csv_parser.add_argument("output_csv")
+    qgis_subparsers.add_parser("demo", help="Run QGIS process bridge demo.")
 
     openhydronet_parser = subparsers.add_parser("openhydronet", help="OpenHydroNet AI flood forecasting commands.")
     openhydronet_subparsers = openhydronet_parser.add_subparsers(dest="openhydronet_command", required=True)
@@ -263,6 +284,46 @@ def main(argv: list[str] | None = None) -> int:
         if args.qgis_command == "paths":
             for item in detect_qgis_process_candidates():
                 print(f"{item['path']} exists={item['exists']} executable={item['executable']}")
+            return 0
+        if args.qgis_command == "version":
+            result = qgis_process_version()
+            print(result.get("stdout") or result.get("stderr") or "WARNING qgis_process not available")
+            return 0
+        if args.qgis_command == "algorithms":
+            result = qgis_process_algorithms(args.filter)
+            algorithms = result.get("algorithms", [])
+            if not algorithms:
+                print(result.get("stderr") or "WARNING no algorithms returned")
+                return 0
+            for line in algorithms[:200]:
+                print(line)
+            if len(algorithms) > 200:
+                print(f"... truncated {len(algorithms) - 200} more lines")
+            return 0
+        if args.qgis_command == "layer-info":
+            import json
+
+            print(json.dumps(qgis_layer_info(args.input_path), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "validate-layer":
+            import json
+
+            print(json.dumps(qgis_validate_vector_layer(args.input_path), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "export-vector":
+            import json
+
+            print(json.dumps(qgis_export_vector(args.input_path, args.output_path), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "export-csv":
+            import json
+
+            print(json.dumps(qgis_export_attributes_csv(args.input_path, args.output_csv), indent=2, ensure_ascii=False))
+            return 0
+        if args.qgis_command == "demo":
+            summary = qgis_bridge_demo()
+            print(f"QGIS bridge demo written to: {summary['outputs']['report']}")
+            print(f"Summary written to: {summary['outputs']['summary']}")
             return 0
         diagnosis = build_qgis_diagnosis()
         if args.qgis_command == "recommend":

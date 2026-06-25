@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "name": "demo_reaches",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "reach_id": "R1",
+        "from_node": "N1",
+        "to_node": "N2",
+        "k_hours": 2.0,
+        "x": 0.2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[0.01, 0.02], [0.04, 0.025], [0.07, 0.02]]
+      }
+    }
+  ]
+}

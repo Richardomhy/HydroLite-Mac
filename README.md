@@ -50,6 +50,8 @@ v0.6.0-beta.1 is the current stable beta. v0.7.0 is the next development plan, f
 
 The first v0.7.0 step is QGIS Bridge feasibility diagnosis only. It checks QGIS/QGIS-LTR/qgis_process/PyQGIS availability and does not implement a full QGIS plugin.
 
+The current QGIS Bridge MVP uses `qgis_process` for command-line checks and small GeoJSON/CSV demo exports. It is still not a full QGIS plugin.
+
 Planning documents:
 
 - `docs/roadmap_v0.7.0.md`
@@ -57,6 +59,7 @@ Planning documents:
 - `docs/issue_backlog_v0.7.0.md`
 - `docs/qgis_bridge_roadmap.md`
 - `docs/qgis_bridge_diagnosis.md`
+- `docs/qgis_process_bridge.md`
 - `docs/calibration_roadmap.md`
 - `docs/desktop_app_roadmap.md`
 
@@ -260,6 +263,7 @@ For a guided public demonstration, follow `docs/demo_script_zh.md`.
 - `docs/issue_backlog_v0.7.0.md`: GitHub Issue backlog draft.
 - `docs/qgis_bridge_roadmap.md`: QGIS Bridge plan.
 - `docs/qgis_bridge_diagnosis.md`: QGIS Bridge feasibility diagnosis guide.
+- `docs/qgis_process_bridge.md`: qgis_process Bridge MVP guide.
 - `docs/calibration_roadmap.md`: lightweight calibration plan.
 - `docs/desktop_app_roadmap.md`: desktop app evaluation plan.
 - `docs/installation_guide.md`: install and deployment guide.

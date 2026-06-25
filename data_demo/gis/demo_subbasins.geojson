@@ -1,0 +1,32 @@
+{
+  "type": "FeatureCollection",
+  "name": "demo_subbasins",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "subbasin_id": "S1",
+        "area_km2": 12.5,
+        "cn": 78,
+        "lag_hours": 1.2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[0, 0], [0.04, 0], [0.04, 0.03], [0, 0.03], [0, 0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "subbasin_id": "S2",
+        "area_km2": 9.4,
+        "cn": 82,
+        "lag_hours": 1.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[0.04, 0], [0.08, 0], [0.08, 0.03], [0.04, 0.03], [0.04, 0]]]
+      }
+    }
+  ]
+}
