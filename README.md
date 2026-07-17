@@ -56,7 +56,7 @@ The current QGIS Bridge MVP uses `qgis_process` for command-line checks and smal
 
 The watershed delineation MVP probes QGIS/GRASS/SAGA-style processing availability, creates a tiny synthetic DEM, runs QGIS sink filling and D8 flow direction when available, and uses HydroLite's deterministic topology engine for flow accumulation and stream extraction. Outlet-based basin geometry remains an explicitly marked fallback and still requires GIS review. See `docs/watershed_delineation_mvp.md`.
 
-The HEC-HMS project generator MVP diagnoses HEC-HMS and Java, maps HydroLite/QGIS/Watershed inputs, and writes an unverified basin/met/control/run skeleton, mapping workbook, manifest, and review report. It does not automate the GUI, run a production HMS simulation, or read DSS results. See `docs/hec_hms_project_generator.md`.
+The HEC-HMS bridge diagnoses HEC-HMS and Java, maps HydroLite/QGIS/Watershed inputs, and writes an unverified basin/met/control/run skeleton. Its run-probe MVP supports static `-script` detection, a bounded no-simulation probe, default dry-run, optional 60-second execution, and basic log/output summaries. It does not automate the GUI or deeply read DSS results. See `docs/hec_hms_project_generator.md` and `docs/hec_hms_run_mvp.md`.
 
 ```bash
 python -m hydrolite watershed backends
@@ -64,6 +64,8 @@ python -m hydrolite watershed mvp
 python -m hydrolite watershed validate output/watershed
 python -m hydrolite hms diagnose
 python -m hydrolite hms create-project projects/qgis_workflow_project output/hec_hms_project
+python -m hydrolite hms run-probe
+python -m hydrolite hms run output/hec_hms_project --dry-run
 ```
 
 The v0.7.0 workflow engine can list stages, create dry-run plans, and write workflow status/report files:
@@ -82,6 +84,7 @@ Planning documents:
 - `docs/full_modeling_workflow.md`
 - `docs/hec_hms_integration_plan.md`
 - `docs/hec_hms_project_generator.md`
+- `docs/hec_hms_run_mvp.md`
 - `docs/watershed_delineation_plan.md`
 - `docs/watershed_delineation_mvp.md`
 - `docs/flood_forecast_plan.md`

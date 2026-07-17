@@ -126,9 +126,10 @@ def test_hms_streamlit_and_workflow_states():
     project_stage = get_workflow_stage("hec_hms_project")
     run_stage = get_workflow_stage("hec_hms_run")
     assert project_stage["status"] == "partial"
-    assert run_stage["status"] == "planned"
+    assert run_stage["status"] == "partial"
     assert "hec_hms_project_report.md" in project_stage["expected_outputs"]
     assert (ROOT / "docs" / "hec_hms_project_generator.md").exists()
+    assert (ROOT / "docs" / "hec_hms_run_mvp.md").exists()
 
 
 def test_hms_does_not_modify_data_raw_or_tags():

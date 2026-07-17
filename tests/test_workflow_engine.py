@@ -48,9 +48,9 @@ def test_workflow_engine_import_and_stage_schema():
     assert {"hec_hms_project", "flood_forecast", "drought_forecast"} <= {stage["stage_id"] for stage in stages}
     for stage in stages:
         assert required <= set(stage)
-        if stage["stage_id"] in {"hec_hms_run", "flood_forecast", "drought_forecast"}:
+        if stage["stage_id"] in {"flood_forecast", "drought_forecast"}:
             assert stage["status"] in {"planned", "not_implemented"}
-        if stage["stage_id"] == "hec_hms_project":
+        if stage["stage_id"] in {"hec_hms_project", "hec_hms_run"}:
             assert stage["status"] == "partial"
 
 

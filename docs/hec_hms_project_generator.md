@@ -16,7 +16,7 @@ python -m hydrolite hms version
 
 诊断检查 macOS、Linux、Windows 常见路径，PATH 中的 `hec-hms` / `hms`，系统 Java 以及 macOS app 内置 Java。对 macOS GUI 启动器，版本优先从 `Info.plist` 读取，避免启动 GUI 或遗留 Java 进程。
 
-当前 Mac 可识别 `/Applications/HEC-HMS-4.13.app`、HEC-HMS 4.13 和 app 内置 OpenJDK 17；命令行运行方式仍是 `unverified`，因此推荐 `project_generation_only`。
+当前 Mac 可识别 `/Applications/HEC-HMS-4.13.app`、HEC-HMS 4.13 和 app 内置 OpenJDK 17。后续 run MVP 已验证内置 Java 的短时 `-script` probe，但生成项目的真实计算仍是 unverified，详见 `docs/hec_hms_run_mvp.md`。
 
 ## 支持输入
 
@@ -48,6 +48,9 @@ output/hec_hms_project/
   data/reach_mapping.csv
   scripts/run_hms_stub.sh
   scripts/run_hms_stub.bat
+  scripts/hydrolite_run_hms.py
+  scripts/run_hms.sh
+  scripts/run_hms.bat
   reports/hec_hms_project_report.md
   reports/hec_hms_project_manifest.json
   reports/hec_hms_mapping_summary.xlsx
@@ -59,7 +62,7 @@ output/hec_hms_project/
 - Meteorologic Model：生成 `rainfall_timeseries.csv`，并标记 simple precipitation input mapping。
 - Control Specifications：从降雨时间推断起止和步长；无法推断时使用 demo 时段并 warning。
 - Simulation Run：关联 basin/met/control，但不自动运行。
-- Run scripts：仅输出安全说明，不启动 HEC-HMS。
+- Run scripts：保留原安全 stub，并可由 `hms write-run-scripts` 生成 Jython、shell 和 batch 命令；默认仍不执行。
 
 ## 人工复核
 

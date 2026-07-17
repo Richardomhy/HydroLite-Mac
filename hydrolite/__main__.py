@@ -32,12 +32,21 @@ from hydrolite.gee.diagnostics import build_gee_diagnosis
 from hydrolite.healthcheck import build_healthcheck, healthcheck_status
 from hydrolite.hec_hms import (
     build_hec_hms_diagnosis,
+    build_hms_run_command,
+    collect_hms_run_outputs,
     create_hms_project_from_hydrolite,
+    detect_hms_cli_modes,
     detect_hec_hms_executables,
     detect_hec_hms_installations,
     hec_hms_version,
+    parse_hms_logs,
+    run_hms_probe,
+    run_hms_project,
+    summarize_hms_run,
     validate_hms_project,
+    validate_hms_run_outputs,
     write_hec_hms_diagnosis,
+    write_hms_run_scripts,
     write_hms_project_report,
 )
 from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
@@ -307,6 +316,26 @@ def build_parser() -> argparse.ArgumentParser:
     hms_validate.add_argument("hms_project_dir")
     hms_report = hms_subparsers.add_parser("report", help="Regenerate the HEC-HMS project report.")
     hms_report.add_argument("hms_project_dir")
+    hms_subparsers.add_parser("cli-modes", help="Detect safe HEC-HMS command-line modes and short script probe status.")
+    hms_run_command = hms_subparsers.add_parser("run-command", help="Build a dry-run HEC-HMS command.")
+    hms_run_command.add_argument("hms_project_dir")
+    hms_write_scripts = hms_subparsers.add_parser("write-run-scripts", help="Write reusable HEC-HMS Jython, shell, and batch scripts.")
+    hms_write_scripts.add_argument("hms_project_dir")
+    hms_subparsers.add_parser("run-probe", help="Run a timeout-bounded HEC-HMS script-mode probe without simulation.")
+    hms_run = hms_subparsers.add_parser("run", help="Dry-run by default; optionally execute the generated HEC-HMS command.")
+    hms_run.add_argument("hms_project_dir")
+    hms_run_mode = hms_run.add_mutually_exclusive_group()
+    hms_run_mode.add_argument("--dry-run", action="store_true", help="Build reports without starting HEC-HMS; this is the default.")
+    hms_run_mode.add_argument("--execute", action="store_true", help="Attempt HEC-HMS execution. MVP results require manual review.")
+    hms_run.add_argument("--timeout", type=int, default=60, help="Execution timeout in seconds, capped at 60.")
+    hms_collect = hms_subparsers.add_parser("collect-outputs", help="Collect HEC-HMS project, log, output, and DSS file metadata.")
+    hms_collect.add_argument("hms_project_dir")
+    hms_logs = hms_subparsers.add_parser("parse-logs", help="Parse HEC-HMS log keywords without reading DSS data.")
+    hms_logs.add_argument("hms_project_dir")
+    hms_summary = hms_subparsers.add_parser("run-summary", help="Write HEC-HMS run summary XLSX, Markdown, and JSON.")
+    hms_summary.add_argument("hms_project_dir")
+    hms_validate_run = hms_subparsers.add_parser("validate-run", help="Validate HEC-HMS run MVP outputs.")
+    hms_validate_run.add_argument("hms_project_dir")
 
     return parser
 
@@ -816,6 +845,38 @@ def main(argv: list[str] | None = None) -> int:
             }
             print(f"HEC-HMS project report written to: {write_hms_project_report(root, result)}")
             return 0
+        if args.hms_command == "cli-modes":
+            print(json.dumps(detect_hms_cli_modes(), indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "run-command":
+            print(json.dumps(build_hms_run_command(args.hms_project_dir), indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "write-run-scripts":
+            outputs = write_hms_run_scripts(args.hms_project_dir)
+            print(json.dumps({name: str(path) for name, path in outputs.items()}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "run-probe":
+            print(json.dumps(run_hms_probe(), indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "run":
+            result = run_hms_project(args.hms_project_dir, timeout=args.timeout, execute=args.execute)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "collect-outputs":
+            print(json.dumps(collect_hms_run_outputs(args.hms_project_dir), indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "parse-logs":
+            print(json.dumps(parse_hms_logs(args.hms_project_dir), indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "run-summary":
+            result = summarize_hms_run(args.hms_project_dir)
+            print(f"HEC-HMS run summary written to: {result['summary_xlsx']}")
+            print(f"Run report written to: {result['run_report']}")
+            return 0
+        if args.hms_command == "validate-run":
+            result = validate_hms_run_outputs(args.hms_project_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1 if result["status"] == "failed" else 0
     return 2
 
 

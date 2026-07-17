@@ -28,8 +28,8 @@ stages:
     notes: Generates an unverified HEC-HMS project skeleton for manual review; no real simulation.
   - stage_id: hec_hms_run
     enabled: false
-    status: planned
-    notes: Planned command-line run and DSS reading.
+    status: partial
+    notes: Default dry-run, timeout-bounded CLI probe, optional execute, and basic output summaries; DSS deep reading remains planned.
   - stage_id: swmm_coupling
     enabled: true
     status: partial

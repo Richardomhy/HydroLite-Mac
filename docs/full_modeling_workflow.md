@@ -43,11 +43,12 @@ flowchart LR
 
 - 流域划分 MVP：探测 qgis_process 水文算法，运行小型合成 DEM 填洼与 D8 流向，并用 HydroLite 拓扑算法完成汇流累积和河网提取；出口点分区仍为 fallback。它需要专业 GIS 人工复核，详见 `docs/watershed_delineation_mvp.md`。
 - HEC-HMS 项目生成 MVP：诊断 HEC-HMS/Java，生成 `project_generation_mvp / unverified` 的 basin/met/control/run 骨架和映射报告。
+- HEC-HMS 运行探测 MVP：内置 Java `-script` probe、默认 dry-run、可选 60 秒 execute、日志和输出文件摘要；真实项目运行与 DSS 深读仍未验证。
 
 ## 规划阶段
 
 - 专业级 DEM 流域划分和真实出口点处理。
-- 已验证可运行的 HEC-HMS 项目语法、真实运行和 DSS 结果读取。
+- 已验证可运行的 HEC-HMS 项目语法、稳定真实计算和 DSS 时间序列读取。
 - 洪水预测。
 - 干旱预测。
 - 参数率定与敏感性分析。
@@ -61,6 +62,7 @@ python -m hydrolite workflow plan templates/workflows/full_modeling_workflow.yam
 python -m hydrolite workflow run-full projects/demo_project --dry-run
 python -m hydrolite watershed mvp
 python -m hydrolite hms create-project projects/qgis_workflow_project output/hec_hms_project
+python -m hydrolite hms run output/hec_hms_project --dry-run
 ```
 
 `dry-run` 是默认行为，用于查看计划，不触发重计算或长任务。
