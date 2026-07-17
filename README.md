@@ -56,7 +56,7 @@ The current QGIS Bridge MVP uses `qgis_process` for command-line checks and smal
 
 The watershed delineation MVP probes QGIS/GRASS/SAGA-style processing availability, creates a tiny synthetic DEM, runs QGIS sink filling and D8 flow direction when available, and uses HydroLite's deterministic topology engine for flow accumulation and stream extraction. Outlet-based basin geometry remains an explicitly marked fallback and still requires GIS review. See `docs/watershed_delineation_mvp.md`.
 
-The HEC-HMS bridge diagnoses HEC-HMS and Java, maps HydroLite/QGIS/Watershed inputs, and writes an unverified basin/met/control/run skeleton. Its run-probe MVP supports static `-script` detection, a bounded no-simulation probe, default dry-run, optional 60-second execution, and basic log/output summaries. It does not automate the GUI or deeply read DSS results. See `docs/hec_hms_project_generator.md` and `docs/hec_hms_run_mvp.md`.
+The HEC-HMS bridge diagnoses HEC-HMS and Java, validates the official `Project.open / computeRun` script flow, and calibrates a HydroLite-generated project against HEC-HMS 4.13 component structure. The calibrated project passes `Project.open` and exposes a Run; compute remains gated until a supported rainfall source is available. It does not automate the GUI or deeply read DSS results. See `docs/hec_hms_official_validation.md`, `docs/hec_hms_file_format_calibration.md`, `docs/hec_hms_project_generator.md`, and `docs/hec_hms_run_mvp.md`.
 
 ```bash
 python -m hydrolite watershed backends

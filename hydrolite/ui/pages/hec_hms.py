@@ -10,17 +10,27 @@ from hydrolite.hec_hms import (
     build_hec_hms_diagnosis,
     build_hms_run_command,
     collect_hms_run_outputs,
+    copy_hms_reference_project_to_output,
+    create_calibrated_hms_project_from_hydrolite,
     create_hms_project_from_hydrolite,
     detect_hms_cli_modes,
+    discover_hms_reference_projects,
     parse_hms_logs,
+    run_hms_compute_probe,
+    run_hms_open_probe,
     run_hms_probe,
     run_hms_project,
+    run_official_hms_reference,
+    select_smallest_hms_reference_project,
     summarize_hms_run,
     validate_hms_project,
     validate_hms_run_outputs,
     write_hec_hms_diagnosis,
+    write_hms_dss_discovery_report,
+    write_hms_official_validation_summary,
     write_hms_run_scripts,
 )
+from hydrolite.hec_hms_format import compare_generated_to_reference, write_hms_format_comparison_report
 from hydrolite.ui.components import read_text_if_exists, safe_read_excel, show_download, show_json
 from hydrolite.ui.state import OUTPUT_ROOT, WorkbenchContext
 
@@ -48,6 +58,80 @@ def render(context: WorkbenchContext) -> None:
     if st.button("运行 HMS 诊断", use_container_width=True):
         outputs = write_hec_hms_diagnosis()
         st.success(f"诊断已生成: `{outputs['md']}`")
+
+    st.subheader("官方项目验证与格式校准")
+    st.caption("官方示例项目仅复制到本机 output/ 用于验证，不会提交到仓库。Project.open 成功不代表模拟完成。")
+    reference_root = OUTPUT_ROOT / "hec_hms_reference"
+    reference_project = reference_root / "reference_project"
+    verified_project = OUTPUT_ROOT / "hec_hms_project_verified"
+    candidates = discover_hms_reference_projects()
+    selected = select_smallest_hms_reference_project(candidates)
+    official_candidates = [item for item in candidates if item.get("likely_official")]
+    if official_candidates:
+        st.dataframe(pd.DataFrame(official_candidates), use_container_width=True)
+    else:
+        st.info("未检测到官方项目，可继续使用 HydroLite 独立工作流和生成器语法检查。")
+    if selected:
+        st.write(
+            f"已选择 `{selected['project_name']}`，大小 `{selected['total_size_bytes']}` bytes，"
+            f"Run: `{', '.join(selected['run_names'])}`"
+        )
+
+    reference_cols = st.columns(4)
+    if reference_cols[0].button("扫描官方参考项目", use_container_width=True):
+        show_json({"candidates": candidates, "selected": selected})
+    if reference_cols[1].button("复制参考项目到 output", disabled=selected is None, use_container_width=True):
+        copied = copy_hms_reference_project_to_output(selected, reference_project)
+        st.success(f"参考项目已复制: `{copied}`")
+    if reference_cols[2].button("运行 reference open", disabled=not reference_project.exists(), use_container_width=True):
+        show_json(run_official_hms_reference(reference_project, execute=False, timeout=60))
+    confirm_reference_compute = st.checkbox("我理解：reference compute 会运行安装包官方小型样例，最长 120 秒。")
+    if reference_cols[3].button(
+        "运行 reference compute",
+        disabled=not reference_project.exists() or not confirm_reference_compute,
+        use_container_width=True,
+    ):
+        show_json(run_official_hms_reference(reference_project, execute=True, timeout=120))
+
+    calibration_cols = st.columns(4)
+    if calibration_cols[0].button("比较项目格式", disabled=not reference_project.exists(), use_container_width=True):
+        comparison = compare_generated_to_reference(reference_project, OUTPUT_ROOT / "hec_hms_project")
+        show_json({key: str(value) for key, value in write_hms_format_comparison_report(reference_root / "reports", comparison).items()})
+    if calibration_cols[1].button("重新生成校准项目", use_container_width=True):
+        show_json(create_calibrated_hms_project_from_hydrolite(context.project_dir, verified_project))
+    if calibration_cols[2].button("运行 generated open-probe", disabled=not verified_project.exists(), use_container_width=True):
+        show_json(run_hms_open_probe(verified_project))
+    confirm_generated_compute = st.checkbox("我理解：仅当全部计算门禁通过时才会尝试 generated compute-probe。")
+    if calibration_cols[3].button(
+        "尝试 generated compute-probe",
+        disabled=not verified_project.exists() or not confirm_generated_compute,
+        use_container_width=True,
+    ):
+        show_json(run_hms_compute_probe(verified_project, execute=True, timeout=120))
+
+    discovery_cols = st.columns(2)
+    if discovery_cols[0].button("发现 DSS", disabled=not verified_project.exists(), use_container_width=True):
+        show_json({key: str(value) for key, value in write_hms_dss_discovery_report(verified_project).items()})
+    if discovery_cols[1].button("生成官方验证总表", use_container_width=True):
+        show_json({key: str(value) for key, value in write_hms_official_validation_summary().items()})
+
+    official_report = reference_root / "reports" / "hec_hms_official_reference_report.md"
+    format_report = reference_root / "reports" / "hms_format_comparison.md"
+    generated_open = verified_project / "reports" / "hec_hms_open_probe.md"
+    generated_compute = verified_project / "reports" / "hec_hms_compute_probe.md"
+    dss_report = verified_project / "reports" / "hec_hms_dss_discovery.md"
+    for title, path in (
+        ("官方参考验证", official_report),
+        ("文件格式比较", format_report),
+        ("生成项目 open-probe", generated_open),
+        ("生成项目 compute-probe", generated_compute),
+        ("DSS 发现", dss_report),
+    ):
+        text = read_text_if_exists(path)
+        if text:
+            with st.expander(title):
+                st.markdown(text)
+            show_download(f"下载 {path.name}", path, "text/markdown")
 
     source_project = st.text_input("HydroLite 项目路径", value=str(context.project_dir))
     hms_output = st.text_input("HMS 项目输出目录", value=str(OUTPUT_ROOT / "hec_hms_project"))

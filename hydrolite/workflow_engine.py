@@ -140,7 +140,7 @@ _STAGES: tuple[WorkflowStage, ...] = (
         "HEC-HMS",
         ["当前为 project_generation_mvp / unverified；不做 GUI 自动化。"],
         ["HEC-HMS optional", "Java runtime optional for diagnosis"],
-        "已实现环境探测、数据映射和 basin/met/control/run 骨架；真实运行与 DSS 读取未验证。",
+        "验证等级包括 official_reference_validated 与 generated_project_opened；校准项目已通过 Project.open，DSS reading planned。",
     ),
     WorkflowStage(
         "hec_hms_run",
@@ -153,9 +153,9 @@ _STAGES: tuple[WorkflowStage, ...] = (
         ["hec_hms_run_report.md", "hec_hms_run_result.json", "hec_hms_run_summary.xlsx"],
         "python -m hydrolite hms run output/hec_hms_project --dry-run",
         "HEC-HMS",
-        ["默认 dry-run；execute 必须显式请求并受 60 秒 timeout 限制；不做 GUI 自动化。"],
+        ["默认 dry-run；execute 必须显式请求并受 120 秒 timeout 限制；不做 GUI 自动化。"],
         ["HEC-HMS optional", "DSS readers planned"],
-        "已实现 -script 静态探测、短时 probe、运行日志和文件摘要；DSS 深度读取仍是 planned。",
+        "验证等级包括 official_reference_validated、generated_project_opened、generated_project_computed；当前生成项目未满足降雨门禁，DSS reading planned。",
     ),
     WorkflowStage(
         "swmm_coupling",

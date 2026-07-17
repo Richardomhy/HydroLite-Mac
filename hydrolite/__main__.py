@@ -33,22 +33,32 @@ from hydrolite.healthcheck import build_healthcheck, healthcheck_status
 from hydrolite.hec_hms import (
     build_hec_hms_diagnosis,
     build_hms_run_command,
+    copy_hms_reference_project_to_output,
     collect_hms_run_outputs,
+    create_calibrated_hms_project_from_hydrolite,
     create_hms_project_from_hydrolite,
     detect_hms_cli_modes,
     detect_hec_hms_executables,
     detect_hec_hms_installations,
+    discover_hms_reference_projects,
     hec_hms_version,
     parse_hms_logs,
+    run_hms_compute_probe,
+    run_hms_open_probe,
     run_hms_probe,
     run_hms_project,
+    run_official_hms_reference,
+    select_smallest_hms_reference_project,
     summarize_hms_run,
     validate_hms_project,
     validate_hms_run_outputs,
     write_hec_hms_diagnosis,
+    write_hms_dss_discovery_report,
+    write_hms_official_validation_summary,
     write_hms_run_scripts,
     write_hms_project_report,
 )
+from hydrolite.hec_hms_format import compare_generated_to_reference, write_hms_format_comparison_report
 from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
 from hydrolite.openhydronet.runner import run_openhydronet_prepare_inputs, run_openhydronet_smoke
 from hydrolite.project import (
@@ -336,6 +346,23 @@ def build_parser() -> argparse.ArgumentParser:
     hms_summary.add_argument("hms_project_dir")
     hms_validate_run = hms_subparsers.add_parser("validate-run", help="Validate HEC-HMS run MVP outputs.")
     hms_validate_run.add_argument("hms_project_dir")
+    hms_subparsers.add_parser("reference-scan", help="Scan bounded locations for official HEC-HMS reference projects.")
+    hms_subparsers.add_parser("reference-info", help="Select and copy the smallest suitable official reference project.")
+    hms_subparsers.add_parser("reference-open", help="Run an open-only probe on the copied official reference project.")
+    hms_subparsers.add_parser("reference-compute", help="Compute the selected official reference run after the open gate passes.")
+    hms_compare = hms_subparsers.add_parser("compare-format", help="Compare generated HEC-HMS component syntax with a reference project.")
+    hms_compare.add_argument("reference_dir")
+    hms_compare.add_argument("generated_dir")
+    hms_calibrate = hms_subparsers.add_parser("calibrate-project", help="Generate a project calibrated to HEC-HMS 4.13 structure.")
+    hms_calibrate.add_argument("project_dir")
+    hms_calibrate.add_argument("output_dir")
+    hms_open_probe = hms_subparsers.add_parser("open-probe", help="Run Project.open against a generated project.")
+    hms_open_probe.add_argument("hms_project_dir")
+    hms_compute_probe = hms_subparsers.add_parser("compute-probe", help="Attempt computeRun only when all safety gates pass.")
+    hms_compute_probe.add_argument("hms_project_dir")
+    hms_discover_dss = hms_subparsers.add_parser("discover-dss", help="List DSS file metadata without deep reading.")
+    hms_discover_dss.add_argument("hms_project_dir")
+    hms_subparsers.add_parser("official-validation-summary", help="Write the official/generated validation summary.")
 
     return parser
 
@@ -801,6 +828,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "hms":
         import json
 
+        reference_root = Path("output/hec_hms_reference").resolve()
+        reference_project = reference_root / "reference_project"
+
+        def ensure_reference_project() -> tuple[Path | None, dict | None]:
+            if list(reference_project.glob("*.hms")):
+                return reference_project, None
+            selected = select_smallest_hms_reference_project(discover_hms_reference_projects())
+            if not selected:
+                return None, None
+            return copy_hms_reference_project_to_output(selected, reference_project), selected
+
         if args.hms_command == "paths":
             print(
                 json.dumps(
@@ -877,6 +915,61 @@ def main(argv: list[str] | None = None) -> int:
             result = validate_hms_run_outputs(args.hms_project_dir)
             print(json.dumps(result, indent=2, ensure_ascii=False))
             return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "reference-scan":
+            candidates = discover_hms_reference_projects()
+            selected = select_smallest_hms_reference_project(candidates)
+            reports = reference_root / "reports"
+            reports.mkdir(parents=True, exist_ok=True)
+            output = reports / "reference_candidates.json"
+            output.write_text(
+                json.dumps({"candidates": candidates, "selected": selected}, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            print(json.dumps({"candidate_count": len(candidates), "selected": selected, "report": str(output)}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "reference-info":
+            selected = select_smallest_hms_reference_project(discover_hms_reference_projects())
+            if not selected:
+                print("HEC-HMS official reference status: reference_not_found")
+                return 0
+            copied = copy_hms_reference_project_to_output(selected, reference_project)
+            print(json.dumps({"selected": selected, "copied_to": str(copied)}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command in {"reference-open", "reference-compute"}:
+            copied, _ = ensure_reference_project()
+            if copied is None:
+                print("HEC-HMS official reference status: reference_not_found; probe skipped")
+                return 0
+            result = run_official_hms_reference(
+                copied,
+                execute=args.hms_command == "reference-compute",
+                timeout=120,
+            )
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 0
+        if args.hms_command == "compare-format":
+            comparison = compare_generated_to_reference(args.reference_dir, args.generated_dir)
+            outputs = write_hms_format_comparison_report(reference_root / "reports", comparison)
+            print(json.dumps({"status": comparison["status"], "outputs": {key: str(value) for key, value in outputs.items()}}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "calibrate-project":
+            result = create_calibrated_hms_project_from_hydrolite(args.project_dir, args.output_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 0
+        if args.hms_command == "open-probe":
+            print(json.dumps(run_hms_open_probe(args.hms_project_dir), indent=2, ensure_ascii=False, default=str))
+            return 0
+        if args.hms_command == "compute-probe":
+            print(json.dumps(run_hms_compute_probe(args.hms_project_dir, execute=True), indent=2, ensure_ascii=False, default=str))
+            return 0
+        if args.hms_command == "discover-dss":
+            outputs = write_hms_dss_discovery_report(args.hms_project_dir)
+            print(json.dumps({key: str(value) for key, value in outputs.items()}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "official-validation-summary":
+            outputs = write_hms_official_validation_summary()
+            print(json.dumps({key: str(value) for key, value in outputs.items()}, indent=2, ensure_ascii=False))
+            return 0
     return 2
 
 

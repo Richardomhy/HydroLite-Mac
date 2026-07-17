@@ -52,6 +52,9 @@ def test_workflow_engine_import_and_stage_schema():
             assert stage["status"] in {"planned", "not_implemented"}
         if stage["stage_id"] in {"hec_hms_project", "hec_hms_run"}:
             assert stage["status"] == "partial"
+            assert "DSS reading planned" in stage["implementation_notes"]
+    hms_project = next(stage for stage in stages if stage["stage_id"] == "hec_hms_project")
+    assert "official_reference_validated" in hms_project["implementation_notes"]
 
 
 def test_workflow_templates_and_plan_outputs(tmp_path: Path):

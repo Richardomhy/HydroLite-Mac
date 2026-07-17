@@ -7,6 +7,8 @@ env/
 .env
 output/
 outputs/
+output/hec_hms_reference/
+output/hec_hms_project_verified/
 logs/
 templates_export/
 projects/*/output/
@@ -27,6 +29,9 @@ projects/qgis_workflow_project/
 .streamlit/
 .streamlit/secrets.toml
 *.log
+*.dss
+hs_err_pid*
+java_pid*
 configs/gee.local.yaml
 *service-account*.json
 *credentials*.json

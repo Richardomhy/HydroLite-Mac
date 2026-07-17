@@ -4,7 +4,7 @@
 
 本 MVP 诊断 HEC-HMS 安装、Java 和可执行入口，并将 HydroLite/QGIS/Watershed 数据整理为 HEC-HMS 项目骨架。它不做 GUI 自动化，不执行长时间 HMS 计算，不读取 DSS 结果。
 
-所有项目文件均标记 `status: project_generation_mvp` 和 `runnable_status: unverified`，必须在 HEC-HMS GUI 或经验证的命令行中人工复核。
+旧目录 `output/hec_hms_project` 继续保留为 `project_generation_mvp / unverified` 诊断成果。新目录 `output/hec_hms_project_verified` 使用官方 4.13 结构校准，已通过真实 `Project.open`，仍必须在 HEC-HMS GUI 或经验证的命令行中人工复核。
 
 ## 环境诊断
 
@@ -16,7 +16,7 @@ python -m hydrolite hms version
 
 诊断检查 macOS、Linux、Windows 常见路径，PATH 中的 `hec-hms` / `hms`，系统 Java 以及 macOS app 内置 Java。对 macOS GUI 启动器，版本优先从 `Info.plist` 读取，避免启动 GUI 或遗留 Java 进程。
 
-当前 Mac 可识别 `/Applications/HEC-HMS-4.13.app`、HEC-HMS 4.13 和 app 内置 OpenJDK 17。后续 run MVP 已验证内置 Java 的短时 `-script` probe，但生成项目的真实计算仍是 unverified，详见 `docs/hec_hms_run_mvp.md`。
+当前 Mac 可识别 `/Applications/HEC-HMS-4.13.app`、HEC-HMS 4.13 和 app 内置 OpenJDK 17。内置 Java 的 `-script`、官方参考项目计算和校准项目打开均已验证；校准项目计算仍受降雨门禁阻止，详见 `docs/hec_hms_official_validation.md` 与 `docs/hec_hms_file_format_calibration.md`。
 
 ## 支持输入
 
