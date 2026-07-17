@@ -71,6 +71,15 @@ from hydrolite.tutorial import (
 )
 from hydrolite.validate import validate_target
 from hydrolite.wizard import create_project_from_wizard, preview_wizard, validate_wizard_config
+from hydrolite.workflow_engine import (
+    create_workflow_plan,
+    list_workflow_stages,
+    read_workflow_status,
+    run_full_workflow,
+    run_workflow_stage,
+    summarize_workflow_outputs,
+    validate_workflow_config,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -235,6 +244,26 @@ def build_parser() -> argparse.ArgumentParser:
     beta_subparsers.add_parser("checklist", help="Show post-release beta verification checklist.")
     beta_subparsers.add_parser("smoke-local", help="Run lightweight local beta smoke checks.")
 
+    workflow_parser = subparsers.add_parser("workflow", help="v0.7.x full modeling workflow orchestration.")
+    workflow_subparsers = workflow_parser.add_subparsers(dest="workflow_command", required=True)
+    workflow_subparsers.add_parser("list", help="List workflow stages and implementation status.")
+    workflow_plan = workflow_subparsers.add_parser("plan", help="Create a dry-run workflow plan from a template.")
+    workflow_plan.add_argument("config")
+    workflow_plan.add_argument("output_dir")
+    workflow_status = workflow_subparsers.add_parser("status", help="Show workflow status files for a project.")
+    workflow_status.add_argument("project_dir")
+    workflow_run_stage = workflow_subparsers.add_parser("run-stage", help="Dry-run one workflow stage for a project.")
+    workflow_run_stage.add_argument("stage_id")
+    workflow_run_stage.add_argument("project_dir")
+    workflow_run_stage.add_argument("--config", default=None)
+    workflow_run_stage.add_argument("--dry-run", action="store_true", help="Keep dry-run mode; this is the default.")
+    workflow_run_stage.add_argument("--execute", action="store_true", help="Request non-dry-run mode for implemented stages.")
+    workflow_run_full = workflow_subparsers.add_parser("run-full", help="Dry-run the full workflow for a project.")
+    workflow_run_full.add_argument("project_dir")
+    workflow_run_full.add_argument("--config", default=None)
+    workflow_run_full.add_argument("--dry-run", action="store_true", help="Keep dry-run mode; this is the default.")
+    workflow_run_full.add_argument("--execute", action="store_true", help="Request non-dry-run mode for implemented stages.")
+
     return parser
 
 
@@ -288,7 +317,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "roadmap":
         root = Path(__file__).resolve().parents[1]
-        print(f"current_stable_version: {__version__}")
+        print("current_stable_version: 0.6.0-beta.1")
+        print(f"current_development_version: {__version__}")
         print("v0.7.0_goal: GIS/QGIS bridge, real project import, lightweight calibration, report templates, and desktop launcher planning.")
         print(f"roadmap: {root / 'docs' / 'roadmap_v0.7.0.md'}")
         print(f"milestones: {root / 'docs' / 'milestones_v0.7.0.md'}")
@@ -620,6 +650,50 @@ def main(argv: list[str] | None = None) -> int:
             print(f"readme_exists: {result['readme_exists']}")
             print(f"release_dir_exists: {result['release_dir_exists']}")
             print(f"streamlit_app_exists: {result['streamlit_app_exists']}")
+            return 0
+    if args.command == "workflow":
+        if args.workflow_command == "list":
+            for stage in list_workflow_stages():
+                print(f"{stage['stage_id']}: {stage['status']} - {stage['title_zh']} / {stage['title_en']}")
+                print(f"  CLI: {stage['cli_command']}")
+            return 0
+        if args.workflow_command == "plan":
+            validation = validate_workflow_config(args.config)
+            plan = create_workflow_plan(args.config, args.output_dir)
+            print(f"Workflow validation status: {validation['status']}")
+            print(f"Workflow plan written to: {plan['plan_json']}")
+            print(f"Workflow plan markdown: {plan['plan_md']}")
+            return 1 if validation["errors"] else 0
+        if args.workflow_command == "status":
+            import json
+
+            print(
+                json.dumps(
+                    {
+                        "status": read_workflow_status(args.project_dir),
+                        "outputs": summarize_workflow_outputs(args.project_dir),
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+        if args.workflow_command == "run-stage":
+            import json
+
+            result = run_workflow_stage(
+                args.stage_id,
+                args.project_dir,
+                config_path=args.config,
+                dry_run=not args.execute,
+            )
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 0
+        if args.workflow_command == "run-full":
+            import json
+
+            result = run_full_workflow(args.project_dir, config_path=args.config, dry_run=not args.execute)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
             return 0
     return 2
 

@@ -37,7 +37,7 @@ def _unsafe_name(name: str) -> bool:
 
 
 def test_beta_version():
-    assert __version__ == "0.6.0-beta.1"
+    assert __version__ == "0.7.0-dev"
 
 
 def test_beta_release_files_exist_and_manifest_readable():

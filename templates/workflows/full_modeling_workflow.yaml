@@ -1,0 +1,60 @@
+workflow_name: full_modeling_workflow
+description: Full v0.7.x target chain from data templates to reports and user manuals.
+dry_run_default: true
+stages:
+  - stage_id: data_templates
+    enabled: true
+    status: available
+    notes: Prepare and validate standard input templates.
+  - stage_id: qgis_preprocessing
+    enabled: true
+    status: partial
+    notes: QGIS/GeoJSON file bridge MVP; not a full QGIS plugin.
+  - stage_id: watershed_delineation
+    enabled: false
+    status: planned
+    notes: Planned DEM-based basin delineation.
+  - stage_id: gee_inputs
+    enabled: true
+    status: partial
+    notes: Requires user Earth Engine authentication for real data.
+  - stage_id: hydrolite_simulation
+    enabled: true
+    status: available
+    notes: Existing SCS-CN, unit hydrograph, Muskingum workflow.
+  - stage_id: hec_hms_project
+    enabled: false
+    status: planned
+    notes: Planned project-file bridge.
+  - stage_id: hec_hms_run
+    enabled: false
+    status: planned
+    notes: Planned command-line run and DSS reading.
+  - stage_id: swmm_coupling
+    enabled: true
+    status: partial
+    notes: Existing graceful SWMM coupling and fallback.
+  - stage_id: flood_forecast
+    enabled: false
+    status: planned
+    notes: Planned rule-based lightweight flood forecast.
+  - stage_id: drought_forecast
+    enabled: false
+    status: planned
+    notes: Planned lightweight drought indicators.
+  - stage_id: calibration
+    enabled: false
+    status: planned
+    notes: Planned parameter scan, not complex optimization.
+  - stage_id: comparison
+    enabled: true
+    status: available
+    notes: Existing scenario comparison.
+  - stage_id: report_export
+    enabled: true
+    status: available
+    notes: Existing report export.
+  - stage_id: user_manual_export
+    enabled: false
+    status: planned
+    notes: Planned Chinese/English manual export.

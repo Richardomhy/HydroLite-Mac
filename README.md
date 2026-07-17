@@ -1,15 +1,16 @@
-# HydroLite Studio v0.6.0-beta.1
+# HydroLite Studio v0.7.0-dev
 
 [![Release](https://img.shields.io/badge/release-v0.6.0--beta.1-blue)](https://github.com/Richardomhy/HydroLite-Mac/releases/tag/v0.6.0-beta.1)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Cloud%20demo-ff4b4b)](https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app)
 
 - GitHub repository: https://github.com/Richardomhy/HydroLite-Mac.git
 - Streamlit Cloud online demo: https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app
-- Current version: `v0.6.0-beta.1`
+- Current development version: `v0.7.0-dev`
+- Current stable beta: `v0.6.0-beta.1`
 
 The online version is best for demos, tutorials, data template downloads, and viewing example outputs; the local version is recommended for complete GEE, SWMM, OpenHydroNet-ready input, and project delivery workflows.
 
-HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.6.0-beta.1 is a patch release that keeps the v0.6.0-beta model workflow unchanged and adds the beta feedback loop, Issue templates, smoke test docs, and post-release validation materials.
+HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.7.0-dev starts the next development phase: a full modeling workflow engine for data templates, QGIS/GEE preprocessing, HydroLite simulation, future HEC-HMS bridges, SWMM coupling, forecast planning, comparison, reports, and user manuals. The current stable beta remains v0.6.0-beta.1.
 
 Latest beta release: **v0.6.0-beta.1**.
 
@@ -17,7 +18,7 @@ Previous beta tag: **v0.6.0-beta**.
 
 Previous stable alpha tag: **v0.5.0-alpha.2**.
 
-Next development plan: **v0.7.0 roadmap**. This is planning only, not released functionality. Start with `docs/roadmap_v0.7.0.md`.
+Next development plan: **v0.7.x full workflow architecture**. This is planning only plus orchestration scaffolding, not a claim that every stage is implemented. Start with `docs/full_modeling_workflow.md` and `docs/roadmap_v0.7.0.md`.
 
 Quick demo entry points:
 
@@ -29,6 +30,7 @@ Quick demo entry points:
 - FAQ：`docs/faq_zh.md`
 - 数据模板：`docs/data_templates.md`
 - 项目向导：`docs/project_wizard.md`
+- 全流程工作流：`docs/full_modeling_workflow.md`
 - v0.7.0 路线图：`docs/roadmap_v0.7.0.md`
 
 ## Beta Feature Overview
@@ -46,15 +48,31 @@ Quick demo entry points:
 
 ## v0.7.0 Planning
 
-v0.6.0-beta.1 is the current stable beta. v0.7.0 is the next development plan, focused on GIS/QGIS Bridge, real project import, lightweight calibration, report templates, desktop launcher evaluation, and QGIS/SWAT/GEE collaboration notes.
+v0.6.0-beta.1 is the current stable beta. v0.7.0-dev is the active development branch for full workflow orchestration. HEC-HMS, watershed delineation, flood forecasting, drought forecasting, calibration, and user-manual export are staged as planned or partial work until implemented and tested.
 
 The first v0.7.0 step is QGIS Bridge feasibility diagnosis only. It checks QGIS/QGIS-LTR/qgis_process/PyQGIS availability and does not implement a full QGIS plugin.
 
 The current QGIS Bridge MVP uses `qgis_process` for command-line checks and small GeoJSON/CSV demo exports. It is still not a full QGIS plugin. It can also convert QGIS-exported GeoJSON layers into HydroLite input templates and create a runnable HydroLite project from those converted outputs; see `docs/qgis_to_hydrolite_inputs.md` and `docs/qgis_project_workflow.md`.
 
+The v0.7.0 workflow engine can list stages, create dry-run plans, and write workflow status/report files:
+
+```bash
+python -m hydrolite workflow list
+python -m hydrolite workflow plan templates/workflows/full_modeling_workflow.yaml output/workflow_plan
+python -m hydrolite workflow run-full projects/demo_project --dry-run
+```
+
+`dry-run` is the default. Planned stages are not executed and are not advertised as available model capabilities.
+
 Planning documents:
 
 - `docs/roadmap_v0.7.0.md`
+- `docs/full_modeling_workflow.md`
+- `docs/hec_hms_integration_plan.md`
+- `docs/watershed_delineation_plan.md`
+- `docs/flood_forecast_plan.md`
+- `docs/drought_forecast_plan.md`
+- `docs/user_manual_plan.md`
 - `docs/milestones_v0.7.0.md`
 - `docs/issue_backlog_v0.7.0.md`
 - `docs/qgis_bridge_roadmap.md`

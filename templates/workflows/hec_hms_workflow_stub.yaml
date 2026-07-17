@@ -1,0 +1,25 @@
+workflow_name: hec_hms_workflow_stub
+description: Planned HEC-HMS bridge stages. This template is not executable yet.
+dry_run_default: true
+stages:
+  - stage_id: data_templates
+    enabled: true
+    status: available
+  - stage_id: qgis_preprocessing
+    enabled: true
+    status: partial
+  - stage_id: gee_inputs
+    enabled: true
+    status: partial
+  - stage_id: hec_hms_project
+    enabled: false
+    status: planned
+  - stage_id: hec_hms_run
+    enabled: false
+    status: planned
+  - stage_id: comparison
+    enabled: true
+    status: available
+  - stage_id: report_export
+    enabled: true
+    status: available

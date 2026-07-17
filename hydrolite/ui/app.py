@@ -31,6 +31,7 @@ from hydrolite.ui.pages import (
     scenario_run,
     swmm_center,
     tutorial_demo,
+    workflow_engine,
 )
 from hydrolite.ui.state import (
     CASES_DIR,
@@ -56,6 +57,7 @@ PAGES = {
     "Beta 反馈": beta_feedback.render,
     "数据模板": data_templates.render,
     "项目向导": project_wizard.render,
+    "全流程工作流": workflow_engine.render,
     "数据与校验": data_validation.render,
     "情景运行": scenario_run.render,
     "GEE 数据中心": gee_center.render,

@@ -37,7 +37,7 @@ def _unsafe_name(name: str) -> bool:
 def test_patch_version():
     from hydrolite.__version__ import __version__
 
-    assert __version__ == "0.6.0-beta.1"
+    assert __version__ == "0.7.0-dev"
 
 
 def test_patch_release_directory_and_manifest():

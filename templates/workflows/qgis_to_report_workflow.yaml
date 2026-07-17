@@ -1,0 +1,19 @@
+workflow_name: qgis_to_report_workflow
+description: Current practical path from QGIS converted outputs to HydroLite project reports.
+dry_run_default: true
+stages:
+  - stage_id: data_templates
+    enabled: true
+    status: available
+  - stage_id: qgis_preprocessing
+    enabled: true
+    status: partial
+  - stage_id: hydrolite_simulation
+    enabled: true
+    status: available
+  - stage_id: comparison
+    enabled: true
+    status: available
+  - stage_id: report_export
+    enabled: true
+    status: available

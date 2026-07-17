@@ -1,0 +1,22 @@
+workflow_name: flood_drought_workflow_stub
+description: Planned flood and drought forecast stages. No AI training or long inference.
+dry_run_default: true
+stages:
+  - stage_id: hydrolite_simulation
+    enabled: true
+    status: available
+  - stage_id: flood_forecast
+    enabled: false
+    status: planned
+  - stage_id: drought_forecast
+    enabled: false
+    status: planned
+  - stage_id: calibration
+    enabled: false
+    status: planned
+  - stage_id: comparison
+    enabled: true
+    status: available
+  - stage_id: report_export
+    enabled: true
+    status: available

@@ -19,6 +19,8 @@ projects/*/reports/*.md
 projects/*/reports/*.docx
 projects/*/reports/*.pdf
 projects/*/reports/demo_progress.json
+projects/*/reports/workflow_status.json
+projects/*/reports/workflow_plan/
 projects/wizard_demo_project/
 projects/qgis_demo_project/
 projects/qgis_workflow_project/
