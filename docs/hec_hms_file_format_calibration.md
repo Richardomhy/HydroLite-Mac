@@ -45,3 +45,6 @@ The current calibrated project intentionally has no fabricated HEC-HMS precipita
 ## DSS Boundary
 
 This phase discovers DSS files and records path, size, modification time, empty status, likely role, and whether a process created or changed the file. DSS record/pathname reading remains planned.
+# Precipitation calibration
+
+The generated project now follows the observed Castro `.gage` and `.met` patterns: an external-DSS precipitation gage, a single `Weighted Gages` method, explicit weight `1.0` for each subbasin, relative DSS paths, and synchronized Control Specifications. See `hec_hms_precipitation_dss.md` for read-back checks.

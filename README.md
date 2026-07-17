@@ -56,7 +56,7 @@ The current QGIS Bridge MVP uses `qgis_process` for command-line checks and smal
 
 The watershed delineation MVP probes QGIS/GRASS/SAGA-style processing availability, creates a tiny synthetic DEM, runs QGIS sink filling and D8 flow direction when available, and uses HydroLite's deterministic topology engine for flow accumulation and stream extraction. Outlet-based basin geometry remains an explicitly marked fallback and still requires GIS review. See `docs/watershed_delineation_mvp.md`.
 
-The HEC-HMS bridge diagnoses HEC-HMS and Java, validates the official `Project.open / computeRun` script flow, and calibrates a HydroLite-generated project against HEC-HMS 4.13 component structure. The calibrated project passes `Project.open` and exposes a Run; compute remains gated until a supported rainfall source is available. It does not automate the GUI or deeply read DSS results. See `docs/hec_hms_official_validation.md`, `docs/hec_hms_file_format_calibration.md`, `docs/hec_hms_project_generator.md`, and `docs/hec_hms_run_mvp.md`.
+The HEC-HMS bridge diagnoses HEC-HMS and Java, validates the official `Project.open / computeRun` flow, writes HydroLite rainfall through verified HEC-DSS Java classes, maps `HydroLite_Precip` with Weighted Gages, and runs a rainfall-gated generated-project `computeRun`. Result DSS pathnames are cataloged, but deep DSS analysis and production-project adaptation remain partial. It does not automate the GUI. See `docs/hec_hms_precipitation_dss.md` and `docs/hec_hms_rainfall_compute_validation.md`.
 
 ```bash
 python -m hydrolite watershed backends
@@ -66,6 +66,8 @@ python -m hydrolite hms diagnose
 python -m hydrolite hms create-project projects/qgis_workflow_project output/hec_hms_project
 python -m hydrolite hms run-probe
 python -m hydrolite hms run output/hec_hms_project --dry-run
+python -m hydrolite hms create-rainfall-project projects/qgis_workflow_project output/hec_hms_project_rainfall_verified
+python -m hydrolite hms rainfall-compute output/hec_hms_project_rainfall_verified
 ```
 
 The v0.7.0 workflow engine can list stages, create dry-run plans, and write workflow status/report files:

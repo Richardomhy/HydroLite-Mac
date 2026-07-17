@@ -122,6 +122,55 @@ def test_hms_official_cli_routes_and_ui(monkeypatch, tmp_path: Path):
     assert callable(page.render)
 
 
+def test_official_precipitation_structure_inspection(monkeypatch, tmp_path: Path):
+    import hydrolite.hec_hms_precipitation as precipitation
+    from hydrolite.hec_hms_format import (
+        discover_reference_precipitation_components,
+        discover_reference_time_series_files,
+        inspect_reference_dss_pathnames,
+        inspect_reference_meteorologic_precipitation,
+        inspect_reference_precipitation_gages,
+        write_precipitation_reference_report,
+    )
+
+    reference = _reference(tmp_path / "precip_reference")
+    (reference / "reference.gage").write_text(
+        "Gage Manager: reference\nEnd:\n\nGage: Rain\n     Gage Type: Precipitation\n"
+        "     Data Source Type: External DSS\n     Filename: rain.dss\n"
+        "     Pathname: /P/RAIN/PRECIP-INC//1HOUR/OBS/\nEnd:\n",
+        encoding="utf-8",
+    )
+    (reference / "met.met").write_text(
+        "Meteorology: met\n     Precipitation Method: Weighted Gages\nEnd:\n\n"
+        "Precip Method Parameters: S1\n     Recording Gage: Rain\n     Recording Gage Weight: 1\nEnd:\n",
+        encoding="utf-8",
+    )
+    (reference / "rain.dss").write_bytes(b"fixture")
+    monkeypatch.setattr(
+        precipitation,
+        "catalog_dss_file",
+        lambda *_: {"status": "success", "pathnames": ["/P/RAIN/PRECIP-INC/01JUN2026/1HOUR/OBS/"]},
+    )
+    assert discover_reference_precipitation_components(reference)
+    assert discover_reference_time_series_files(reference)[0]["referenced_by_gage"] is True
+    assert inspect_reference_precipitation_gages(reference)[0]["gage_name"] == "Rain"
+    assert inspect_reference_meteorologic_precipitation(reference)[0]["precipitation_method"] == "Weighted Gages"
+    assert inspect_reference_dss_pathnames(reference)[0]["c_part"] == "PRECIP-INC"
+    result = {
+        "reference_project": str(reference),
+        "components": discover_reference_precipitation_components(reference),
+        "time_series_files": discover_reference_time_series_files(reference),
+        "gages": inspect_reference_precipitation_gages(reference),
+        "meteorology": inspect_reference_meteorologic_precipitation(reference),
+        "dss_pathnames": inspect_reference_dss_pathnames(reference),
+        "direct_observations": ["observed"],
+        "inferences": ["inferred"],
+        "unconfirmed": ["unconfirmed"],
+    }
+    outputs = write_precipitation_reference_report(tmp_path / "reports", result)
+    assert all(path.exists() for path in outputs.values())
+
+
 def test_official_samples_and_sensitive_artifacts_are_not_tracked():
     import subprocess
 

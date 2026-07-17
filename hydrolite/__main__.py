@@ -31,6 +31,7 @@ from hydrolite.gee.export import (
 from hydrolite.gee.diagnostics import build_gee_diagnosis
 from hydrolite.healthcheck import build_healthcheck, healthcheck_status
 from hydrolite.hec_hms import (
+    analyze_reference_precipitation,
     build_hec_hms_diagnosis,
     build_hms_run_command,
     copy_hms_reference_project_to_output,
@@ -57,6 +58,20 @@ from hydrolite.hec_hms import (
     write_hms_official_validation_summary,
     write_hms_run_scripts,
     write_hms_project_report,
+)
+from hydrolite.hec_hms_precipitation import (
+    create_hms_rainfall_verified_project,
+    evaluate_hms_rainfall_gate,
+    map_project_rainfall,
+    run_hms_rainfall_compute,
+    run_hms_rainfall_open_probe,
+    validate_project_rainfall_dss,
+    write_dss_backend_diagnosis,
+    write_hms_rainfall_gate_report,
+    write_hms_result_catalog_report,
+    write_normalized_rainfall_report,
+    write_project_rainfall_dss,
+    write_rainfall_validation_summary,
 )
 from hydrolite.hec_hms_format import compare_generated_to_reference, write_hms_format_comparison_report
 from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
@@ -363,6 +378,27 @@ def build_parser() -> argparse.ArgumentParser:
     hms_discover_dss = hms_subparsers.add_parser("discover-dss", help="List DSS file metadata without deep reading.")
     hms_discover_dss.add_argument("hms_project_dir")
     hms_subparsers.add_parser("official-validation-summary", help="Write the official/generated validation summary.")
+    hms_subparsers.add_parser("precipitation-reference", help="Analyze official precipitation and DSS structures.")
+    hms_subparsers.add_parser("dss-backends", help="Diagnose verified HEC-DSS write backends.")
+    hms_normalize_rainfall = hms_subparsers.add_parser("normalize-rainfall", help="Normalize HydroLite rainfall for HEC-HMS.")
+    hms_normalize_rainfall.add_argument("project_dir")
+    hms_create_rainfall = hms_subparsers.add_parser("create-rainfall-project", help="Create a rainfall-mapped HEC-HMS project.")
+    hms_create_rainfall.add_argument("project_dir")
+    hms_create_rainfall.add_argument("output_dir")
+    hms_write_rainfall = hms_subparsers.add_parser("write-rainfall-dss", help="Write and read back precipitation DSS data.")
+    hms_write_rainfall.add_argument("project_dir")
+    hms_write_rainfall.add_argument("hms_project_dir")
+    for command, help_text in (
+        ("validate-rainfall-dss", "Validate precipitation DSS read-back."),
+        ("map-rainfall", "Generate and validate gage/met/control mapping."),
+        ("rainfall-open-probe", "Open the rainfall-verified project."),
+        ("rainfall-gate", "Evaluate the rainfall compute safety gate."),
+        ("rainfall-compute", "Run gated HEC-HMS computeRun, capped at 120 seconds."),
+        ("result-catalog", "Catalog and classify HEC-HMS result DSS pathnames."),
+        ("rainfall-validation-summary", "Write the rainfall validation summary."),
+    ):
+        child = hms_subparsers.add_parser(command, help=help_text)
+        child.add_argument("hms_project_dir")
 
     return parser
 
@@ -968,6 +1004,58 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.hms_command == "official-validation-summary":
             outputs = write_hms_official_validation_summary()
+            print(json.dumps({key: str(value) for key, value in outputs.items()}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "precipitation-reference":
+            copied, _ = ensure_reference_project()
+            if copied is None:
+                print("HEC-HMS precipitation reference status: reference_not_found")
+                return 0
+            result = analyze_reference_precipitation(copied)
+            print(json.dumps({"status": "completed", "report_files": result["report_files"]}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "dss-backends":
+            outputs = write_dss_backend_diagnosis()
+            print(json.dumps({key: str(value) for key, value in outputs.items()}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "normalize-rainfall":
+            print(json.dumps(write_normalized_rainfall_report(args.project_dir), indent=2, ensure_ascii=False, default=str))
+            return 0
+        if args.hms_command == "create-rainfall-project":
+            result = create_hms_rainfall_verified_project(args.project_dir, args.output_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 1 if result["status"] == "rainfall_mapping_failed" else 0
+        if args.hms_command == "write-rainfall-dss":
+            result = write_project_rainfall_dss(args.project_dir, args.hms_project_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "validate-rainfall-dss":
+            result = validate_project_rainfall_dss(args.hms_project_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "map-rainfall":
+            result = map_project_rainfall(args.hms_project_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "rainfall-open-probe":
+            result = run_hms_rainfall_open_probe(args.hms_project_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 1 if result.get("status") != "project_opened" else 0
+        if args.hms_command == "rainfall-gate":
+            result = evaluate_hms_rainfall_gate(args.hms_project_dir)
+            write_hms_rainfall_gate_report(args.hms_project_dir, result)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "rainfall-compute":
+            result = run_hms_rainfall_compute(args.hms_project_dir, timeout=120)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 1 if result["status"] in {"compute_failed", "compute_timeout"} else 0
+        if args.hms_command == "result-catalog":
+            outputs = write_hms_result_catalog_report(args.hms_project_dir)
+            print(json.dumps({key: str(value) for key, value in outputs.items()}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "rainfall-validation-summary":
+            outputs = write_rainfall_validation_summary(args.hms_project_dir)
             print(json.dumps({key: str(value) for key, value in outputs.items()}, indent=2, ensure_ascii=False))
             return 0
     return 2

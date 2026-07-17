@@ -9,6 +9,9 @@ output/
 outputs/
 output/hec_hms_reference/
 output/hec_hms_project_verified/
+output/hec_hms_precipitation_reference/
+output/hec_hms_precipitation/
+output/hec_hms_project_rainfall_verified/
 logs/
 templates_export/
 projects/*/output/

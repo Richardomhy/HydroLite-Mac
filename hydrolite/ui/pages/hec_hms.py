@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import io
+import json
 from pathlib import Path
+import zipfile
 
 import pandas as pd
 import streamlit as st
 
 from hydrolite.__version__ import __version__
 from hydrolite.hec_hms import (
+    analyze_reference_precipitation,
     build_hec_hms_diagnosis,
     build_hms_run_command,
     collect_hms_run_outputs,
@@ -29,6 +33,20 @@ from hydrolite.hec_hms import (
     write_hms_dss_discovery_report,
     write_hms_official_validation_summary,
     write_hms_run_scripts,
+)
+from hydrolite.hec_hms_precipitation import (
+    create_hms_rainfall_verified_project,
+    evaluate_hms_rainfall_gate,
+    map_project_rainfall,
+    read_rainfall_context,
+    run_hms_rainfall_compute,
+    run_hms_rainfall_open_probe,
+    validate_project_rainfall_dss,
+    write_dss_backend_diagnosis,
+    write_hms_rainfall_gate_report,
+    write_hms_result_catalog_report,
+    write_normalized_rainfall_report,
+    write_project_rainfall_dss,
 )
 from hydrolite.hec_hms_format import compare_generated_to_reference, write_hms_format_comparison_report
 from hydrolite.ui.components import read_text_if_exists, safe_read_excel, show_download, show_json
@@ -133,6 +151,82 @@ def render(context: WorkbenchContext) -> None:
                 st.markdown(text)
             show_download(f"下载 {path.name}", path, "text/markdown")
 
+    st.subheader("降雨数据映射与最小计算")
+    st.caption("当前为 HEC-HMS 4.13 最小项目验证，单次计算最长 120 秒，结果仍需人工复核。")
+    rainfall_source = st.text_input(
+        "降雨源项目",
+        value=str(Path("projects/qgis_workflow_project").resolve()),
+        key="hms_rainfall_source",
+    )
+    rainfall_project = Path(
+        st.text_input(
+            "降雨验证 HMS 项目",
+            value=str(OUTPUT_ROOT / "hec_hms_project_rainfall_verified"),
+            key="hms_rainfall_project",
+        )
+    ).expanduser().resolve()
+    context_path = rainfall_project / "reports" / "hec_hms_rainfall_context.json"
+    rainfall_context = read_rainfall_context(rainfall_project) if context_path.is_file() else {}
+    gate_path = rainfall_project / "reports" / "hec_hms_rainfall_gate.json"
+    compute_path = rainfall_project / "reports" / "hec_hms_rainfall_compute.json"
+    gate_result = json.loads(gate_path.read_text(encoding="utf-8")) if gate_path.is_file() else {}
+    compute_result = json.loads(compute_path.read_text(encoding="utf-8")) if compute_path.is_file() else {}
+    metrics = st.columns(4)
+    metrics[0].metric("降雨记录", rainfall_context.get("normalized_rows", 0))
+    metrics[1].metric("时间步 (min)", rainfall_context.get("interval_minutes", "-"))
+    metrics[2].metric("总降雨 (mm)", rainfall_context.get("total_precipitation_mm", "-"))
+    metrics[3].metric("Rainfall gate", gate_result.get("status", "not_run"))
+    if rainfall_context:
+        st.write(f"rainfall.csv: `{rainfall_context.get('rainfall_csv', '')}`")
+        st.write(f"Start / end: `{rainfall_context.get('start', '')}` / `{rainfall_context.get('end', '')}`")
+        st.write(f"DSS backend: `{rainfall_context.get('dss_backend', '')}`")
+        st.write(f"DSS pathname: `{rainfall_context.get('pathname', '')}`")
+        st.write(f"DSS read-back: `{rainfall_context.get('dss_validation', {}).get('status', 'not_run')}`")
+        mapping_overview = rainfall_context.get("mapping", {}).get("overview", {})
+        st.write(
+            f"Gage: `{mapping_overview.get('gage_name', '')}`; method: `{mapping_overview.get('meteorologic_method', '')}`; "
+            f"mapped subbasins: `{mapping_overview.get('mapped_subbasins', '')}`"
+        )
+    if compute_result:
+        st.write(
+            f"Compute: `{compute_result.get('status', '')}`; result DSS: `{compute_result.get('result_dss', '')}`; "
+            f"flow pathnames: `{len(compute_result.get('flow_pathnames', []))}`"
+        )
+        for error in compute_result.get("fatal_errors", []):
+            st.error(error)
+        for warning in compute_result.get("warnings", []):
+            st.warning(warning)
+
+    rainfall_buttons = [
+        ("分析官方降雨结构", lambda: analyze_reference_precipitation()),
+        ("检测 DSS 后端", lambda: {key: str(value) for key, value in write_dss_backend_diagnosis().items()}),
+        ("规范化降雨", lambda: write_normalized_rainfall_report(rainfall_source)),
+        ("创建降雨验证项目", lambda: create_hms_rainfall_verified_project(rainfall_source, rainfall_project)),
+        ("写入 DSS", lambda: write_project_rainfall_dss(rainfall_source, rainfall_project)),
+        ("验证 DSS", lambda: validate_project_rainfall_dss(rainfall_project)),
+        ("映射降雨站", lambda: map_project_rainfall(rainfall_project)),
+        ("检查 rainfall gate", lambda: _ui_rainfall_gate(rainfall_project)),
+        ("Open-probe", lambda: run_hms_rainfall_open_probe(rainfall_project)),
+        ("执行最小 computeRun", lambda: run_hms_rainfall_compute(rainfall_project, timeout=120)),
+        ("生成结果 catalog", lambda: {key: str(value) for key, value in write_hms_result_catalog_report(rainfall_project).items()}),
+    ]
+    for row_start in range(0, len(rainfall_buttons), 3):
+        button_columns = st.columns(3)
+        for column, (label, action) in zip(button_columns, rainfall_buttons[row_start : row_start + 3]):
+            if column.button(label, use_container_width=True, key=f"hms_rainfall_{row_start}_{label}"):
+                try:
+                    show_json(action())
+                except Exception as exc:  # noqa: BLE001
+                    st.error(str(exc))
+    report_files = sorted((rainfall_project / "reports").glob("hec_hms_*")) if (rainfall_project / "reports").is_dir() else []
+    if report_files:
+        bundle = io.BytesIO()
+        with zipfile.ZipFile(bundle, "w", zipfile.ZIP_DEFLATED) as archive:
+            for path in report_files:
+                if path.is_file():
+                    archive.write(path, arcname=path.name)
+        st.download_button("下载全部降雨验证报告", bundle.getvalue(), "hec_hms_rainfall_reports.zip", "application/zip")
+
     source_project = st.text_input("HydroLite 项目路径", value=str(context.project_dir))
     hms_output = st.text_input("HMS 项目输出目录", value=str(OUTPUT_ROOT / "hec_hms_project"))
     cols = st.columns(2)
@@ -232,3 +326,9 @@ def render(context: WorkbenchContext) -> None:
     show_download("下载 hydrolite_run_hms.py", run_jython, "text/x-python")
 
     st.info("推荐下一步：在 HEC-HMS 4.13 中人工打开并复核 basin/met/control/run 文件、连通性、单位和参数；验证前不执行生产计算。")
+
+
+def _ui_rainfall_gate(project_dir: Path) -> dict:
+    result = evaluate_hms_rainfall_gate(project_dir)
+    write_hms_rainfall_gate_report(project_dir, result)
+    return result

@@ -43,7 +43,7 @@ flowchart LR
 
 - 流域划分 MVP：探测 qgis_process 水文算法，运行小型合成 DEM 填洼与 D8 流向，并用 HydroLite 拓扑算法完成汇流累积和河网提取；出口点分区仍为 fallback。它需要专业 GIS 人工复核，详见 `docs/watershed_delineation_mvp.md`。
 - HEC-HMS 项目生成 MVP：旧骨架保持不变；新增基于官方 4.13 文件结构的校准项目，并通过真实 `Project.open`、识别 Run。
-- HEC-HMS 运行探测 MVP：安装包官方 Castro 样例已完成 `Project.open / computeRun`；生成项目因降雨数据源门禁保持 skipped。DSS 仅做文件发现，不深读。
+- HEC-HMS 降雨计算 MVP：HydroLite rainfall CSV 已通过内置 HEC-DSS 类写入/回读，生成项目已通过 `Project.open`、rainfall gate 和 `computeRun`；结果只做 pathname catalog，不深读。
 
 ## 规划阶段
 

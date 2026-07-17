@@ -78,3 +78,6 @@ output/hec_hms_project/
 - 系统 Java 不可用：诊断会继续检查 HEC-HMS app 内置 JRE。
 - 项目不能运行：检查 HMS 版本、项目语法、时间序列存储、坐标、单位和连通性。
 - 下一阶段用官方最小项目对照校验语法，再验证 macOS 命令行入口、最小模拟和 DSS 摘要读取。
+# Rainfall-ready project
+
+`create-rainfall-project` creates a separate project under `output/hec_hms_project_rainfall_verified/`, normalizes rainfall, writes and reads back HEC-DSS precipitation, generates the gage/met mapping, and aligns Control Specifications. Earlier generated project folders are not overwritten.

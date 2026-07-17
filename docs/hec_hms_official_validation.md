@@ -49,3 +49,6 @@ After every probe, check that no HEC-HMS Java process remains. For engineering r
 ## Current Boundary
 
 This validation proves the official `Project.open / computeRun / close / shutdownEngine` route on the local installation. It does not add flood prediction, drought prediction, GUI automation, or deep DSS time-series analysis.
+# Rainfall reference extension
+
+The Castro copy is also inspected for its precipitation gage, relative DSS reference, six-part pathname, `Weighted Gages` meteorologic method, subbasin weights, and run component references. These observations calibrate the original HydroLite rainfall project; no official project or DSS content is committed.

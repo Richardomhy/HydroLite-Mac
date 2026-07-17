@@ -23,6 +23,7 @@ BLOCK_HEADERS = {
     "Source",
     "Diversion",
     "Gage",
+    "Gage Manager",
     "Precip Method Parameters",
 }
 
@@ -286,3 +287,205 @@ def write_hms_format_comparison_report(output_dir: str | Path, comparison: dict[
     lines.extend(f"- {error}" for error in comparison.get("generated_validation", {}).get("errors", []))
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return {"json": json_path, "xlsx": xlsx_path, "markdown": md_path}
+
+
+def discover_reference_precipitation_components(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    root = Path(reference_project_dir).expanduser().resolve()
+    rows: list[dict[str, Any]] = []
+    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+        suffix = path.suffix.lower()
+        if suffix not in {".gage", ".met", ".run", ".control", ".hms", ".dss"}:
+            continue
+        text = "" if suffix == ".dss" else path.read_text(encoding="utf-8", errors="replace")
+        relevant = suffix in {".gage", ".met", ".dss"} or any(
+            token in text for token in ("Precip", "Gage", "DSS File")
+        )
+        if relevant:
+            rows.append(
+                {
+                    "file": str(path),
+                    "relative_path": str(path.relative_to(root)),
+                    "suffix": suffix,
+                    "size_bytes": path.stat().st_size,
+                    "evidence": "direct_file" if suffix in {".gage", ".met"} else "referenced_or_related",
+                }
+            )
+    return rows
+
+
+def discover_reference_time_series_files(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    root = Path(reference_project_dir).expanduser().resolve()
+    referenced: set[str] = set()
+    for gage_file in root.glob("*.gage"):
+        parsed = _parse_component(gage_file, "Gage Manager")
+        for block in parsed["blocks"]:
+            for value in block["property_map"].get("Filename", []):
+                referenced.add(value)
+    rows = []
+    for path in sorted(root.rglob("*.dss")):
+        relative = str(path.relative_to(root))
+        rows.append(
+            {
+                "file": str(path),
+                "relative_path": relative,
+                "size_bytes": path.stat().st_size,
+                "referenced_by_gage": relative in referenced or path.name in referenced,
+            }
+        )
+    return rows
+
+
+def inspect_reference_precipitation_gages(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    root = Path(reference_project_dir).expanduser().resolve()
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.glob("*.gage")):
+        parsed = _parse_component(path, "Gage Manager")
+        for block in parsed["blocks"]:
+            props = block["property_map"]
+            if block["block_type"] != "Gage" or props.get("Gage Type", [""])[0] != "Precipitation":
+                continue
+            pathname = props.get("Pathname", [""])[0]
+            pathname_parts = pathname.strip("/").split("/") + [""] * 6
+            rows.append(
+                {
+                    "file": str(path),
+                    "gage_name": block["name"],
+                    "gage_type": props.get("Gage Type", [""])[0],
+                    "data_source_type": props.get("Data Source Type", [""])[0],
+                    "dss_file": props.get("Filename", [""])[0],
+                    "pathname": pathname,
+                    "data_type": pathname_parts[2],
+                    "interval": pathname_parts[4],
+                    "start": props.get("Start Time", [""])[0],
+                    "end": props.get("End Time", [""])[0],
+                    "units_observed": props.get("Units", [""])[0],
+                    "units_inferred": "IN for English-unit meteorology; not explicit in the gage block",
+                }
+            )
+    return rows
+
+
+def _pathname_parts(pathname: str) -> dict[str, str]:
+    parts = pathname.strip("/").split("/")
+    parts += [""] * (6 - len(parts))
+    return dict(zip(("a_part", "b_part", "c_part", "d_part", "e_part", "f_part"), parts[:6]))
+
+
+def inspect_reference_dss_pathnames(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    from hydrolite.hec_hms_precipitation import catalog_dss_file
+
+    rows: list[dict[str, Any]] = []
+    for item in discover_reference_time_series_files(reference_project_dir):
+        catalog = catalog_dss_file(item["file"])
+        for pathname in catalog.get("pathnames", []):
+            rows.append(
+                {
+                    "dss_file": item["file"],
+                    "pathname": pathname,
+                    **_pathname_parts(pathname),
+                    "catalog_status": catalog.get("status"),
+                }
+            )
+    return rows
+
+
+def inspect_reference_meteorologic_precipitation(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    root = Path(reference_project_dir).expanduser().resolve()
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.glob("*.met")):
+        parsed = parse_hms_meteorologic_file(path)
+        header = parsed["blocks"][0] if parsed["blocks"] else {"property_map": {}, "name": ""}
+        method = header["property_map"].get("Precipitation Method", [""])[0]
+        recording_gages = [
+            block["name"]
+            for block in parsed["blocks"]
+            if block["block_type"] == "Gage" and block["property_map"].get("Type", [""])[0] == "Recording"
+        ]
+        subbasin_blocks = [block for block in parsed["blocks"] if block["block_type"] == "Subbasin"]
+        for block in subbasin_blocks:
+            props = block["property_map"]
+            rows.append(
+                {
+                    "file": str(path),
+                    "meteorologic_model": header.get("name", ""),
+                    "precipitation_method": method,
+                    "subbasin": block["name"],
+                    "recording_gages": ", ".join(recording_gages),
+                    "assigned_gages": ", ".join(props.get("Gage", [])),
+                    "volume_weights": ", ".join(props.get("Volume Weight", [])),
+                    "temporal_distribution_weights": ", ".join(props.get("Temporal Distribution Weight", [])),
+                }
+            )
+        if not any(row["file"] == str(path) for row in rows):
+            rows.append(
+                {
+                    "file": str(path),
+                    "meteorologic_model": header.get("name", ""),
+                    "precipitation_method": method,
+                    "subbasin": "",
+                    "recording_gages": "",
+                    "assigned_gages": "",
+                    "volume_weights": "",
+                    "temporal_distribution_weights": "",
+                }
+            )
+    return rows
+
+
+def compare_precipitation_configuration(
+    reference_project_dir: str | Path, generated_project_dir: str | Path
+) -> dict[str, Any]:
+    reference_gages = inspect_reference_precipitation_gages(reference_project_dir)
+    generated_gages = inspect_reference_precipitation_gages(generated_project_dir)
+    reference_met = inspect_reference_meteorologic_precipitation(reference_project_dir)
+    generated_met = inspect_reference_meteorologic_precipitation(generated_project_dir)
+    return {
+        "reference_project": str(Path(reference_project_dir).resolve()),
+        "generated_project": str(Path(generated_project_dir).resolve()),
+        "reference_gages": reference_gages,
+        "generated_gages": generated_gages,
+        "reference_meteorology": reference_met,
+        "generated_meteorology": generated_met,
+        "checks": {
+            "reference_has_external_dss_gage": any(row["data_source_type"] == "External DSS" for row in reference_gages),
+            "generated_has_external_dss_gage": any(row["data_source_type"] == "External DSS" for row in generated_gages),
+            "reference_uses_weighted_gages": any(row["precipitation_method"] == "Weighted Gages" for row in reference_met),
+            "generated_uses_weighted_gages": any(row["precipitation_method"] == "Weighted Gages" for row in generated_met),
+        },
+    }
+
+
+def write_precipitation_reference_report(output_dir: str | Path, result: dict[str, Any]) -> dict[str, Path]:
+    output = Path(output_dir).expanduser().resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    json_path = output / "precipitation_reference.json"
+    catalog_path = output / "dss_pathname_catalog.json"
+    xlsx_path = output / "precipitation_reference_summary.xlsx"
+    md_path = output / "precipitation_reference_report.md"
+    json_path.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    catalog_path.write_text(json.dumps(result.get("dss_pathnames", []), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    with pd.ExcelWriter(xlsx_path) as writer:
+        pd.DataFrame(result.get("components", [])).to_excel(writer, sheet_name="components", index=False)
+        pd.DataFrame(result.get("gages", [])).to_excel(writer, sheet_name="precipitation_gages", index=False)
+        pd.DataFrame(result.get("meteorology", [])).to_excel(writer, sheet_name="meteorology", index=False)
+        pd.DataFrame(result.get("dss_pathnames", [])).to_excel(writer, sheet_name="dss_pathnames", index=False)
+        pd.DataFrame(result.get("time_series_files", [])).to_excel(writer, sheet_name="time_series_files", index=False)
+        pd.DataFrame(result.get("run_references", [])).to_excel(writer, sheet_name="run_references", index=False)
+        pd.DataFrame(result.get("control_windows", [])).to_excel(writer, sheet_name="control_windows", index=False)
+    lines = [
+        "# HEC-HMS Precipitation Reference",
+        "",
+        f"- Reference project: `{result.get('reference_project', '')}`",
+        f"- Precipitation gages: `{len(result.get('gages', []))}`",
+        f"- DSS pathnames cataloged: `{len(result.get('dss_pathnames', []))}`",
+        "",
+        "## Directly Observed",
+        "",
+    ]
+    lines.extend(f"- {item}" for item in result.get("direct_observations", []))
+    lines.extend(["", "## Inferred From References", ""])
+    lines.extend(f"- {item}" for item in result.get("inferences", []))
+    lines.extend(["", "## Not Yet Confirmed", ""])
+    lines.extend(f"- {item}" for item in result.get("unconfirmed", []))
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return {"markdown": md_path, "json": json_path, "xlsx": xlsx_path, "catalog": catalog_path}

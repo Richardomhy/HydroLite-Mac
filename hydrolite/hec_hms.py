@@ -2569,3 +2569,107 @@ def write_hms_official_validation_summary(output_dir: str | Path = HMS_REFERENCE
         encoding="utf-8",
     )
     return {"json": json_path, "markdown": md_path, "xlsx": xlsx_path}
+
+
+def discover_reference_precipitation_components(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    from hydrolite.hec_hms_format import discover_reference_precipitation_components as discover
+
+    return discover(reference_project_dir)
+
+
+def discover_reference_time_series_files(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    from hydrolite.hec_hms_format import discover_reference_time_series_files as discover
+
+    return discover(reference_project_dir)
+
+
+def inspect_reference_precipitation_gages(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    from hydrolite.hec_hms_format import inspect_reference_precipitation_gages as inspect
+
+    return inspect(reference_project_dir)
+
+
+def inspect_reference_dss_pathnames(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    from hydrolite.hec_hms_format import inspect_reference_dss_pathnames as inspect
+
+    return inspect(reference_project_dir)
+
+
+def inspect_reference_meteorologic_precipitation(reference_project_dir: str | Path) -> list[dict[str, Any]]:
+    from hydrolite.hec_hms_format import inspect_reference_meteorologic_precipitation as inspect
+
+    return inspect(reference_project_dir)
+
+
+def compare_precipitation_configuration(
+    reference_project_dir: str | Path, generated_project_dir: str | Path
+) -> dict[str, Any]:
+    from hydrolite.hec_hms_format import compare_precipitation_configuration as compare
+
+    return compare(reference_project_dir, generated_project_dir)
+
+
+def write_precipitation_reference_report(output_dir: str | Path, result: dict[str, Any]) -> dict[str, Path]:
+    from hydrolite.hec_hms_format import write_precipitation_reference_report as write
+
+    return write(output_dir, result)
+
+
+def analyze_reference_precipitation(
+    reference_project_dir: str | Path = HMS_REFERENCE_ROOT / "reference_project",
+    output_dir: str | Path = PROJECT_ROOT / "output" / "hec_hms_precipitation_reference",
+) -> dict[str, Any]:
+    from hydrolite.hec_hms_format import inspect_hms_component_references, parse_hms_control_file
+
+    root = _resolve(reference_project_dir)
+    run_references = [
+        row
+        for row in inspect_hms_component_references(root)
+        if Path(row["source_file"]).suffix.lower() == ".run" and row["reference_type"] in {"Basin", "Precip", "Control"}
+    ]
+    control_windows = []
+    for path in sorted(root.glob("*.control")):
+        parsed = parse_hms_control_file(path)
+        for block in parsed["blocks"]:
+            if block["block_type"] != "Control":
+                continue
+            props = block["property_map"]
+            control_windows.append(
+                {
+                    "file": str(path),
+                    "control_name": block["name"],
+                    "start_date": props.get("Start Date", [""])[0],
+                    "start_time": props.get("Start Time", [""])[0],
+                    "end_date": props.get("End Date", [""])[0],
+                    "end_time": props.get("End Time", [""])[0],
+                    "interval_minutes": props.get("Time Interval", [""])[0],
+                }
+            )
+    result = {
+        "generated_at": _now(),
+        "reference_project": str(root),
+        "components": discover_reference_precipitation_components(root),
+        "time_series_files": discover_reference_time_series_files(root),
+        "gages": inspect_reference_precipitation_gages(root),
+        "meteorology": inspect_reference_meteorologic_precipitation(root),
+        "dss_pathnames": inspect_reference_dss_pathnames(root),
+        "run_references": run_references,
+        "control_windows": control_windows,
+        "direct_observations": [
+            "castro.gage defines precipitation gages with Data Source Type External DSS, a relative Filename, and a six-part DSS Pathname.",
+            "GageWts.met uses Precipitation Method Weighted Gages and defines a Precip Method Parameters block for each subbasin.",
+            "The reference run names Basin, Precip, and Control components explicitly.",
+        ],
+        "inferences": [
+            "A single recording gage can be assigned to every generated subbasin with weight 1.0 for the HydroLite uniform-rainfall MVP.",
+            "A blank D-part pathname allows HEC-DSS to resolve regular time series across catalog date blocks.",
+        ],
+        "unconfirmed": [
+            "Deep semantic interpretation of every official output pathname remains outside this MVP.",
+            "Real-world multi-gage spatial weighting requires project-specific engineering review.",
+        ],
+    }
+    result["report_files"] = {
+        key: str(path) for key, path in write_precipitation_reference_report(output_dir, result).items()
+    }
+    return result
