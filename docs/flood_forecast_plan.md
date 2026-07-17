@@ -1,5 +1,7 @@
 # Flood Forecast Plan
 
+The HEC-HMS/HydroLite event comparison is an implemented analysis input, not a forecast. Forecast rainfall ingestion, forecast execution, operational thresholds and warning issuance remain planned and are not activated by DSS result extraction.
+
 ## 目标
 
 在 HydroLite 模拟基础上建立轻量洪水预测工作流，用于情景预报、峰值流量估计和超警提示。

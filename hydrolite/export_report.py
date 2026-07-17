@@ -3,6 +3,7 @@ from __future__ import annotations
 from base64 import b64encode
 from datetime import datetime, timezone
 from html import escape
+import json
 from pathlib import Path
 import zipfile
 from typing import Any
@@ -67,6 +68,19 @@ def _read_text(path: Path, max_chars: int = 12000) -> str:
     except Exception as exc:
         return f"Unable to read {path}: {exc}"
     return text[:max_chars]
+
+
+def _hms_comparison_for_project(repo_root: Path, project: Path) -> Path | None:
+    comparison = repo_root / "output" / "hec_hms_comparison"
+    manifest = comparison / "comparison_manifest.json"
+    if not manifest.is_file():
+        return None
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        source_project = Path(payload.get("hydrolite_project_dir", "")).expanduser().resolve()
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    return comparison if source_project == project.resolve() else None
 
 
 def _stringify(value: Any) -> str:
@@ -199,6 +213,8 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     reports = _report_dir(project)
     config = _read_yaml(project / "project.yaml")
     comparison = project / "output" / "comparison" / "scenario_comparison.xlsx"
+    hms_comparison_dir = _hms_comparison_for_project(repo_root, project) or project / "output" / "hec_hms_comparison"
+    hms_comparison = hms_comparison_dir / "model_comparison_metrics.xlsx"
     validation = project / "reports" / "project_validation.xlsx"
     global_gee_summary = repo_root / "output" / "gee" / "gee_summary.xlsx"
     gee_summary = _first_existing([project / "output" / "gee" / "gee_summary.xlsx", global_gee_summary])
@@ -214,6 +230,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         project / "output" / "comparison" / "volume_comparison.png",
         project / "output" / "comparison" / "water_balance_comparison.png",
         project / "output" / "comparison" / "swmm_kpi_comparison.png",
+        *sorted((hms_comparison_dir / "charts").glob("*.png")),
     ]
     existing_charts = [path for path in charts if path.exists()]
     expected = {
@@ -243,6 +260,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "modules": config.get("modules") or {},
         "project_summary_text": _read_text(project / "project_summary.md"),
         "comparison_report_text": _read_text(project / "output" / "comparison" / "hydrolite_report.md"),
+        "hms_comparison_report_text": _read_text(hms_comparison_dir / "comparison_report.md"),
         "openhydronet_report_text": _read_text(openhydronet_report) if openhydronet_report else "",
         "validation_overview": _safe_read_excel(validation, "case_overview"),
         "validation_errors": _safe_read_excel(validation, "case_errors"),
@@ -258,6 +276,8 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "gee_summary": _safe_read_excel(gee_summary) if gee_summary else pd.DataFrame(),
         "swmm_case_summaries": _collect_case_swmm(project),
         "model_performance": _collect_model_performance(project),
+        "hms_comparison_summary": _safe_read_excel(hms_comparison, "summary"),
+        "hms_comparison_metrics": _safe_read_excel(hms_comparison, "comparison_metrics"),
         "charts": existing_charts,
         "assets": list_report_assets(project),
         "missing_assets": pd.DataFrame(missing),
@@ -371,6 +391,14 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "",
         _df_to_markdown(data["model_performance"]),
         "",
+        "## HEC-HMS and HydroLite Event Comparison",
+        "",
+        _df_to_markdown(data["hms_comparison_summary"]),
+        "",
+        _df_to_markdown(data["hms_comparison_metrics"]),
+        "",
+        data["hms_comparison_report_text"] or "unavailable",
+        "",
         "## Charts",
         "",
     ]
@@ -427,6 +455,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
         ("HydroLite-SWMM Coupling", _df_to_html(data["coupling_metrics"])),
         ("GEE Data Center", _df_to_html(data["gee_summary"])),
         ("Observed Flow Evaluation", _df_to_html(data["model_performance"])),
+        ("HEC-HMS and HydroLite Event Comparison", _df_to_html(data["hms_comparison_metrics"])),
         ("Missing or Unavailable Outputs", _df_to_html(data["missing_assets"])),
     ]
     html = [
@@ -512,6 +541,7 @@ def render_project_report_docx(project_dir: str | Path, output_path: str | Path 
         ("HydroLite-SWMM Coupling", "coupling_metrics"),
         ("GEE Data Center", "gee_summary"),
         ("Observed Flow Evaluation", "model_performance"),
+        ("HEC-HMS and HydroLite Event Comparison", "hms_comparison_metrics"),
         ("Missing or Unavailable Outputs", "missing_assets"),
     ]:
         document.add_heading(title, level=1)

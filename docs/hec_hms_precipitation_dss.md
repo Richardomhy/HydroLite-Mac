@@ -1,5 +1,7 @@
 # HEC-HMS precipitation DSS
 
+The precipitation DSS is an input data source; the Simulation DSS is the completed-run result source. Flow-result pathname classification and reading are documented separately in `docs/hec_hms_dss_flow_results.md`.
+
 HydroLite rainfall CSV is a human-readable input table. HEC-HMS 4.13 does not treat a renamed CSV as a DSS database: the data must be written through a verified HEC-DSS API, cataloged, and read back before computation.
 
 ## Verified data chain

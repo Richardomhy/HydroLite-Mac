@@ -1,5 +1,7 @@
 # HydroLite Studio v0.7.0 Roadmap
 
+HEC-HMS completed-event result extraction now provides a verified small-demo path from Simulation DSS to outlet hydrograph comparison. The HEC-HMS stage remains partial; production adaptation, calibration and flood forecasting are still roadmap items.
+
 ## 总目标
 
 v0.7.0 的目标是把 v0.6.0-beta.1 已经稳定的项目工作台继续推进到“真实项目准备与 GIS 协同”阶段：让用户更容易从 QGIS、Excel/CSV、GEE 和已有工程资料进入 HydroLite，再输出可复核的校验、率定和报告成果。当前 QGIS 方向仍是 `qgis_process` / GeoJSON 文件级自动化，不是完整 QGIS 插件；QGIS 转项目工作流见 `docs/qgis_project_workflow.md`。

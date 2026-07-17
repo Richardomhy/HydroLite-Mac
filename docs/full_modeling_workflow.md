@@ -1,5 +1,7 @@
 # HydroLite Studio v0.7.x Full Modeling Workflow
 
+For a completed HEC-HMS run, the comparison branch is: Simulation DSS catalog -> flow classification -> bounded Java read -> topology mapping -> verified outlet -> HydroLite flow discovery -> unit/time alignment -> event/model metrics -> report and bundle. This branch analyzes completed event simulations only.
+
 ## 目标
 
 v0.7.x 的目标是建立一个可扩展的全流程编排框架，把现有项目工作流、QGIS Bridge、GEE 数据中心、HydroLite 模拟、SWMM 联动、对比和报告导出串成统一入口。

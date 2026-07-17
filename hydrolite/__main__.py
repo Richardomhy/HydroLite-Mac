@@ -74,6 +74,22 @@ from hydrolite.hec_hms_precipitation import (
     write_rainfall_validation_summary,
 )
 from hydrolite.hec_hms_format import compare_generated_to_reference, write_hms_format_comparison_report
+from hydrolite.hec_hms_results import (
+    DEFAULT_COMPARISON_DIR,
+    DEFAULT_RESULTS_DIR,
+    export_hms_comparison_bundle,
+    load_hms_result_catalog,
+    map_hms_results_to_hydrolite_elements,
+    read_hms_dss_timeseries,
+    run_hms_hydrolite_comparison,
+    run_hms_result_extraction,
+    select_verified_outlet_series,
+    validate_hms_comparison_outputs,
+    write_hms_comparison_report,
+    write_hms_hydrolite_mapping_report,
+    write_hms_timeseries_catalog,
+    write_outlet_selection_report,
+)
 from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
 from hydrolite.openhydronet.runner import run_openhydronet_prepare_inputs, run_openhydronet_smoke
 from hydrolite.project import (
@@ -399,6 +415,29 @@ def build_parser() -> argparse.ArgumentParser:
     ):
         child = hms_subparsers.add_parser(command, help=help_text)
         child.add_argument("hms_project_dir")
+    for command, help_text in (
+        ("catalog-results", "Catalog and classify result DSS records."),
+        ("list-flow-results", "List classified flow result pathnames."),
+        ("read-flow-results", "Read all classified flow time series."),
+        ("extract-results", "Run the complete HEC-HMS result extraction workflow."),
+    ):
+        child = hms_subparsers.add_parser(command, help=help_text)
+        child.add_argument("hms_project_dir")
+    for command, help_text in (
+        ("map-results", "Map HEC-HMS flow results to HydroLite elements."),
+        ("identify-outlet", "Identify topology-backed outlet candidates and series."),
+        ("compare-hydrolite", "Compare the verified HMS outlet with HydroLite."),
+    ):
+        child = hms_subparsers.add_parser(command, help=help_text)
+        child.add_argument("hms_project_dir")
+        child.add_argument("hydrolite_project_dir")
+    for command, help_text in (
+        ("comparison-report", "Regenerate the HMS/HydroLite comparison report."),
+        ("comparison-bundle", "Regenerate the safe HMS/HydroLite comparison bundle."),
+        ("validate-comparison", "Validate HMS/HydroLite comparison outputs."),
+    ):
+        child = hms_subparsers.add_parser(command, help=help_text)
+        child.add_argument("output_dir")
 
     return parser
 
@@ -1058,6 +1097,56 @@ def main(argv: list[str] | None = None) -> int:
             outputs = write_rainfall_validation_summary(args.hms_project_dir)
             print(json.dumps({key: str(value) for key, value in outputs.items()}, indent=2, ensure_ascii=False))
             return 0
+        if args.hms_command == "catalog-results":
+            catalog = load_hms_result_catalog(Path(args.hms_project_dir) / "hydrolite_run.dss")
+            print(json.dumps({"status": catalog.get("status"), "pathname_count": catalog["pathname_count"], "flow_pathname_count": catalog["flow_pathname_count"]}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "list-flow-results":
+            catalog = load_hms_result_catalog(Path(args.hms_project_dir) / "hydrolite_run.dss")
+            print(json.dumps({"flow_pathname_count": catalog["flow_pathname_count"], "flow_pathnames": catalog["flow_pathnames"]}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "read-flow-results":
+            dss_path = Path(args.hms_project_dir) / "hydrolite_run.dss"
+            catalog = load_hms_result_catalog(dss_path)
+            result = read_hms_dss_timeseries(dss_path, catalog["flow_pathnames"], DEFAULT_RESULTS_DIR, timeout=60)
+            result["catalog"] = catalog["classified"]
+            result["requested_pathnames"] = catalog["flow_pathnames"]
+            write_hms_timeseries_catalog(DEFAULT_RESULTS_DIR, result)
+            print(json.dumps({key: result[key] for key in ("status", "backend", "requested_pathname_count", "successful_pathname_count", "failed_pathname_count", "runtime_seconds")}, indent=2, ensure_ascii=False))
+            return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "map-results":
+            catalog = load_hms_result_catalog(Path(args.hms_project_dir) / "hydrolite_run.dss")
+            result = map_hms_results_to_hydrolite_elements(args.hms_project_dir, catalog, args.hydrolite_project_dir)
+            outputs = write_hms_hydrolite_mapping_report(DEFAULT_RESULTS_DIR, result)
+            print(json.dumps({"status": result["status"], "mapped_count": result["mapped_count"], "unmapped_count": result["unmapped_count"], "outputs": {key: str(value) for key, value in outputs.items()}}, indent=2, ensure_ascii=False))
+            return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "identify-outlet":
+            extraction = run_hms_result_extraction(args.hms_project_dir, DEFAULT_RESULTS_DIR)
+            mapping = map_hms_results_to_hydrolite_elements(args.hms_project_dir, load_hms_result_catalog(Path(args.hms_project_dir) / "hydrolite_run.dss"), args.hydrolite_project_dir)
+            outlet = select_verified_outlet_series(args.hms_project_dir, extraction["read_result"], mapping)
+            outputs = write_outlet_selection_report(DEFAULT_RESULTS_DIR, outlet)
+            print(json.dumps({"status": outlet.get("outlet_selection_status"), "candidates": outlet.get("candidates", []), "selected_outlet": outlet.get("selected_outlet"), "selected_pathname": outlet.get("selected_pathname"), "outputs": {key: str(value) for key, value in outputs.items()}}, indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "extract-results":
+            result = run_hms_result_extraction(args.hms_project_dir, DEFAULT_RESULTS_DIR)
+            print(json.dumps({"status": result["status"], "pathname_count": result["pathname_count"], "flow_pathname_count": result["flow_pathname_count"], "successful_pathname_count": result["read_result"]["successful_pathname_count"], "failed_pathname_count": result["read_result"]["failed_pathname_count"], "outlet_selection_status": result["outlet_selection"].get("outlet_selection_status"), "output_dir": str(DEFAULT_RESULTS_DIR)}, indent=2, ensure_ascii=False))
+            return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "compare-hydrolite":
+            result = run_hms_hydrolite_comparison(args.hms_project_dir, args.hydrolite_project_dir, DEFAULT_COMPARISON_DIR)
+            print(json.dumps({"status": result["status"], "outlet": result.get("outlet_selection", {}).get("selected_outlet"), "alignment": result.get("alignment", {}), "comparison_metrics": result.get("comparison_metrics", {}), "event_differences": result.get("event_differences", {}), "output_dir": str(DEFAULT_COMPARISON_DIR)}, indent=2, ensure_ascii=False, default=str))
+            return 1 if result["status"] in {"outlet_unresolved", "unit_unresolved", "alignment_failed"} else 0
+        if args.hms_command == "comparison-report":
+            path = write_hms_comparison_report(args.output_dir)
+            print(f"HEC-HMS comparison report written to: {path}")
+            return 0
+        if args.hms_command == "comparison-bundle":
+            path = export_hms_comparison_bundle(args.output_dir)
+            print(f"HEC-HMS comparison bundle written to: {path}")
+            return 0
+        if args.hms_command == "validate-comparison":
+            result = validate_hms_comparison_outputs(args.output_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1 if result["status"] == "failed" else 0
     return 2
 
 

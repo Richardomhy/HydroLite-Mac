@@ -1,5 +1,7 @@
 # HydroLite Studio HEC-HMS 命令行运行探测与结果读取 MVP
 
+运行 MVP 现包含小型已完成事件的限时结果 DSS 流量提取和基于拓扑的出口对比。真实项目适配、率定和预报尚未完成，因此阶段仍为 `partial`。
+
 ## 目标与边界
 
 本 MVP 用于识别 HEC-HMS 4.13 的命令行入口，生成可复用命令和脚本，并收集 stdout、stderr、日志和结果文件元数据。官方安装包 Castro 参考项目已通过 `Project.open` 和短时 `computeRun`；HydroLite 校准项目已通过 open 并识别 Run，但因降雨数据源门禁未满足而不自动计算。它不做 GUI 自动化，也不把 open 成功宣称为模拟完成。

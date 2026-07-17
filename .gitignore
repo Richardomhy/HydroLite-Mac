@@ -12,6 +12,9 @@ output/hec_hms_project_verified/
 output/hec_hms_precipitation_reference/
 output/hec_hms_precipitation/
 output/hec_hms_project_rainfall_verified/
+output/hec_hms_results/
+output/hec_hms_comparison/
+**/.hydrolite_scripts/
 logs/
 templates_export/
 projects/*/output/
@@ -35,6 +38,7 @@ projects/qgis_workflow_project/
 *.dss
 hs_err_pid*
 java_pid*
+replay_pid*
 configs/gee.local.yaml
 *service-account*.json
 *credentials*.json

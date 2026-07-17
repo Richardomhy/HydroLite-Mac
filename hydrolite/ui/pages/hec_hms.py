@@ -49,6 +49,18 @@ from hydrolite.hec_hms_precipitation import (
     write_project_rainfall_dss,
 )
 from hydrolite.hec_hms_format import compare_generated_to_reference, write_hms_format_comparison_report
+from hydrolite.hec_hms_results import (
+    DEFAULT_COMPARISON_DIR,
+    DEFAULT_RESULTS_DIR,
+    export_hms_comparison_bundle,
+    load_hms_result_catalog,
+    map_hms_results_to_hydrolite_elements,
+    read_hms_dss_timeseries,
+    run_hms_hydrolite_comparison,
+    run_hms_result_extraction,
+    validate_hms_comparison_outputs,
+    write_hms_comparison_report,
+)
 from hydrolite.ui.components import read_text_if_exists, safe_read_excel, show_download, show_json
 from hydrolite.ui.state import OUTPUT_ROOT, WorkbenchContext
 
@@ -56,7 +68,7 @@ from hydrolite.ui.state import OUTPUT_ROOT, WorkbenchContext
 def render(context: WorkbenchContext) -> None:
     st.header("HEC-HMS")
     st.caption(f"HydroLite Studio v{__version__}")
-    st.warning("当前为 HEC-HMS 环境诊断与项目生成 MVP，不等于已完成真实 HMS 模拟或 DSS 结果读取。")
+    st.warning("当前支持小型已完成事件的 DSS 结果读取和 HydroLite 对比，但不代表真实项目已完成率定。")
 
     diagnosis = build_hec_hms_diagnosis()
     c1, c2, c3, c4 = st.columns(4)
@@ -324,6 +336,65 @@ def render(context: WorkbenchContext) -> None:
     show_download("下载 run_hms.sh", run_shell, "text/x-shellscript")
     show_download("下载 run_hms.bat", run_batch, "text/plain")
     show_download("下载 hydrolite_run_hms.py", run_jython, "text/x-python")
+
+    st.subheader("HEC-HMS 结果与 HydroLite 对比")
+    st.caption("本区域展示两个模型对同一事件的模拟差异，不代表任何一个模型已完成真实项目率定。")
+    result_hms_project = rainfall_project
+    result_hydro_project = Path(rainfall_source).expanduser().resolve()
+    result_dss = result_hms_project / "hydrolite_run.dss"
+    result_columns = st.columns(4)
+    if result_columns[0].button("读取 DSS catalog", disabled=not result_dss.is_file(), use_container_width=True):
+        show_json(load_hms_result_catalog(result_dss))
+    if result_columns[1].button("读取全部流量过程", disabled=not result_dss.is_file(), use_container_width=True):
+        catalog = load_hms_result_catalog(result_dss)
+        result = read_hms_dss_timeseries(result_dss, catalog["flow_pathnames"], DEFAULT_RESULTS_DIR, timeout=60)
+        show_json({key: result[key] for key in ("status", "backend", "successful_pathname_count", "failed_pathname_count")})
+    if result_columns[2].button("映射 HMS/HydroLite 元素", disabled=not result_dss.is_file(), use_container_width=True):
+        show_json(map_hms_results_to_hydrolite_elements(result_hms_project, load_hms_result_catalog(result_dss), result_hydro_project))
+    if result_columns[3].button("运行结果提取", disabled=not result_dss.is_file(), use_container_width=True):
+        show_json(run_hms_result_extraction(result_hms_project, DEFAULT_RESULTS_DIR))
+
+    compare_columns = st.columns(4)
+    if compare_columns[0].button("识别出口", disabled=not result_dss.is_file(), use_container_width=True):
+        extracted = run_hms_result_extraction(result_hms_project, DEFAULT_RESULTS_DIR)
+        show_json(extracted["outlet_selection"])
+    if compare_columns[1].button("运行 HydroLite 对比", disabled=not result_dss.is_file(), use_container_width=True):
+        show_json(run_hms_hydrolite_comparison(result_hms_project, result_hydro_project, DEFAULT_COMPARISON_DIR))
+    if compare_columns[2].button("生成对比报告", disabled=not (DEFAULT_COMPARISON_DIR / "comparison_manifest.json").is_file(), use_container_width=True):
+        st.success(f"报告已生成: `{write_hms_comparison_report(DEFAULT_COMPARISON_DIR)}`")
+    if compare_columns[3].button("生成对比 bundle", disabled=not (DEFAULT_COMPARISON_DIR / "comparison_report.md").is_file(), use_container_width=True):
+        st.success(f"Bundle 已生成: `{export_hms_comparison_bundle(DEFAULT_COMPARISON_DIR)}`")
+
+    comparison_book = DEFAULT_COMPARISON_DIR / "model_comparison_metrics.xlsx"
+    comparison_summary = safe_read_excel(comparison_book, "summary")
+    comparison_metrics = safe_read_excel(comparison_book, "comparison_metrics")
+    if not comparison_summary.empty:
+        st.dataframe(comparison_summary, use_container_width=True)
+        st.dataframe(comparison_metrics, use_container_width=True)
+        summary_row = comparison_summary.iloc[0]
+        metric_row = comparison_metrics.iloc[0] if not comparison_metrics.empty else {}
+        display = st.columns(4)
+        display[0].metric("Comparison status", summary_row.get("comparison_status", "unknown"))
+        display[1].metric("NSE", f"{metric_row.get('NSE', float('nan')):.3f}" if pd.notna(metric_row.get("NSE")) else "NA")
+        display[2].metric("KGE", f"{metric_row.get('KGE', float('nan')):.3f}" if pd.notna(metric_row.get("KGE")) else "NA")
+        display[3].metric("RMSE", f"{metric_row.get('RMSE', float('nan')):.3f}" if pd.notna(metric_row.get("RMSE")) else "NA")
+        for chart in sorted((DEFAULT_COMPARISON_DIR / "charts").glob("*.png")):
+            st.image(str(chart), caption=chart.stem, use_container_width=True)
+    comparison_report = DEFAULT_COMPARISON_DIR / "comparison_report.md"
+    comparison_text = read_text_if_exists(comparison_report)
+    if comparison_text:
+        with st.expander("查看对比报告"):
+            st.markdown(comparison_text)
+    for label, path, mime in (
+        ("下载对齐 CSV", DEFAULT_COMPARISON_DIR / "aligned_outlet_timeseries.csv", "text/csv"),
+        ("下载指标 Excel", comparison_book, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        ("下载对比报告", comparison_report, "text/markdown"),
+        ("下载对比 bundle", DEFAULT_COMPARISON_DIR / "hec_hms_comparison_bundle.zip", "application/zip"),
+    ):
+        show_download(label, path, mime)
+    validation_result = validate_hms_comparison_outputs(DEFAULT_COMPARISON_DIR) if comparison_book.is_file() else None
+    if validation_result and validation_result["status"] != "passed":
+        st.warning(validation_result)
 
     st.info("推荐下一步：在 HEC-HMS 4.13 中人工打开并复核 basin/met/control/run 文件、连通性、单位和参数；验证前不执行生产计算。")
 

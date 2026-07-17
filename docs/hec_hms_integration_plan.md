@@ -1,5 +1,7 @@
 # HEC-HMS Integration Plan
 
+Completed-event DSS flow extraction is now implemented: six-part pathname parsing, flow semantics, unit validation, topology mapping, outlet selection, exact time alignment, event metrics and HydroLite comparison. Future work must preserve the distinction between model comparison, calibration and forecasting.
+
 ## 集成目标
 
 让 HydroLite Studio 后续能够把 QGIS、GEE 和 HydroLite 数据模板整理为 HEC-HMS 可用项目，并在本地环境可用时运行 HEC-HMS、读取结果和纳入对比报告。

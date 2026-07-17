@@ -1,5 +1,7 @@
 # HEC-HMS rainfall compute validation
 
+After the compute gate passes, HydroLite can read the non-empty Simulation DSS, classify its 51 pathnames and extract the 27 flow pathnames. This result analysis does not change the rainfall gate and does not imply calibration; see `docs/hec_hms_hydrolite_comparison.md`.
+
 The rainfall-verified project is an original minimal HydroLite-generated HEC-HMS 4.13 project under `output/hec_hms_project_rainfall_verified/`. It does not overwrite earlier generated projects or the copied official reference.
 
 ## Safety gate
