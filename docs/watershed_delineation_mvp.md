@@ -20,7 +20,11 @@
 - `fallback`：未发现稳定链，仅生成小型诊断示例。
 - `unavailable`：后端和 fallback 都不可用。当前 MVP 自带轻量 fallback，通常不会进入此状态。
 
-当 `native:fillsinkswangliu` 可用时，填洼优先通过 `qgis_process` 运行。汇流累积、河网和分区若缺少稳定后端，使用小型 Python D8/fallback 示例，文件属性中会写入 `is_fallback: true`。
+当 `native:fillsinkswangliu` 可用时，填洼和 D8 流向由 `qgis_process` 生成。HydroLite 随后做流向环检测/边界出口修复，通过无环拓扑算法计算汇流累积，并沿同一流向提取河网。该链不依赖 GRASS，但河网阈值和出口修复仍需 GIS 人工复核。
+
+### GRASS 为什么不可用
+
+当前 QGIS 3.44.10 包含并加载 `grassprovider` Python 插件，但 QGIS app 包内没有 GRASS GIS runtime/可执行文件，系统 PATH、`/Applications/GRASS*.app`、Homebrew 常见路径也没有 GRASS，且未设置有效 `GISBASE`。因此 provider 虽存在，却无法注册/执行 `r.watershed`、`r.fill.dir`、`r.water.outlet`。详细根因会写入 `watershed_diagnosis.json` 的 `grass_diagnosis`。
 
 ## 使用
 
@@ -44,6 +48,7 @@ Streamlit 中从主导航进入“流域划分”页面。
 - `watershed_backend_summary.xlsx`
 - `demo_dem.asc`
 - `filled_dem.asc`
+- `flow_directions.asc`
 - `flow_accumulation.asc`
 - `basin_boundary.geojson`
 - `stream_network.geojson`
@@ -67,9 +72,9 @@ Streamlit 中从主导航进入“流域划分”页面。
 - 不做真实出口点吸附和专业子流域划分。
 - fallback 边界基于 demo DEM 范围，不是真实地形分水岭。
 - 河网阈值是小样例规则，不是工程标定值。
-- GRASS/SAGA/Whitebox/TauDEM 的安装与专业算法适配属于后续路线。
+- 汇流累积与河网已采用 QGIS D8 流向 + HydroLite 无环拓扑链；分区与真实出口点划分仍为 fallback 示例。
+- GRASS/SAGA/Whitebox/TauDEM 的专业后端对照验证属于后续路线。
 
 ## 人工复核
 
 真实项目必须在 GIS 中复核 DEM 投影和分辨率、水系烧入/平坦区处理、汇流阈值、出口点位置、河网连通性、分水岭和流域面积。
-

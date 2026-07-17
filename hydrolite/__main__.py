@@ -30,6 +30,16 @@ from hydrolite.gee.export import (
 )
 from hydrolite.gee.diagnostics import build_gee_diagnosis
 from hydrolite.healthcheck import build_healthcheck, healthcheck_status
+from hydrolite.hec_hms import (
+    build_hec_hms_diagnosis,
+    create_hms_project_from_hydrolite,
+    detect_hec_hms_executables,
+    detect_hec_hms_installations,
+    hec_hms_version,
+    validate_hms_project,
+    write_hec_hms_diagnosis,
+    write_hms_project_report,
+)
 from hydrolite.openhydronet.diagnostics import build_openhydronet_diagnosis
 from hydrolite.openhydronet.runner import run_openhydronet_prepare_inputs, run_openhydronet_smoke
 from hydrolite.project import (
@@ -284,6 +294,19 @@ def build_parser() -> argparse.ArgumentParser:
     watershed_validate.add_argument("output_dir")
     watershed_report = watershed_subparsers.add_parser("report", help="Regenerate the watershed MVP report.")
     watershed_report.add_argument("output_dir")
+
+    hms_parser = subparsers.add_parser("hms", help="HEC-HMS diagnostics and project generator MVP.")
+    hms_subparsers = hms_parser.add_subparsers(dest="hms_command", required=True)
+    hms_subparsers.add_parser("diagnose", help="Write HEC-HMS environment diagnosis outputs.")
+    hms_subparsers.add_parser("paths", help="List HEC-HMS installation and executable candidates.")
+    hms_subparsers.add_parser("version", help="Read HEC-HMS version safely when possible.")
+    hms_create = hms_subparsers.add_parser("create-project", help="Generate an unverified HEC-HMS project skeleton.")
+    hms_create.add_argument("project_dir")
+    hms_create.add_argument("output_dir")
+    hms_validate = hms_subparsers.add_parser("validate", help="Validate generated HEC-HMS project files.")
+    hms_validate.add_argument("hms_project_dir")
+    hms_report = hms_subparsers.add_parser("report", help="Regenerate the HEC-HMS project report.")
+    hms_report.add_argument("hms_project_dir")
 
     return parser
 
@@ -745,6 +768,53 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 result = {"status": "unavailable", "output_dir": str(output), "outputs": {}, "steps": {}}
             print(f"Watershed report written to: {write_watershed_report(output, result)}")
+            return 0
+    if args.command == "hms":
+        import json
+
+        if args.hms_command == "paths":
+            print(
+                json.dumps(
+                    {
+                        "installations": detect_hec_hms_installations(),
+                        "executables": detect_hec_hms_executables(),
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+        if args.hms_command == "diagnose":
+            outputs = write_hec_hms_diagnosis()
+            diagnosis = build_hec_hms_diagnosis()
+            print(f"HEC-HMS diagnosis written to: {outputs['md']}")
+            print(f"JSON written to: {outputs['json']}")
+            print(f"recommended_integration: {diagnosis['recommended_integration']}")
+            return 0
+        if args.hms_command == "version":
+            print(json.dumps(hec_hms_version(), indent=2, ensure_ascii=False))
+            return 0
+        if args.hms_command == "create-project":
+            result = create_hms_project_from_hydrolite(args.project_dir, args.output_dir)
+            print(f"HEC-HMS project status: {result['status']}")
+            print(f"Runnable status: {result['runnable_status']}")
+            print(f"Project written to: {result['hms_project_dir']}")
+            return 0
+        if args.hms_command == "validate":
+            result = validate_hms_project(args.hms_project_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1 if result["status"] == "failed" else 0
+        if args.hms_command == "report":
+            root = Path(args.hms_project_dir).expanduser().resolve()
+            manifest = root / "reports" / "hec_hms_project_manifest.json"
+            result = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else {
+                "status": "project_generation_mvp",
+                "runnable_status": "unverified",
+                "hms_project_dir": str(root),
+                "validation": validate_hms_project(root),
+                "warnings": ["Manifest unavailable; report regenerated from file checks only."],
+            }
+            print(f"HEC-HMS project report written to: {write_hms_project_report(root, result)}")
             return 0
     return 2
 

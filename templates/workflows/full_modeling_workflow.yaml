@@ -24,8 +24,8 @@ stages:
     notes: Existing SCS-CN, unit hydrograph, Muskingum workflow.
   - stage_id: hec_hms_project
     enabled: false
-    status: planned
-    notes: Planned project-file bridge.
+    status: partial
+    notes: Generates an unverified HEC-HMS project skeleton for manual review; no real simulation.
   - stage_id: hec_hms_run
     enabled: false
     status: planned

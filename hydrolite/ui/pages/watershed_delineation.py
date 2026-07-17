@@ -32,6 +32,10 @@ def render(context: WorkbenchContext) -> None:
     st.caption(backends["message"])
     if backends.get("qgis_version"):
         st.code(backends["qgis_version"], language="text")
+    grass = backends.get("grass_diagnosis", {})
+    if grass.get("status") != "available":
+        st.warning(f"GRASS 不可用：{grass.get('root_cause', 'runtime not detected')}")
+        st.caption("当前使用 QGIS D8 流向 + HydroLite 无环拓扑汇流/河网，不要求 GRASS。")
 
     candidates = pd.DataFrame(backends["algorithm_candidates"])
     if not candidates.empty:
@@ -99,4 +103,3 @@ def render(context: WorkbenchContext) -> None:
 - 复核后将 CSV/GeoJSON 交给 `QGIS Bridge` 或 `项目向导`。
 """
     )
-

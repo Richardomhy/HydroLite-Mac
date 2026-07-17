@@ -6,6 +6,7 @@ from functools import lru_cache
 import heapq
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 from typing import Any
@@ -79,22 +80,64 @@ def list_watershed_algorithm_candidates() -> list[dict[str, Any]]:
     return rows
 
 
+def diagnose_grass_runtime() -> dict[str, Any]:
+    qgis_root = Path("/Applications/QGIS.app/Contents")
+    provider = qgis_root / "Resources" / "qgis" / "python" / "plugins" / "grassprovider"
+    bundle_candidates = sorted(qgis_root.glob("MacOS/grass*")) if qgis_root.exists() else []
+    standalone_apps = sorted(Path("/Applications").glob("GRASS*.app")) if Path("/Applications").exists() else []
+    path_candidates = [shutil.which(name) for name in ("grass", "grass84", "grass83", "grass82", "grass80")]
+    executables = [str(Path(path).resolve()) for path in path_candidates if path]
+    gisbase = os.environ.get("GISBASE", "")
+    gisbase_valid = bool(gisbase and Path(gisbase).is_dir())
+    runtime_available = bool(executables or bundle_candidates or standalone_apps or gisbase_valid)
+    if provider.exists() and not runtime_available:
+        root_cause = (
+            "QGIS includes and loads the grassprovider Python plugin, but no GRASS GIS runtime, executable, "
+            "standalone GRASS application, or valid GISBASE was found. The provider therefore has algorithm "
+            "descriptions but cannot register or execute r.watershed/r.fill.dir/r.water.outlet."
+        )
+    elif runtime_available:
+        root_cause = "A GRASS runtime candidate exists; provider compatibility still requires a qgis_process algorithm check."
+    else:
+        root_cause = "Neither the QGIS GRASS provider nor a GRASS runtime was detected."
+    return {
+        "status": "available" if runtime_available else "unavailable",
+        "provider_plugin_path": str(provider),
+        "provider_plugin_exists": provider.exists(),
+        "bundle_runtime_candidates": [str(path) for path in bundle_candidates],
+        "standalone_app_candidates": [str(path) for path in standalone_apps],
+        "path_executables": executables,
+        "gisbase": gisbase,
+        "gisbase_valid": gisbase_valid,
+        "root_cause": root_cause,
+        "recommended_action": (
+            "HydroLite will use QGIS native sink filling plus its deterministic D8 topology engine. "
+            "A separate GRASS installation can be considered later, but is not required for this MVP."
+        ),
+    }
+
+
 def detect_watershed_backends() -> dict[str, Any]:
     inventory = _algorithm_inventory()
     candidates = list_watershed_algorithm_candidates()
     by_category = {row["category"]: row for row in candidates}
     qgis_available = bool(inventory["qgis_process"] and inventory["return_code"] == 0)
     fill_available = by_category["fill_sinks"]["match_count"] > 0
-    accumulation_available = by_category["flow_accumulation"]["match_count"] > 0
-    stream_available = by_category["stream_network"]["match_count"] > 0
+    qgis_accumulation_available = by_category["flow_accumulation"]["match_count"] > 0
+    qgis_stream_available = by_category["stream_network"]["match_count"] > 0
     basin_available = by_category["watershed"]["match_count"] > 0
+    stable_accumulation_available = fill_available
+    stable_stream_available = fill_available
 
-    if qgis_available and fill_available and accumulation_available and stream_available and basin_available:
+    if qgis_available and fill_available and qgis_accumulation_available and qgis_stream_available and basin_available:
         status = "available"
         message = "qgis_process exposes a complete candidate algorithm chain; results still require GIS review."
-    elif qgis_available and (fill_available or accumulation_available or basin_available):
+    elif qgis_available and (fill_available or stable_accumulation_available or basin_available):
         status = "partial"
-        message = "Only part of the watershed toolchain is available; missing stages use the explicit Python fallback."
+        message = (
+            "QGIS native sink filling and flow direction are available. HydroLite provides deterministic "
+            "topological accumulation and stream extraction; outlet-based basin delineation remains partial."
+        )
     elif qgis_available:
         status = "fallback"
         message = "qgis_process is available but no stable watershed chain was detected; use diagnostic fallback outputs."
@@ -103,6 +146,7 @@ def detect_watershed_backends() -> dict[str, Any]:
         message = "qgis_process is unavailable; the small deterministic Python fallback remains available for workflow testing."
 
     version = qgis_process_version() if inventory["qgis_process"] else {}
+    grass = diagnose_grass_runtime()
     return {
         "status": status,
         "message": message,
@@ -110,10 +154,14 @@ def detect_watershed_backends() -> dict[str, Any]:
         "qgis_process_path": inventory["qgis_process"],
         "qgis_version": version.get("stdout", ""),
         "qgis_stderr": inventory["stderr"],
+        "grass_diagnosis": grass,
         "capabilities": {
             "fill_sinks": fill_available,
-            "flow_accumulation": accumulation_available,
-            "stream_network": stream_available,
+            "qgis_flow_direction": fill_available,
+            "qgis_flow_accumulation": qgis_accumulation_available,
+            "qgis_stream_network": qgis_stream_available,
+            "flow_accumulation": stable_accumulation_available,
+            "stream_network": stable_stream_available,
             "basin_delineation": basin_available,
         },
         "algorithm_candidates": candidates,
@@ -280,6 +328,8 @@ def run_fill_sinks(dem_path: str | Path, output_path: str | Path, backend: str =
     qgis_fill = next((line.split()[0] for line in fill_matches if "native:fillsinkswangliu" in line), None)
     if backend in {"auto", "qgis_process"} and qgis_fill:
         qgis_filled = output if output.suffix.lower() in {".tif", ".tiff"} else output.with_name(f"{output.stem}_qgis.tif")
+        flow_direction_tif = output.with_name("flow_directions.tif")
+        flow_direction_asc = output.with_name("flow_directions.asc")
         result = run_qgis_process(
             [
                 "run",
@@ -289,7 +339,7 @@ def run_fill_sinks(dem_path: str | Path, output_path: str | Path, backend: str =
                 "BAND=1",
                 "MIN_SLOPE=0.1",
                 f"OUTPUT_FILLED_DEM={qgis_filled}",
-                f"OUTPUT_FLOW_DIRECTIONS={output.with_name('flow_directions.tif')}",
+                f"OUTPUT_FLOW_DIRECTIONS={flow_direction_tif}",
                 f"OUTPUT_WATERSHED_BASINS={output.with_name('watershed_basins.tif')}",
             ],
             timeout=90,
@@ -316,12 +366,26 @@ def run_fill_sinks(dem_path: str | Path, output_path: str | Path, backend: str =
                         "message": translate.get("stderr") or translate.get("stdout") or "",
                     }
                 )
+            if flow_direction_tif.exists():
+                direction_translate = run_qgis_process(
+                    ["run", "gdal:translate", "--", f"INPUT={flow_direction_tif}", "DATA_TYPE=5", f"OUTPUT={flow_direction_asc}"],
+                    timeout=60,
+                )
+                attempts.append(
+                    {
+                        "backend": "qgis_process:gdal:translate:flow_directions",
+                        "status": "success" if direction_translate.get("return_code") == 0 and flow_direction_asc.exists() else "failed",
+                        "return_code": direction_translate.get("return_code"),
+                        "message": direction_translate.get("stderr") or direction_translate.get("stdout") or "",
+                    }
+                )
             if output.exists():
                 return {
                     "status": "success",
                     "method": "qgis_process:native:fillsinkswangliu",
                     "output": str(output),
                     "qgis_raster": str(qgis_filled),
+                    "flow_directions": str(flow_direction_asc) if flow_direction_asc.exists() else "",
                     "attempts": attempts,
                 }
         if backend == "qgis_process":
@@ -343,11 +407,91 @@ def run_fill_sinks(dem_path: str | Path, output_path: str | Path, backend: str =
         return {"status": "failed", "method": "python_priority_flood_fallback", "output": str(output), "attempts": attempts}
 
 
+def _accumulate_downstream(rows: int, cols: int, downstream: list[list[int | None]]) -> list[list[float]]:
+    indegree = [0] * (rows * cols)
+    for row in range(rows):
+        for col in range(cols):
+            target = downstream[row][col]
+            if target is not None:
+                indegree[target] += 1
+    accumulation = [1.0] * (rows * cols)
+    queue = deque(index for index, degree in enumerate(indegree) if degree == 0)
+    processed = 0
+    while queue:
+        index = queue.popleft()
+        processed += 1
+        row, col = divmod(index, cols)
+        target = downstream[row][col]
+        if target is None:
+            continue
+        accumulation[target] += accumulation[index]
+        indegree[target] -= 1
+        if indegree[target] == 0:
+            queue.append(target)
+    if processed != rows * cols:
+        raise ValueError("Flow direction grid contains a cycle; accumulation cannot be resolved safely.")
+    return [accumulation[row * cols : (row + 1) * cols] for row in range(rows)]
+
+
+def _downstream_from_direction_grid(grid: dict[str, Any]) -> list[list[int | None]]:
+    rows, cols = grid["nrows"], grid["ncols"]
+    downstream: list[list[int | None]] = [[None] * cols for _ in range(rows)]
+    nodata = grid["nodata_value"]
+    for row in range(rows):
+        for col in range(cols):
+            value = grid["values"][row][col]
+            if value == nodata:
+                continue
+            code = int(round(value))
+            if not 0 <= code < len(_NEIGHBORS):
+                continue
+            drow, dcol = _NEIGHBORS[code]
+            nr, nc = row + drow, col + dcol
+            if 0 <= nr < rows and 0 <= nc < cols:
+                downstream[row][col] = nr * cols + nc
+    return downstream
+
+
+def _repair_flow_cycles(
+    downstream: list[list[int | None]],
+    rows: int,
+    cols: int,
+    elevations: list[list[float]],
+) -> list[dict[str, Any]]:
+    repairs: list[dict[str, Any]] = []
+    for start in range(rows * cols):
+        current: int | None = start
+        path: list[int] = []
+        positions: dict[int, int] = {}
+        while current is not None:
+            if current in positions:
+                cycle = path[positions[current] :]
+                boundary = [
+                    index
+                    for index in cycle
+                    if (index // cols) in {0, rows - 1} or (index % cols) in {0, cols - 1}
+                ]
+                candidates = boundary or cycle
+                outlet = min(candidates, key=lambda index: elevations[index // cols][index % cols])
+                downstream[outlet // cols][outlet % cols] = None
+                repairs.append(
+                    {
+                        "cycle_cells": [[index // cols, index % cols] for index in cycle],
+                        "outlet_cell": [outlet // cols, outlet % cols],
+                        "reason": "boundary_lowest_cell" if boundary else "cycle_lowest_elevation_cell",
+                    }
+                )
+                break
+            positions[current] = len(path)
+            path.append(current)
+            current = downstream[current // cols][current % cols]
+    return repairs
+
+
 def _d8_accumulation(grid: dict[str, Any]) -> tuple[list[list[float]], list[list[int | None]]]:
     values = grid["values"]
     rows, cols = grid["nrows"], grid["ncols"]
     downstream: list[list[int | None]] = [[None] * cols for _ in range(rows)]
-    indegree = [0] * (rows * cols)
     for row in range(rows):
         for col in range(cols):
             best: tuple[float, int] | None = None
@@ -361,20 +505,7 @@ def _d8_accumulation(grid: dict[str, Any]) -> tuple[list[list[float]], list[list
                     best = (slope, nr * cols + nc)
             if best:
                 downstream[row][col] = best[1]
-                indegree[best[1]] += 1
-    accumulation = [1.0] * (rows * cols)
-    queue = deque(index for index, degree in enumerate(indegree) if degree == 0)
-    while queue:
-        index = queue.popleft()
-        row, col = divmod(index, cols)
-        target = downstream[row][col]
-        if target is None:
-            continue
-        accumulation[target] += accumulation[index]
-        indegree[target] -= 1
-        if indegree[target] == 0:
-            queue.append(target)
-    return [accumulation[row * cols : (row + 1) * cols] for row in range(rows)], downstream
+    return _accumulate_downstream(rows, cols, downstream), downstream
 
 
 def run_flow_accumulation(dem_path: str | Path, output_dir: str | Path, backend: str = "auto") -> dict[str, Any]:
@@ -383,16 +514,32 @@ def run_flow_accumulation(dem_path: str | Path, output_dir: str | Path, backend:
     output.parent.mkdir(parents=True, exist_ok=True)
     try:
         grid = _read_ascii_grid(source)
-        accumulation, _ = _d8_accumulation(grid)
+        direction_path = output.parent / "flow_directions.asc"
+        if direction_path.exists():
+            direction_grid = _read_ascii_grid(direction_path)
+            if (direction_grid["nrows"], direction_grid["ncols"]) != (grid["nrows"], grid["ncols"]):
+                raise ValueError("Flow direction and DEM grid dimensions do not match.")
+            downstream = _downstream_from_direction_grid(direction_grid)
+            cycle_repairs = _repair_flow_cycles(downstream, grid["nrows"], grid["ncols"], grid["values"])
+            accumulation = _accumulate_downstream(grid["nrows"], grid["ncols"], downstream)
+            method = "qgis_d8_direction_plus_hydrolite_topology"
+        else:
+            accumulation, downstream = _d8_accumulation(grid)
+            cycle_repairs = []
+            method = "hydrolite_d8_topology"
         _write_ascii_grid(output, {**grid, "values": accumulation})
         return {
             "status": "success",
-            "method": "python_d8_fallback",
+            "method": method,
             "output": str(output),
-            "warning": "No stable qgis_process accumulation algorithm was detected; used a small D8 fallback for MVP verification.",
+            "flow_directions": str(direction_path) if direction_path.exists() else "derived_from_filled_dem",
+            "max_accumulation_cells": max(value for row in accumulation for value in row),
+            "cycle_repairs": cycle_repairs,
+            "cycle_repair_count": len(cycle_repairs),
+            "warning": "GRASS is unavailable; accumulation uses a deterministic acyclic D8 topology engine.",
         }
     except Exception as exc:  # noqa: BLE001
-        return {"status": "failed", "method": "python_d8_fallback", "output": str(output), "error": str(exc)}
+        return {"status": "failed", "method": "hydrolite_d8_topology", "output": str(output), "error": str(exc)}
 
 
 def _cell_center(grid: dict[str, Any], row: int, col: int) -> list[float]:
@@ -415,19 +562,36 @@ def extract_stream_network(
         values = grid["values"]
         flat = [value for row in values for value in row]
         chosen_threshold = float(threshold if threshold is not None else max(4.0, round(max(flat) * 0.18, 2)))
+        direction_path = source.parent / "flow_directions.asc"
+        direction_grid = _read_ascii_grid(direction_path) if direction_path.exists() else None
+        downstream = _downstream_from_direction_grid(direction_grid) if direction_grid else None
+        cycle_repairs: list[dict[str, Any]] = []
+        if downstream:
+            filled_dem = source.parent / "filled_dem.asc"
+            elevations = _read_ascii_grid(filled_dem)["values"] if filled_dem.exists() else values
+            cycle_repairs = _repair_flow_cycles(downstream, grid["nrows"], grid["ncols"], elevations)
+        method = "qgis_d8_direction_plus_hydrolite_stream_extraction" if downstream else "hydrolite_accumulation_gradient_stream_extraction"
         features = []
         for row in range(grid["nrows"]):
             for col in range(grid["ncols"]):
                 if values[row][col] < chosen_threshold:
                     continue
-                larger: list[tuple[float, int, int]] = []
-                for drow, dcol in _NEIGHBORS:
-                    nr, nc = row + drow, col + dcol
-                    if 0 <= nr < grid["nrows"] and 0 <= nc < grid["ncols"] and values[nr][nc] > values[row][col]:
-                        larger.append((values[nr][nc], nr, nc))
-                if not larger:
-                    continue
-                _, nr, nc = max(larger)
+                target = downstream[row][col] if downstream else None
+                if target is not None:
+                    nr, nc = divmod(target, grid["ncols"])
+                else:
+                    larger: list[tuple[float, int, int]] = []
+                    for drow, dcol in _NEIGHBORS:
+                        candidate_row, candidate_col = row + drow, col + dcol
+                        if (
+                            0 <= candidate_row < grid["nrows"]
+                            and 0 <= candidate_col < grid["ncols"]
+                            and values[candidate_row][candidate_col] > values[row][col]
+                        ):
+                            larger.append((values[candidate_row][candidate_col], candidate_row, candidate_col))
+                    if not larger:
+                        continue
+                    _, nr, nc = max(larger)
                 features.append(
                     {
                         "type": "Feature",
@@ -435,8 +599,9 @@ def extract_stream_network(
                             "segment_id": f"SEG_{len(features) + 1}",
                             "accumulation_cells": values[row][col],
                             "threshold_cells": chosen_threshold,
-                            "processing_method": "python_d8_fallback",
-                            "is_fallback": True,
+                            "processing_method": method,
+                            "is_fallback": downstream is None,
+                            "review_required": True,
                         },
                         "geometry": {"type": "LineString", "coordinates": [_cell_center(grid, row, col), _cell_center(grid, nr, nc)]},
                     }
@@ -462,13 +627,14 @@ def extract_stream_network(
         output.write_text(json.dumps({"type": "FeatureCollection", "features": features}, indent=2) + "\n", encoding="utf-8")
         return {
             "status": "success",
-            "method": "python_d8_fallback",
+            "method": method,
             "output": str(output),
             "threshold": chosen_threshold,
             "feature_count": len(features),
+            "cycle_repairs": cycle_repairs,
         }
     except Exception as exc:  # noqa: BLE001
-        return {"status": "failed", "method": "python_d8_fallback", "output": str(output), "error": str(exc)}
+        return {"status": "failed", "method": "hydrolite_stream_extraction", "output": str(output), "error": str(exc)}
 
 
 def _polygon_feature(feature_id: str, coordinates: list[list[float]], properties: dict[str, Any]) -> dict[str, Any]:
@@ -552,6 +718,15 @@ def _backend_rows(backends: dict[str, Any], steps: dict[str, Any]) -> pd.DataFra
             "details": backends.get("qgis_version") or backends.get("message", ""),
         }
     ]
+    grass = backends.get("grass_diagnosis", {})
+    rows.append(
+        {
+            "component": "grass_runtime",
+            "status": grass.get("status", "unavailable"),
+            "backend": grass.get("path_executables", []),
+            "details": grass.get("root_cause", ""),
+        }
+    )
     for name, value in steps.items():
         rows.append(
             {
@@ -591,7 +766,16 @@ def run_watershed_mvp(dem_path: str | Path | None = None, output_dir: str | Path
             "remaining fallback products use the synthetic demo DEM and are not results for the supplied raster."
         )
     accumulation = run_flow_accumulation(accumulation_source, output)
-    stream = extract_stream_network(accumulation["output"], output / "stream_network.geojson")
+    stream = (
+        extract_stream_network(accumulation["output"], output / "stream_network.geojson")
+        if accumulation["status"] == "success"
+        else {
+            "status": "failed",
+            "method": "not_run",
+            "output": str(output / "stream_network.geojson"),
+            "error": "Flow accumulation failed; stream extraction was not run to avoid stale outputs.",
+        }
+    )
     basin = delineate_basin(accumulation_source, output_dir=output)
     steps = {"fill_sinks": fill, "flow_accumulation": accumulation, "stream_network": stream, "basin_delineation": basin}
     status = backends["status"]
@@ -616,6 +800,7 @@ def run_watershed_mvp(dem_path: str | Path | None = None, output_dir: str | Path
         "outputs": {
             "demo_dem": str(working_dem),
             "filled_dem": fill["output"],
+            "flow_directions": fill.get("flow_directions", ""),
             "flow_accumulation": accumulation["output"],
             "stream_network": stream["output"],
             "basin_boundary": basin["basin_boundary"],
@@ -646,6 +831,8 @@ def validate_watershed_outputs(output_dir: str | Path) -> dict[str, Any]:
     required = [
         "watershed_diagnosis.json",
         "watershed_backend_summary.xlsx",
+        "flow_directions.asc",
+        "flow_accumulation.asc",
         "basin_boundary.geojson",
         "stream_network.geojson",
         "subbasins.geojson",
@@ -681,6 +868,7 @@ def write_watershed_report(output_dir: str | Path, result: dict[str, Any]) -> Pa
     inspection = result.get("dem_inspection", {})
     steps = result.get("steps", {})
     validation = result.get("validation") or validate_watershed_outputs(output)
+    grass = backends.get("grass_diagnosis", {})
     lines = [
         "# HydroLite Watershed Delineation MVP Report",
         "",
@@ -694,7 +882,14 @@ def write_watershed_report(output_dir: str | Path, result: dict[str, Any]) -> Pa
         f"- qgis_process: `{backends.get('qgis_process_path') or 'unavailable'}`",
         f"- QGIS version: `{backends.get('qgis_version') or 'unavailable'}`",
         f"- Validation: `{validation.get('status', 'unknown')}`",
-        "- Backend note: `当前环境未检测到完整稳定的流域划分后端；可用阶段优先调用 QGIS，其余仅生成明确标记的示例诊断输出。`",
+        "- Backend note: `QGIS 填洼/流向 + HydroLite 无环 D8 拓扑汇流/河网已可用；真实出口点流域划分仍为 partial。`",
+        "",
+        "## GRASS Diagnosis",
+        "",
+        f"- GRASS status: `{grass.get('status', 'unavailable')}`",
+        f"- Provider plugin exists: `{grass.get('provider_plugin_exists', False)}`",
+        f"- GISBASE valid: `{grass.get('gisbase_valid', False)}`",
+        f"- Root cause: {grass.get('root_cause', 'not checked')}",
         "",
         "## DEM Inspection",
         "",
@@ -725,7 +920,8 @@ def write_watershed_report(output_dir: str | Path, result: dict[str, Any]) -> Pa
             "## Limitations",
             "",
             "- 本次 demo DEM 使用无敏感地理含义的合成局部坐标。",
-            "- qgis_process 后端不完整时，D8 汇流、河网和分区为明确标记的 fallback 示例。",
+            "- 汇流累积和河网使用 QGIS D8 流向 + HydroLite 无环拓扑链；河网阈值仍需人工论证。",
+            "- 真实出口点吸附、流域边界和子流域划分仍是 fallback 示例。",
             "- 输出不能替代投影检查、出口点校正、阈值论证、地形修正和专业 GIS 人工复核。",
             "- 真实项目应在 QGIS 中检查 DEM 坐标系、分辨率、NoData、洼地处理、河网连通性和面积。",
             "",

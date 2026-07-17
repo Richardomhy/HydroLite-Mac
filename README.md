@@ -54,12 +54,16 @@ The first v0.7.0 step is QGIS Bridge feasibility diagnosis only. It checks QGIS/
 
 The current QGIS Bridge MVP uses `qgis_process` for command-line checks and small GeoJSON/CSV demo exports. It is still not a full QGIS plugin. It can also convert QGIS-exported GeoJSON layers into HydroLite input templates and create a runnable HydroLite project from those converted outputs; see `docs/qgis_to_hydrolite_inputs.md` and `docs/qgis_project_workflow.md`.
 
-The watershed delineation MVP probes QGIS/GRASS/SAGA-style processing availability, creates a tiny synthetic DEM, runs QGIS sink filling when available, and writes explicitly marked fallback stream/basin examples plus HydroLite CSV templates. It is a workflow and environment check, not a professional delineation replacement. See `docs/watershed_delineation_mvp.md`.
+The watershed delineation MVP probes QGIS/GRASS/SAGA-style processing availability, creates a tiny synthetic DEM, runs QGIS sink filling and D8 flow direction when available, and uses HydroLite's deterministic topology engine for flow accumulation and stream extraction. Outlet-based basin geometry remains an explicitly marked fallback and still requires GIS review. See `docs/watershed_delineation_mvp.md`.
+
+The HEC-HMS project generator MVP diagnoses HEC-HMS and Java, maps HydroLite/QGIS/Watershed inputs, and writes an unverified basin/met/control/run skeleton, mapping workbook, manifest, and review report. It does not automate the GUI, run a production HMS simulation, or read DSS results. See `docs/hec_hms_project_generator.md`.
 
 ```bash
 python -m hydrolite watershed backends
 python -m hydrolite watershed mvp
 python -m hydrolite watershed validate output/watershed
+python -m hydrolite hms diagnose
+python -m hydrolite hms create-project projects/qgis_workflow_project output/hec_hms_project
 ```
 
 The v0.7.0 workflow engine can list stages, create dry-run plans, and write workflow status/report files:
@@ -77,6 +81,7 @@ Planning documents:
 - `docs/roadmap_v0.7.0.md`
 - `docs/full_modeling_workflow.md`
 - `docs/hec_hms_integration_plan.md`
+- `docs/hec_hms_project_generator.md`
 - `docs/watershed_delineation_plan.md`
 - `docs/watershed_delineation_mvp.md`
 - `docs/flood_forecast_plan.md`

@@ -41,6 +41,9 @@ def test_watershed_module_and_backend_detection():
     }
     diagnosis = watershed.detect_watershed_backends()
     assert diagnosis["status"] in {"available", "partial", "fallback", "unavailable"}
+    assert diagnosis["grass_diagnosis"]["status"] in {"available", "unavailable"}
+    assert diagnosis["capabilities"]["flow_accumulation"]
+    assert diagnosis["capabilities"]["stream_network"]
 
 
 def test_demo_dem_inspection_and_mvp_outputs(tmp_path: Path):
@@ -54,6 +57,8 @@ def test_demo_dem_inspection_and_mvp_outputs(tmp_path: Path):
     assert inspection["nrows"] == 12
     result = run_watershed_mvp(dem, tmp_path / "watershed")
     assert result["status"] in {"available", "partial", "fallback"}
+    assert result["steps"]["flow_accumulation"]["status"] == "success"
+    assert result["steps"]["stream_network"]["status"] == "success"
     validation = validate_watershed_outputs(tmp_path / "watershed")
     assert validation["status"] == "passed"
     assert validation["data_template_validation"]["subbasins"]["status"] == "passed"
@@ -127,4 +132,3 @@ def test_no_tracked_secrets_external_or_model_weights():
     assert not any(path.startswith("external/") for path in tracked)
     assert not any(path.endswith((".pt", ".pth", ".ckpt", ".onnx")) for path in tracked)
     assert not any("secrets.toml" in path or "credentials" in path.lower() for path in tracked)
-
