@@ -12,8 +12,8 @@ stages:
     notes: QGIS/GeoJSON file bridge MVP; not a full QGIS plugin.
   - stage_id: watershed_delineation
     enabled: false
-    status: planned
-    notes: Planned DEM-based basin delineation.
+    status: partial
+    notes: Small DEM diagnostics and explicitly marked fallback outputs; professional GIS review required.
   - stage_id: gee_inputs
     enabled: true
     status: partial

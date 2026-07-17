@@ -54,6 +54,14 @@ The first v0.7.0 step is QGIS Bridge feasibility diagnosis only. It checks QGIS/
 
 The current QGIS Bridge MVP uses `qgis_process` for command-line checks and small GeoJSON/CSV demo exports. It is still not a full QGIS plugin. It can also convert QGIS-exported GeoJSON layers into HydroLite input templates and create a runnable HydroLite project from those converted outputs; see `docs/qgis_to_hydrolite_inputs.md` and `docs/qgis_project_workflow.md`.
 
+The watershed delineation MVP probes QGIS/GRASS/SAGA-style processing availability, creates a tiny synthetic DEM, runs QGIS sink filling when available, and writes explicitly marked fallback stream/basin examples plus HydroLite CSV templates. It is a workflow and environment check, not a professional delineation replacement. See `docs/watershed_delineation_mvp.md`.
+
+```bash
+python -m hydrolite watershed backends
+python -m hydrolite watershed mvp
+python -m hydrolite watershed validate output/watershed
+```
+
 The v0.7.0 workflow engine can list stages, create dry-run plans, and write workflow status/report files:
 
 ```bash
@@ -70,6 +78,7 @@ Planning documents:
 - `docs/full_modeling_workflow.md`
 - `docs/hec_hms_integration_plan.md`
 - `docs/watershed_delineation_plan.md`
+- `docs/watershed_delineation_mvp.md`
 - `docs/flood_forecast_plan.md`
 - `docs/drought_forecast_plan.md`
 - `docs/user_manual_plan.md`

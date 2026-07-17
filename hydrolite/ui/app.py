@@ -31,6 +31,7 @@ from hydrolite.ui.pages import (
     scenario_run,
     swmm_center,
     tutorial_demo,
+    watershed_delineation,
     workflow_engine,
 )
 from hydrolite.ui.state import (
@@ -62,6 +63,7 @@ PAGES = {
     "情景运行": scenario_run.render,
     "GEE 数据中心": gee_center.render,
     "QGIS Bridge": qgis_bridge.render,
+    "流域划分": watershed_delineation.render,
     "SWMM 联动": swmm_center.render,
     "OpenHydroNet AI 输入": openhydronet_center.render,
     "结果对比": comparison.render,

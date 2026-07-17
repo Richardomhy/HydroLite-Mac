@@ -71,6 +71,14 @@ from hydrolite.tutorial import (
 )
 from hydrolite.validate import validate_target
 from hydrolite.wizard import create_project_from_wizard, preview_wizard, validate_wizard_config
+from hydrolite.watershed import (
+    create_demo_dem,
+    detect_watershed_backends,
+    inspect_dem,
+    run_watershed_mvp,
+    validate_watershed_outputs,
+    write_watershed_report,
+)
 from hydrolite.workflow_engine import (
     create_workflow_plan,
     list_workflow_stages,
@@ -263,6 +271,19 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_run_full.add_argument("--config", default=None)
     workflow_run_full.add_argument("--dry-run", action="store_true", help="Keep dry-run mode; this is the default.")
     workflow_run_full.add_argument("--execute", action="store_true", help="Request non-dry-run mode for implemented stages.")
+
+    watershed_parser = subparsers.add_parser("watershed", help="Watershed diagnostics and small DEM processing MVP.")
+    watershed_subparsers = watershed_parser.add_subparsers(dest="watershed_command", required=True)
+    watershed_subparsers.add_parser("backends", help="Detect qgis_process watershed algorithm candidates.")
+    watershed_demo = watershed_subparsers.add_parser("create-demo-dem", help="Create a small synthetic ASCII DEM.")
+    watershed_demo.add_argument("output_path")
+    watershed_inspect = watershed_subparsers.add_parser("inspect", help="Inspect a DEM with lightweight and QGIS checks.")
+    watershed_inspect.add_argument("dem_path")
+    watershed_subparsers.add_parser("mvp", help="Run the small watershed delineation MVP.")
+    watershed_validate = watershed_subparsers.add_parser("validate", help="Validate watershed MVP outputs.")
+    watershed_validate.add_argument("output_dir")
+    watershed_report = watershed_subparsers.add_parser("report", help="Regenerate the watershed MVP report.")
+    watershed_report.add_argument("output_dir")
 
     return parser
 
@@ -694,6 +715,36 @@ def main(argv: list[str] | None = None) -> int:
 
             result = run_full_workflow(args.project_dir, config_path=args.config, dry_run=not args.execute)
             print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 0
+    if args.command == "watershed":
+        import json
+
+        if args.watershed_command == "backends":
+            print(json.dumps(detect_watershed_backends(), indent=2, ensure_ascii=False))
+            return 0
+        if args.watershed_command == "create-demo-dem":
+            print(f"Demo DEM written to: {create_demo_dem(args.output_path)}")
+            return 0
+        if args.watershed_command == "inspect":
+            print(json.dumps(inspect_dem(args.dem_path), indent=2, ensure_ascii=False))
+            return 0
+        if args.watershed_command == "mvp":
+            result = run_watershed_mvp()
+            print(f"Watershed MVP status: {result['status']}")
+            print(f"Outputs written to: {result['output_dir']}")
+            return 0
+        if args.watershed_command == "validate":
+            result = validate_watershed_outputs(args.output_dir)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1 if result["status"] == "failed" else 0
+        if args.watershed_command == "report":
+            output = Path(args.output_dir).expanduser().resolve()
+            diagnosis = output / "watershed_diagnosis.json"
+            if diagnosis.exists():
+                result = json.loads(diagnosis.read_text(encoding="utf-8"))
+            else:
+                result = {"status": "unavailable", "output_dir": str(output), "outputs": {}, "steps": {}}
+            print(f"Watershed report written to: {write_watershed_report(output, result)}")
             return 0
     return 2
 

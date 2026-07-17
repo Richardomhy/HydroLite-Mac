@@ -39,9 +39,13 @@ flowchart LR
 - 情景对比。
 - 项目报告导出。
 
+## 当前 partial 阶段
+
+- 流域划分 MVP：探测 qgis_process 水文算法，运行小型合成 DEM 填洼和明确标记的 fallback 汇流/河网/分区。它需要专业 GIS 人工复核，详见 `docs/watershed_delineation_mvp.md`。
+
 ## 规划阶段
 
-- DEM 流域划分。
+- 专业级 DEM 流域划分和真实出口点处理。
 - HEC-HMS 项目生成、运行和 DSS 结果读取。
 - 洪水预测。
 - 干旱预测。
@@ -54,6 +58,7 @@ flowchart LR
 python -m hydrolite workflow list
 python -m hydrolite workflow plan templates/workflows/full_modeling_workflow.yaml output/workflow_plan
 python -m hydrolite workflow run-full projects/demo_project --dry-run
+python -m hydrolite watershed mvp
 ```
 
 `dry-run` 是默认行为，用于查看计划，不触发重计算或长任务。
