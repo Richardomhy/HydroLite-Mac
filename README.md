@@ -12,6 +12,10 @@ The online version is best for demos, tutorials, data template downloads, and vi
 
 HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.7.0-dev starts the next development phase: a full modeling workflow engine for data templates, QGIS/GEE preprocessing, HydroLite simulation, future HEC-HMS bridges, SWMM coupling, forecast planning, comparison, reports, and user manuals. The current stable beta remains v0.6.0-beta.1.
 
+## Built with Codex and GPT-5.6
+
+HydroLite Studio was developed collaboratively with Codex during OpenAI Build Week. GPT-5.6 in Codex helped navigate the repository, plan and implement workflow integrations, diagnose local backends, write regression tests, and produce user-facing documentation. The hydrologic calculations and generated outputs remain explicitly validated through the repository's reproducible command-line checks and test suite; Codex is a development collaborator, not a replacement for engineering review.
+
 Latest beta release: **v0.6.0-beta.1**.
 
 Previous beta tag: **v0.6.0-beta**.
