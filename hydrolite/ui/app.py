@@ -18,6 +18,7 @@ from hydrolite.ui.components import (
 )
 from hydrolite.ui.pages import (
     beta_feedback,
+    calibration,
     comparison,
     data_templates,
     data_validation,
@@ -61,6 +62,7 @@ PAGES = {
     "项目向导": project_wizard.render,
     "全流程工作流": workflow_engine.render,
     "数据与校验": data_validation.render,
+    "参数率定与敏感性": calibration.render,
     "情景运行": scenario_run.render,
     "GEE 数据中心": gee_center.render,
     "QGIS Bridge": qgis_bridge.render,

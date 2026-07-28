@@ -14,6 +14,8 @@ output/hec_hms_precipitation/
 output/hec_hms_project_rainfall_verified/
 output/hec_hms_results/
 output/hec_hms_comparison/
+output/hec_hms_alignment_best/
+output/calibration/
 **/.hydrolite_scripts/
 logs/
 templates_export/
@@ -32,6 +34,8 @@ projects/*/reports/workflow_plan/
 projects/wizard_demo_project/
 projects/qgis_demo_project/
 projects/qgis_workflow_project/
+projects/*/data/generated/calibration/
+projects/*/output/*aligned*/
 .streamlit/
 .streamlit/secrets.toml
 *.log

@@ -4,8 +4,26 @@ import argparse
 from pathlib import Path
 import sys
 
+import pandas as pd
+
 from hydrolite.__version__ import __app_name__, __release_date__, __version__
 from hydrolite.batch import run_batch
+from hydrolite.calibration import (
+    DEFAULT_OUTPUT as CALIBRATION_OUTPUT,
+    build_parameter_bounds,
+    compare_best_case,
+    create_calibrated_case,
+    export_calibration_bundle,
+    run_calibrated_case,
+    run_oat_sensitivity,
+    run_parameter_search,
+    select_best_calibration_candidate,
+    select_calibration_target,
+    validate_calibrated_case,
+    write_calibration_report,
+    write_parameter_outputs,
+    write_target_outputs,
+)
 from hydrolite.beta import beta_checklist, beta_info, beta_smoke_local
 from hydrolite.compare import run_compare
 from hydrolite.data_templates import (
@@ -311,6 +329,27 @@ def build_parser() -> argparse.ArgumentParser:
     beta_subparsers.add_parser("info", help="Show beta release links and docs.")
     beta_subparsers.add_parser("checklist", help="Show post-release beta verification checklist.")
     beta_subparsers.add_parser("smoke-local", help="Run lightweight local beta smoke checks.")
+
+    calibration_parser = subparsers.add_parser("calibration", help="Bounded sensitivity and calibration/alignment commands.")
+    calibration_subparsers = calibration_parser.add_subparsers(dest="calibration_command", required=True)
+    for command in ("target", "sensitivity", "search"):
+        child = calibration_subparsers.add_parser(command)
+        child.add_argument("project_dir")
+        child.add_argument("hms_comparison_dir")
+        if command == "search": child.add_argument("--max-candidates", type=int, default=30)
+    calibration_parameters = calibration_subparsers.add_parser("parameters")
+    calibration_parameters.add_argument("project_dir")
+    calibration_bounds = calibration_subparsers.add_parser("bounds")
+    calibration_bounds.add_argument("project_dir")
+    calibration_best = calibration_subparsers.add_parser("best")
+    calibration_best.add_argument("search_dir")
+    calibration_create = calibration_subparsers.add_parser("create-case")
+    calibration_create.add_argument("project_dir"); calibration_create.add_argument("search_dir")
+    calibration_run = calibration_subparsers.add_parser("run-best"); calibration_run.add_argument("project_dir")
+    calibration_compare = calibration_subparsers.add_parser("compare-best"); calibration_compare.add_argument("project_dir"); calibration_compare.add_argument("hms_project_dir")
+    calibration_report = calibration_subparsers.add_parser("report"); calibration_report.add_argument("output_dir")
+    calibration_bundle = calibration_subparsers.add_parser("bundle"); calibration_bundle.add_argument("output_dir")
+    calibration_validate = calibration_subparsers.add_parser("validate"); calibration_validate.add_argument("output_dir")
 
     workflow_parser = subparsers.add_parser("workflow", help="v0.7.x full modeling workflow orchestration.")
     workflow_subparsers = workflow_parser.add_subparsers(dest="workflow_command", required=True)
@@ -826,6 +865,60 @@ def main(argv: list[str] | None = None) -> int:
             print(f"release_dir_exists: {result['release_dir_exists']}")
             print(f"streamlit_app_exists: {result['streamlit_app_exists']}")
             return 0
+    if args.command == "calibration":
+        import json
+
+        if args.calibration_command == "target":
+            target = write_target_outputs(args.project_dir, args.hms_comparison_dir, CALIBRATION_OUTPUT)
+            print(json.dumps(target, indent=2, ensure_ascii=False, default=str)); return 0 if target["target_mode"] != "unavailable" else 1
+        if args.calibration_command in {"parameters", "bounds"}:
+            parameters, bounds = write_parameter_outputs(args.project_dir, CALIBRATION_OUTPUT)
+            frame = parameters if args.calibration_command == "parameters" else bounds
+            print(frame.to_string(index=False)); return 0
+        if args.calibration_command in {"sensitivity", "search"}:
+            target = write_target_outputs(args.project_dir, args.hms_comparison_dir, CALIBRATION_OUTPUT)
+            if target["target_mode"] == "unavailable":
+                print("Calibration target unavailable."); return 1
+            _, bounds = write_parameter_outputs(args.project_dir, CALIBRATION_OUTPUT)
+            if args.calibration_command == "sensitivity":
+                result = run_oat_sensitivity(args.project_dir, target, bounds, CALIBRATION_OUTPUT / "sensitivity")
+                print(f"target_mode: {target['target_mode']}")
+                print(f"candidates attempted: {len(result['results'])}; succeeded: {(result['results']['run_status'] == 'success').sum()}")
+                print(f"report: {result['report']}")
+            else:
+                result = run_parameter_search(args.project_dir, target, bounds, CALIBRATION_OUTPUT / "search", args.max_candidates)
+                print(f"target_mode: {target['target_mode']}")
+                print(f"candidates attempted: {len(result['results'])}; succeeded: {len(result['ranked'])}")
+                print(f"best candidate: {(result['best'] or {}).get('candidate_id', 'unavailable')}")
+                print(f"report: {result['report']}")
+            return 0
+        if args.calibration_command == "best":
+            candidates = pd.read_excel(Path(args.search_dir) / "calibration_candidates.xlsx")
+            best = select_best_calibration_candidate(candidates)
+            print(json.dumps(best or {}, indent=2, ensure_ascii=False, default=str)); return 0 if best else 1
+        if args.calibration_command == "create-case":
+            candidates = pd.read_excel(Path(args.search_dir) / "calibration_candidates.xlsx")
+            best = select_best_calibration_candidate(candidates)
+            output_case = Path(args.project_dir) / "cases" / "qgis_demo_aligned.yaml"
+            result = create_calibrated_case(args.project_dir, best, output_case)
+            print(json.dumps({key: str(value) for key, value in result.items()}, indent=2, ensure_ascii=False)); return 0
+        if args.calibration_command == "run-best":
+            case = Path(args.project_dir) / "cases" / "qgis_demo_aligned.yaml"
+            validate_calibrated_case(case)
+            outputs = run_calibrated_case(case)
+            print(f"Best case complete: {outputs.output_dir}"); return 0
+        if args.calibration_command == "compare-best":
+            result = compare_best_case(args.project_dir, args.hms_project_dir)
+            print(f"Best alignment report: {result['report']}"); return 0
+        if args.calibration_command == "report":
+            print(f"Calibration report: {write_calibration_report(args.output_dir)}"); return 0
+        if args.calibration_command == "bundle":
+            print(f"Calibration bundle: {export_calibration_bundle(args.output_dir)}"); return 0
+        if args.calibration_command == "validate":
+            output = Path(args.output_dir)
+            required = [output / "calibration_target.json", output / "baseline_parameters.xlsx", output / "search" / "calibration_candidates.xlsx"]
+            missing = [str(path) for path in required if not path.exists()]
+            print(json.dumps({"status": "passed" if not missing else "failed", "missing": missing}, indent=2, ensure_ascii=False)); return 0 if not missing else 1
     if args.command == "workflow":
         if args.workflow_command == "list":
             for stage in list_workflow_stages():

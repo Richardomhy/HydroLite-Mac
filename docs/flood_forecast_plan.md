@@ -27,3 +27,6 @@ The HEC-HMS/HydroLite event comparison is an implemented analysis input, not a f
 ## 与 HydroLite / HEC-HMS 的关系
 
 HydroLite 提供快速情景模拟；HEC-HMS 后续可作为专业模型对照。洪水预测模块只消费这些模型的输出，不替代它们。
+# Flood Forecast Plan
+
+Flood forecasting remains planned. Single-event sensitivity or cross-model alignment does not create a flood forecast.

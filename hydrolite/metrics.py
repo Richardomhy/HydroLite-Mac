@@ -70,7 +70,7 @@ def kge(observed: Any, simulated: Any) -> float | pd.NA:
     sim_mean = sim.mean()
     obs_std = obs.std(ddof=0)
     sim_std = sim.std(ddof=0)
-    if obs_mean == 0 or obs_std == 0:
+    if obs_mean == 0 or obs_std == 0 or sim_std == 0:
         return pd.NA
     corr = obs.corr(sim)
     if pd.isna(corr):

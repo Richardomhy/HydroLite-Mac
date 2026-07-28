@@ -461,8 +461,12 @@ def run_qgis_project_workflow(
     from hydrolite.export_report import render_project_report_all
     from hydrolite.project import compare_project_outputs, run_project_batch, validate_project
 
-    result = create_project_from_qgis_outputs(qgis_output_dir, project_dir, rainfall_csv=rainfall_csv, run_validate=True)
     project = Path(project_dir).expanduser().resolve()
+    if project.exists() and any(project.iterdir()):
+        # A project workflow is repeatable: validate/run existing generated work, never overwrite it.
+        result: dict[str, Any] = {"status": "success", "project_dir": str(project), "reused_existing_project": True, "warnings": ["Existing project reused without rewriting QGIS-derived inputs."]}
+    else:
+        result = create_project_from_qgis_outputs(qgis_output_dir, project, rainfall_csv=rainfall_csv, run_validate=True)
     result["validation"] = str(validate_project(project)["xlsx"])
     if run_batch:
         summary_path, rows, failed = run_project_batch(project)

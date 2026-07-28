@@ -6,15 +6,20 @@ import numpy as np
 import pandas as pd
 
 
-def scs_cn_runoff_depth_mm(rain_mm: float, curve_number: float) -> float:
+def scs_cn_runoff_depth_mm(
+    rain_mm: float, curve_number: float, initial_abstraction_ratio: float = 0.2
+) -> float:
     """Return direct runoff depth in mm for one rainfall increment."""
     if rain_mm <= 0:
         return 0.0
     if not 0 < curve_number <= 100:
         raise ValueError("curve_number must be in (0, 100].")
+    if not 0 <= initial_abstraction_ratio <= 0.5:
+        raise ValueError("initial_abstraction_ratio must be in [0, 0.5].")
 
     storage_mm = 25400.0 / curve_number - 254.0
-    initial_abstraction_mm = 0.2 * storage_mm
+    # SCS-CN Ia/S is configurable per subcatchment; 0.2 preserves legacy cases.
+    initial_abstraction_mm = initial_abstraction_ratio * storage_mm
     if rain_mm <= initial_abstraction_mm:
         return 0.0
     return ((rain_mm - initial_abstraction_mm) ** 2) / (
@@ -69,8 +74,9 @@ def runoff_to_flow_cms(
     total = np.zeros(len(result), dtype=float)
 
     for row in subcatchments.itertuples(index=False):
+        ia_ratio = float(getattr(row, "initial_abstraction_ratio", 0.2))
         runoff_mm = np.array(
-            [scs_cn_runoff_depth_mm(v, float(row.curve_number)) for v in rainfall["rain_mm"]]
+            [scs_cn_runoff_depth_mm(v, float(row.curve_number), ia_ratio) for v in rainfall["rain_mm"]]
         )
         volume_m3 = runoff_mm / 1000.0 * float(row.area_km2) * 1_000_000.0
         direct_flow_cms = volume_m3 / (dt_hours * 3600.0)

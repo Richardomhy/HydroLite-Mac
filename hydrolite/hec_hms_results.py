@@ -985,12 +985,16 @@ def normalize_hydrolite_flow_timeseries(data: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def load_hydrolite_outlet_timeseries(project_dir: str | Path, outlet_id: str | None = None) -> pd.DataFrame:
+def load_hydrolite_outlet_timeseries(
+    project_dir: str | Path,
+    outlet_id: str | None = None,
+    result_csv: str | Path | None = None,
+) -> pd.DataFrame:
     discovery = discover_hydrolite_flow_outputs(project_dir)
     selected = discovery.get("selected")
-    if not selected:
+    path = _resolve(result_csv) if result_csv is not None else (Path(selected["path"]) if selected else None)
+    if path is None or not path.is_file():
         raise FileNotFoundError("No HydroLite outlet time series was found.")
-    path = Path(selected["path"])
     data = pd.read_csv(path)
     frame = normalize_hydrolite_flow_timeseries(data)
     if outlet_id:
@@ -1541,6 +1545,7 @@ def run_hms_hydrolite_comparison(
     hydrolite_project_dir: str | Path,
     output_dir: str | Path = DEFAULT_COMPARISON_DIR,
     outlet_id: str | None = None,
+    hydrolite_result_csv: str | Path | None = None,
 ) -> dict[str, Any]:
     hms_root = _resolve(hms_project_dir)
     hydro_root = _resolve(hydrolite_project_dir)
@@ -1580,7 +1585,7 @@ def run_hms_hydrolite_comparison(
         write_hms_comparison_report(output, result)
         return result
     selected_hydro_outlet = outlet_id or hydro_outlet.get("selected_outlet_id")
-    hydro_frame = load_hydrolite_outlet_timeseries(hydro_root, selected_hydro_outlet)
+    hydro_frame = load_hydrolite_outlet_timeseries(hydro_root, selected_hydro_outlet, hydrolite_result_csv)
     _write_standard_hydrolite_outputs(hydro_root, hydro_frame)
     alignment = align_flow_timeseries(hms_frame, hydro_frame, method="exact")
     alignment_validation = validate_flow_alignment(alignment)

@@ -59,3 +59,6 @@ v0.7.0 不做复杂优化。若后续确实需要，应单独设计：
 - 计算预算；
 - 不确定性分析；
 - 工程审核流程。
+# Calibration Roadmap
+
+The v0.7 MVP now supports bounded OAT sensitivity and deterministic, capped parameter search. Multi-event independent validation and advanced optimization remain planned.

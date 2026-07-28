@@ -46,6 +46,7 @@ def test_workflow_engine_import_and_stage_schema():
     stages = list_workflow_stages()
     assert stages
     assert {"hec_hms_project", "flood_forecast", "drought_forecast"} <= {stage["stage_id"] for stage in stages}
+    assert next(stage for stage in stages if stage["stage_id"] == "calibration")["status"] == "partial"
     for stage in stages:
         assert required <= set(stage)
         if stage["stage_id"] in {"flood_forecast", "drought_forecast"}:

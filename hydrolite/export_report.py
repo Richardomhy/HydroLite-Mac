@@ -215,6 +215,8 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     comparison = project / "output" / "comparison" / "scenario_comparison.xlsx"
     hms_comparison_dir = _hms_comparison_for_project(repo_root, project) or project / "output" / "hec_hms_comparison"
     hms_comparison = hms_comparison_dir / "model_comparison_metrics.xlsx"
+    calibration_root = repo_root / "output" / "calibration"
+    calibration_candidates = calibration_root / "search" / "candidate_ranking.xlsx"
     validation = project / "reports" / "project_validation.xlsx"
     global_gee_summary = repo_root / "output" / "gee" / "gee_summary.xlsx"
     gee_summary = _first_existing([project / "output" / "gee" / "gee_summary.xlsx", global_gee_summary])
@@ -231,6 +233,9 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         project / "output" / "comparison" / "water_balance_comparison.png",
         project / "output" / "comparison" / "swmm_kpi_comparison.png",
         *sorted((hms_comparison_dir / "charts").glob("*.png")),
+        *sorted((repo_root / "output" / "hec_hms_alignment_best" / "charts").glob("*.png")),
+        *sorted((calibration_root / "search" / "charts").glob("*.png")),
+        *sorted((calibration_root / "sensitivity" / "charts").glob("*.png")),
     ]
     existing_charts = [path for path in charts if path.exists()]
     expected = {
@@ -278,6 +283,9 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "model_performance": _collect_model_performance(project),
         "hms_comparison_summary": _safe_read_excel(hms_comparison, "summary"),
         "hms_comparison_metrics": _safe_read_excel(hms_comparison, "comparison_metrics"),
+        "calibration_target": _read_text(calibration_root / "calibration_target_report.md"),
+        "calibration_candidates": _safe_read_excel(calibration_candidates),
+        "calibration_report_text": _read_text(calibration_root / "calibration_report.md"),
         "charts": existing_charts,
         "assets": list_report_assets(project),
         "missing_assets": pd.DataFrame(missing),
@@ -399,6 +407,14 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "",
         data["hms_comparison_report_text"] or "unavailable",
         "",
+        "## Calibration / Cross-model Alignment",
+        "",
+        data["calibration_target"] or "unavailable",
+        "",
+        _df_to_markdown(data["calibration_candidates"]),
+        "",
+        data["calibration_report_text"] or "unavailable",
+        "",
         "## Charts",
         "",
     ]
@@ -456,6 +472,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
         ("GEE Data Center", _df_to_html(data["gee_summary"])),
         ("Observed Flow Evaluation", _df_to_html(data["model_performance"])),
         ("HEC-HMS and HydroLite Event Comparison", _df_to_html(data["hms_comparison_metrics"])),
+        ("Calibration / Cross-model Alignment", _df_to_html(data["calibration_candidates"])),
         ("Missing or Unavailable Outputs", _df_to_html(data["missing_assets"])),
     ]
     html = [

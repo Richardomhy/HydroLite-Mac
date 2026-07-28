@@ -69,3 +69,6 @@ v0.6.0-beta.1 是当前稳定 beta，已经包含项目工作流、数据模板�
 - `python -m hydrolite workflow run-full projects/demo_project --dry-run` 只写计划、状态和报告，不执行长任务。
 - Streamlit `全流程工作流` 页面能展示阶段、输入、输出和 planned/partial/available 区分。
 - HEC-HMS 项目生成、运行探测和流域划分仅以 MVP `partial` 开放；HEC-HMS 真实工程运行与 DSS 深读、洪水/干旱预测和用户手册导出仍保持未完成状态。
+# v0.7.0 Roadmap
+
+The lightweight calibration milestone is now partial: observed calibration is supported only when real observations exist; HMS alignment is available for small completed events.

@@ -26,3 +26,6 @@ Outputs include aligned and source CSVs, two Excel workbooks, six charts, a Mark
 ## Interpretation
 
 Large peak, volume or timing differences indicate different model structures and parameterization. They are not evidence that either model is calibrated. Calibration and flood forecasting remain planned work.
+# HEC-HMS / HydroLite Comparison
+
+For the calibration MVP, an HMS reference is explicitly labelled cross-model alignment, never observed-data calibration.

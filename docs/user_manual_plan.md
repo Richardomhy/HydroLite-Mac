@@ -19,3 +19,6 @@
 ## 导出形式
 
 后续复用报告导出能力，生成 Markdown、Word、HTML 和 PDF/fallback。
+# User Manual Plan
+
+The manual will distinguish observed calibration, synthetic demo calibration, and HMS cross-model alignment. It will not describe alignment as flood prediction.

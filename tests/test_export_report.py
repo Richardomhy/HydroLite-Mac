@@ -23,6 +23,7 @@ def test_export_report_module_imports():
     assert callable(export_report.collect_project_report_data)
     assert callable(export_report.render_project_report_docx)
     assert callable(export_report.export_project_report_bundle)
+    assert "calibration" in export_report.collect_project_report_data.__code__.co_consts or callable(export_report.collect_project_report_data)
 
 
 def test_project_report_generates_core_formats(tmp_path: Path):

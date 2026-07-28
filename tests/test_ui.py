@@ -39,6 +39,7 @@ def test_ui_workbench_modules_import():
         "hydrolite.ui.pages.comparison",
         "hydrolite.ui.pages.report_export",
         "hydrolite.ui.pages.diagnostics",
+        "hydrolite.ui.pages.calibration",
     ]
     for module in modules:
         assert importlib.import_module(module)

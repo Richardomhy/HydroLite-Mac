@@ -414,3 +414,6 @@ On Apple Silicon, the script first tries an x86_64 conda environment using `COND
 SWMM cases can inject a HydroLite flow hydrograph into the copied `working.inp` file through `swmm.coupling`. The demo uses `source_time_column: time` and `source_flow_column: outflow_cms`, matching HydroLite's current `result_flow.csv` outlet flow field.
 
 The original `data_raw/swmm/demo.inp` is not edited. Coupling writes `[TIMESERIES]` and `[INFLOWS]` only into `output/<case_name>/swmm/working.inp`, then writes `coupling_summary.xlsx`.
+# HydroLite Studio
+
+> v0.7.0-dev includes a bounded single-event sensitivity and calibration/alignment MVP. HEC-HMS results are reference-model outputs, not observations; see [calibration notes](docs/calibration_sensitivity_mvp.md).
