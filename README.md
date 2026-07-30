@@ -10,6 +10,20 @@
 
 The online version is best for demos, tutorials, data template downloads, and viewing example outputs; the local version is recommended for complete GEE, SWMM, OpenHydroNet-ready input, and project delivery workflows.
 
+## Unified Data Center MVP
+
+The v0.7.0-dev data center adds real-project workspaces, read-only raw uploads, format inspection, Chinese/English field mapping, unit/time/CRS checks, quality grading, lineage, model requirement matrices, external connector dry-runs, and standardized model-input preparation.
+
+```bash
+python -m hydrolite data create-workspace my_project workspaces/my_project
+python -m hydrolite data upload templates/data_upload/rainfall_observed.csv workspaces/my_project
+python -m hydrolite data quality workspaces/my_project
+python -m hydrolite connectors plan workspaces/my_project full_modeling_workflow
+python -m hydrolite data build-inputs workspaces/my_project
+```
+
+Start with [the Chinese upload guide](docs/data_upload_guide_zh.md) or [the English guide](docs/data_upload_guide_en.md). Downloads remain opt-in and credentials stay outside the repository.
+
 v0.7.0-dev also includes partial, synthetic-demo-only reservoir level-pool routing and RUSLE-SDR sediment delivery. See `docs/reservoir_routing_mvp.md` and `docs/rusle_sdr_sediment_delivery.md`; these are not operational reservoir models or complete sediment-yield models.
 
 The flood forecast MVP is available as a bounded synthetic demonstration. Operational use still requires cumulative SCS-CN increment accounting, full routing tails, verified HEC-HMS Reservoir semantics, and real multi-event observations; see `docs/hydrologic_water_balance_audit.md`.

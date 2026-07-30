@@ -1,5 +1,7 @@
 # User Manual Export Plan
 
+The unified data-center guides now document required uploads, supported formats, field meanings, units, authentication boundaries, quality states, lineage, model readiness, project creation and output export in Chinese and English.
+
 ## 目标
 
 把现有 README、中文使用文档、教程、数据模板说明和故障排查整理为中英文用户手册。

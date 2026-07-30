@@ -1,0 +1,3 @@
+catalogs:
+  earth_search: {endpoint: "https://earth-search.aws.element84.com/v1", trusted: true, collections: [sentinel-2-l2a, cop-dem-glo-30]}
+  planetary_computer: {endpoint: "https://planetarycomputer.microsoft.com/api/stac/v1", trusted: true, collections: [landsat-c2-l2, sentinel-2-l2a]}

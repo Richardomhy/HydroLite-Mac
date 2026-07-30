@@ -1,0 +1,2 @@
+soil_id,subbasin_id,soil_type,k_factor,synthetic_demo
+SOIL1,S1,loam,0.25,true

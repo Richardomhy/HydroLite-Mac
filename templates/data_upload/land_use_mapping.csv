@@ -1,0 +1,3 @@
+land_use_code,land_use_name,cn_default,rusle_c,source,synthetic_demo
+FOR,Forest,55,0.01,synthetic_demo,true
+URB,Urban,85,0.20,synthetic_demo,true

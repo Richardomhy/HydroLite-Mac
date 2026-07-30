@@ -1,0 +1,2 @@
+source_id,source_type,longitude,latitude,load_kg_d,load_unit,synthetic_demo
+P1,synthetic_point,113.96,22.55,2.5,kg/d,true

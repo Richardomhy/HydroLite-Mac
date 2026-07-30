@@ -1,0 +1,4 @@
+stage_m,discharge_cms,stage_unit,flow_unit,synthetic_demo
+100,0,m,m3/s,true
+101,2,m,m3/s,true
+102,8,m,m3/s,true

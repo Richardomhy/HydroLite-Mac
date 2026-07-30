@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 
 import pandas as pd
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,6 +63,23 @@ from hydrolite.data_templates import (
     validate_project_input_dataset,
     write_data_template_summary,
 )
+from hydrolite.workspace import create_workspace, list_workspace_datasets
+from hydrolite.data_registry import list_dataset_types, write_data_registry_report
+from hydrolite.data_upload import (
+    classify_uploaded_dataset,
+    copy_upload_to_workspace,
+    detect_file_format,
+    inspect_uploaded_file,
+    preview_uploaded_dataset,
+)
+from hydrolite.field_mapping import infer_field_mapping, save_field_mapping
+from hydrolite.data_quality_center import run_workspace_quality_checks, write_data_quality_report
+from hydrolite.data_lineage import validate_lineage_graph, write_lineage_report
+from hydrolite.data_requirements import build_project_data_requirement_matrix, write_data_readiness_report
+from hydrolite.connectors import get_connector, list_connectors
+from hydrolite.data_acquisition import create_acquisition_plan, execute_acquisition_plan, write_acquisition_report
+from hydrolite.input_builder import build_all_inputs
+from hydrolite.data_center import write_data_center_reports
 from hydrolite.export_report import (
     export_project_report_bundle,
     render_project_report_all,
@@ -448,6 +466,27 @@ def build_parser() -> argparse.ArgumentParser:
     for command in ("report", "bundle", "validate"):
         x = forecast_sub.add_parser(command); x.add_argument("output_dir")
     x = forecast_sub.add_parser("run"); x.add_argument("project_dir"); x.add_argument("config_path"); x.add_argument("--output-dir", default=str(FORECAST_OUTPUT))
+
+    data_parser = subparsers.add_parser("data", help="Unified data center and workspace commands.")
+    data_sub = data_parser.add_subparsers(dest="data_command", required=True)
+    for command in ("types", "formats", "templates"):
+        data_sub.add_parser(command)
+    for command in ("inspect", "preview", "classify"):
+        x = data_sub.add_parser(command); x.add_argument("file")
+    x = data_sub.add_parser("create-workspace"); x.add_argument("project_name"); x.add_argument("workspace_dir")
+    x = data_sub.add_parser("upload"); x.add_argument("file"); x.add_argument("workspace_dir")
+    x = data_sub.add_parser("mapping"); x.add_argument("dataset_id"); x.add_argument("workspace_dir")
+    for command in ("quality", "lineage", "build-inputs"):
+        x = data_sub.add_parser(command); x.add_argument("workspace_dir")
+    x = data_sub.add_parser("requirements"); x.add_argument("workflow_id"); x.add_argument("workspace_dir")
+
+    connectors_parser = subparsers.add_parser("connectors", help="External data connector status and acquisition plans.")
+    connectors_sub = connectors_parser.add_subparsers(dest="connectors_command", required=True)
+    for command in ("list", "status", "gee-status", "earthdata-status", "cds-status", "stac-status"):
+        connectors_sub.add_parser(command)
+    x = connectors_sub.add_parser("search"); x.add_argument("connector"); x.add_argument("dataset_type"); x.add_argument("config")
+    x = connectors_sub.add_parser("plan"); x.add_argument("workspace_dir"); x.add_argument("workflow_id")
+    x = connectors_sub.add_parser("execute-plan"); x.add_argument("plan"); x.add_argument("--dry-run", action="store_true"); x.add_argument("--execute", action="store_true")
 
     workflow_parser = subparsers.add_parser("workflow", help="v0.7.x full modeling workflow orchestration.")
     workflow_subparsers = workflow_parser.add_subparsers(dest="workflow_command", required=True)
@@ -1121,6 +1160,88 @@ def main(argv: list[str] | None = None) -> int:
         if command == "report": print(Path(args.output_dir)/"reports/flood_forecast_report_zh.md");return 0
         if command == "bundle": print(export_flood_forecast_bundle(args.output_dir));return 0 if validate_flood_forecast_bundle(args.output_dir)["status"]=="passed" else 1
         if command == "validate": result=validate_flood_forecast_outputs(args.output_dir);print(result);return 0 if result["status"]=="passed" else 1
+    if args.command == "data":
+        output = ROOT / "output" / "data_center"
+        output.mkdir(parents=True, exist_ok=True)
+        if args.data_command == "types":
+            paths = write_data_registry_report(output)
+            rows = list_dataset_types()
+            print(f"dataset_types: {len(rows)}")
+            for row in rows:
+                print(f"- {row['dataset_type_id']}: {row['domain']}")
+            print(f"registry: {paths['registry']}")
+            return 0
+        if args.data_command == "formats":
+            paths = write_data_registry_report(output)
+            print("\n".join(sorted({fmt for row in list_dataset_types() for fmt in row["supported_formats"]})))
+            print(f"supported_formats: {paths['formats']}")
+            return 0
+        if args.data_command == "templates":
+            files = sorted(path for path in (ROOT / "templates" / "data_upload").glob("*") if path.is_file())
+            for path in files:
+                print(path.relative_to(ROOT))
+            print(f"template_count: {len(files)}")
+            return 0
+        if args.data_command == "inspect":
+            print(json.dumps(inspect_uploaded_file(args.file), indent=2, ensure_ascii=False, default=str)); return 0
+        if args.data_command == "preview":
+            print(json.dumps(preview_uploaded_dataset(args.file), indent=2, ensure_ascii=False, default=str)); return 0
+        if args.data_command == "classify":
+            print(json.dumps(classify_uploaded_dataset(args.file), indent=2, ensure_ascii=False)); return 0
+        if args.data_command == "create-workspace":
+            print(json.dumps(create_workspace(args.workspace_dir, args.project_name), indent=2, ensure_ascii=False)); return 0
+        if args.data_command == "upload":
+            print(json.dumps(copy_upload_to_workspace(args.file, args.workspace_dir), indent=2, ensure_ascii=False)); return 0
+        if args.data_command == "mapping":
+            root = Path(args.workspace_dir).resolve()
+            record = next((row for row in list_workspace_datasets(root) if row["dataset_id"] == args.dataset_id), None)
+            if not record:
+                raise KeyError(f"Unknown dataset_id: {args.dataset_id}")
+            path = root / record["raw_path"]
+            if detect_file_format(path) not in {"csv", "tsv"}:
+                print(json.dumps({"status": "needs_manual_mapping", "dataset_id": args.dataset_id}, indent=2)); return 0
+            frame = pd.read_csv(path, sep="\t" if detect_file_format(path) == "tsv" else ",")
+            dataset_type = record.get("user_declared_type") or record.get("classification", {}).get("dataset_type")
+            result = infer_field_mapping(frame, dataset_type)
+            save_field_mapping(result, root / "mappings" / f"{args.dataset_id}.json")
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+        if args.data_command == "quality":
+            result = run_workspace_quality_checks(args.workspace_dir)
+            paths = write_data_quality_report(output, result)
+            print(json.dumps({"status": result["status"], "dataset_count": result["dataset_count"], "outputs": {key: str(value) for key, value in paths.items()}}, indent=2, ensure_ascii=False)); return 0
+        if args.data_command == "requirements":
+            matrix = build_project_data_requirement_matrix(args.workflow_id, args.workspace_dir)
+            paths = write_data_readiness_report(output, {"workflow_id": args.workflow_id, "matrix": matrix})
+            print(json.dumps({"status": "completed", "rows": len(matrix), "outputs": {key: str(value) for key, value in paths.items()}}, indent=2, ensure_ascii=False)); return 0
+        if args.data_command == "lineage":
+            result = validate_lineage_graph(args.workspace_dir)
+            paths = write_lineage_report(output, result)
+            print(json.dumps({"status": result["status"], "record_count": result["record_count"], "outputs": {key: str(value) for key, value in paths.items()}}, indent=2)); return 0
+        if args.data_command == "build-inputs":
+            result = build_all_inputs(args.workspace_dir, output)
+            result["data_center_reports"] = {key: str(value) for key, value in write_data_center_reports(output, args.workspace_dir).items()}
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "connectors":
+        output = ROOT / "output" / "data_center"
+        output.mkdir(parents=True, exist_ok=True)
+        if args.connectors_command in {"list", "status"}:
+            rows = list_connectors()
+            pd.DataFrame(rows).to_excel(output / "connector_status.xlsx", index=False)
+            print(json.dumps(rows, indent=2, ensure_ascii=False, default=str)); return 0
+        if args.connectors_command.endswith("-status"):
+            connector_id = args.connectors_command.removesuffix("-status")
+            print(json.dumps(get_connector(connector_id).healthcheck(), indent=2, ensure_ascii=False, default=str)); return 0
+        if args.connectors_command == "search":
+            config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8")) or {}
+            config["dataset_type"] = args.dataset_type
+            print(json.dumps(get_connector(args.connector).search(config), indent=2, ensure_ascii=False, default=str)); return 0
+        if args.connectors_command == "plan":
+            plan = create_acquisition_plan(args.workspace_dir, args.workflow_id)
+            paths = write_acquisition_report(output, plan)
+            print(json.dumps({"status": plan["status"], "steps": len(plan["steps"]), "outputs": {key: str(value) for key, value in paths.items()}}, indent=2)); return 0
+        if args.connectors_command == "execute-plan":
+            plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
+            print(json.dumps(execute_acquisition_plan(plan, execute=bool(args.execute)), indent=2, ensure_ascii=False, default=str)); return 0
     if args.command == "workflow":
         if args.workflow_command == "list":
             for stage in list_workflow_stages():

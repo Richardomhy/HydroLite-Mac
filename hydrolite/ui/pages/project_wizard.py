@@ -9,6 +9,7 @@ from hydrolite.project import validate_project
 from hydrolite.ui.components import read_project_validation_outputs, show_markdown_file
 from hydrolite.ui.state import PROJECT_ROOT, WorkbenchContext
 from hydrolite.wizard import create_project_from_wizard, preview_wizard, validate_wizard_config, write_wizard_summary
+from hydrolite.workspace import list_workspace_datasets
 
 
 TEMPLATE_OPTIONS = {
@@ -66,6 +67,18 @@ def render(context: WorkbenchContext) -> None:
     st.caption("按步骤创建项目、选择数据、生成情景 YAML，并自动运行项目校验。")
     st.info("项目向导不新增模型算法；仅生成 project.yaml、case YAML 和项目摘要。")
     st.info("不知道数据格式？请先前往 `数据模板` 页面下载标准模板，整理 CSV/GeoJSON 后再创建项目。")
+    with st.expander("从数据中心创建项目"):
+        workspace_path = st.text_input("已通过质量检查的工作区", value="output/demo_workspace" if context.is_cloud else "workspaces/real_project")
+        workspace = Path(workspace_path)
+        datasets = list_workspace_datasets(workspace) if workspace.exists() else []
+        ready = {row.get("user_declared_type") or row.get("classification", {}).get("dataset_type"): row for row in datasets if row.get("quality_status") in {"ready", "ready_with_warnings"} and row.get("standardized_path")}
+        st.write(f"已就绪数据类型：`{', '.join(sorted(str(key) for key in ready)) or '无'}`")
+        required = {"rainfall_observed", "subbasins", "reaches"}
+        missing = sorted(required - set(ready))
+        if missing:
+            st.warning(f"尚不能创建 HydroLite 项目，缺少：{', '.join(missing)}")
+        else:
+            st.success("工作区满足 HydroLite 基础输入要求。请在下方项目表单中引用 standardized 文件后创建项目。")
 
     template_name = st.selectbox("模板选择", list(TEMPLATE_OPTIONS.keys()))
     template_path = TEMPLATE_OPTIONS[template_name]

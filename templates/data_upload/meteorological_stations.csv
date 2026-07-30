@@ -1,0 +1,2 @@
+station_id,station_name,longitude,latitude,elevation_m,timezone,crs,synthetic_demo
+MET1,Demo Met,113.94,22.56,35,Asia/Shanghai,EPSG:4326,true

@@ -2,6 +2,26 @@ workflow_name: full_modeling_workflow
 description: Full v0.7.x target chain from data templates to reports and user manuals.
 dry_run_default: true
 stages:
+  - stage_id: workspace
+    enabled: true
+    status: available
+    notes: Create a manifest-backed workspace with immutable raw uploads.
+  - stage_id: data_center
+    enabled: true
+    status: partial
+    notes: Upload, inspect, map, and quality-check project data.
+  - stage_id: data_acquisition
+    enabled: true
+    status: partial
+    notes: External connector plans are dry-run by default.
+  - stage_id: data_standardization
+    enabled: true
+    status: partial
+    notes: Standardized copies only; raw uploads remain unchanged.
+  - stage_id: model_input_build
+    enabled: true
+    status: partial
+    notes: Build inputs only from standardized or derived data.
   - stage_id: data_templates
     enabled: true
     status: available

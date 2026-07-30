@@ -1,0 +1,3 @@
+issue_time,valid_time,lead_time_hr,member_id,subbasin_id,precipitation_mm,interval_minutes,source,scenario_type,units,quality_status,synthetic_demo
+2026-06-01 00:00:00,2026-06-01 01:00:00,1,M00,S1,8,60,synthetic,scenario,mm,synthetic_demo,true
+2026-06-01 00:00:00,2026-06-01 02:00:00,2,M00,S1,15,60,synthetic,scenario,mm,synthetic_demo,true

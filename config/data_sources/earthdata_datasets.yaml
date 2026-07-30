@@ -1,0 +1,6 @@
+defaults: {max_granules: 20, execute_download: false, require_bbox: true, require_time_range: true}
+datasets:
+  ICESat2_ATL03: {short_name: ATL03, provider: NASA NSIDC, format: HDF5, login_required: true}
+  ICESat2_ATL13: {short_name: ATL13, provider: NASA NSIDC, format: HDF5, login_required: true}
+  GPM: {short_name: GPM_3IMERG, provider: NASA GES DISC, format: HDF5, login_required: true}
+  SMAP: {short_name: SPL3SMP, provider: NASA NSIDC, format: HDF5, login_required: true}

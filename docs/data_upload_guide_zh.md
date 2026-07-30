@@ -1,0 +1,15 @@
+# 数据上传指南
+
+HydroLite 事件模型至少需要降雨、子流域和河段表。实测流量可选但建议提供。SWMM 需要 `.inp`；水库调蓄需要水位-面积-库容与水位-流量曲线；未来水质接口需要水质观测、流量和污染源。
+
+1. 在“数据中心”创建工作区。
+2. 下载 `templates/data_upload/` 模板。
+3. 上传 CSV、XLSX、GeoJSON、ZIP Shapefile 或 ASCII Grid。
+4. 查看格式、字段、时间、CRS、范围和 checksum。
+5. 确认低置信度映射、单位和 CRS。
+6. 运行质量检查；只有 `ready` 或 `ready_with_warnings` 数据进入 `standardized/`。
+7. 生成数据需求、外部获取计划和模型输入。
+
+原文件保存在 `raw/` 并设为只读。缺失值不会默认为 0。GEE、Earthdata 和 CDS 可能需要登录，凭证应留在用户主目录或环境变量中。系统不会自动下载大数据。
+
+常见错误包括缺时间列、负降雨、累计降雨误作时段增量、Shapefile 缺 `.prj`、经纬度颠倒和未知单位。

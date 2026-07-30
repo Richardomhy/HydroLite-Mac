@@ -1,0 +1,4 @@
+defaults: {execute_download: false, require_bbox: true, require_time_range: true, output_format: netcdf}
+datasets:
+  era5_land: {dataset_id: reanalysis-era5-land, variables: [total_precipitation, 2m_temperature, potential_evaporation], license: Copernicus}
+  era5: {dataset_id: reanalysis-era5-single-levels, variables: [total_precipitation, 2m_temperature, surface_pressure], license: Copernicus}

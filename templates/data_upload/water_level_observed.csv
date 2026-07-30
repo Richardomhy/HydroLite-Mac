@@ -1,0 +1,3 @@
+timestamp,station_id,water_level_m,unit,source,quality_status,synthetic_demo
+2026-06-01 00:00:00,WL1,101.2,m,synthetic_demo,validated_demo,true
+2026-06-01 01:00:00,WL1,101.4,m,synthetic_demo,validated_demo,true

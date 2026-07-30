@@ -26,6 +26,16 @@ def test_export_report_module_imports():
     assert "calibration" in export_report.collect_project_report_data.__code__.co_consts or callable(export_report.collect_project_report_data)
 
 
+def test_export_report_collects_data_center_sections(tmp_path: Path):
+    from hydrolite.export_report import collect_project_report_data
+    from hydrolite.project import create_project
+
+    project_dir = tmp_path / "data_center_report_project"
+    create_project(project_dir)
+    data = collect_project_report_data(project_dir)
+    assert {"data_center_report_text", "data_quality_summary", "data_readiness_summary", "connector_status", "lineage_summary"} <= data.keys()
+
+
 def test_project_report_generates_core_formats(tmp_path: Path):
     from hydrolite.export_report import (
         collect_project_report_data,

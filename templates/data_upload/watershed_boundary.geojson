@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","name":"synthetic_demo_watershed","features":[{"type":"Feature","properties":{"basin_id":"B1","name":"Demo Basin","synthetic_demo":true,"source":"synthetic_demo"},"geometry":{"type":"Polygon","coordinates":[[[113.90,22.50],[114.00,22.50],[114.00,22.60],[113.90,22.60],[113.90,22.50]]]}}]}

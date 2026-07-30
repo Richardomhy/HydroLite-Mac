@@ -1,0 +1,4 @@
+timestamp,subbasin_id,rainfall_mm,unit,source,synthetic_demo
+2026-06-01 00:00:00,S1,0,mm,synthetic_demo,true
+2026-06-01 01:00:00,S1,8,mm,synthetic_demo,true
+2026-06-01 02:00:00,S1,15,mm,synthetic_demo,true

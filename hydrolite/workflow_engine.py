@@ -53,6 +53,45 @@ class WorkflowStage:
 
 _STAGES: tuple[WorkflowStage, ...] = (
     WorkflowStage(
+        "workspace", "真实项目工作区", "Real project workspace",
+        "创建 raw 只读、standardized/derived 分离且带 manifest 的项目工作区。",
+        "Create a project workspace with immutable raw files, separated standardized/derived data, and a manifest.",
+        AVAILABLE, ["project name"], ["project.yaml", "workspace_manifest.json"],
+        "python -m hydrolite data create-workspace <name> <workspace_dir>", "数据中心",
+        ["raw 文件不覆盖；用户上传文件不进入 Git。"], ["filesystem"], "轻量工作区结构已实现。",
+    ),
+    WorkflowStage(
+        "data_center", "数据中心", "Data center",
+        "上传、识别、预览并登记真实项目数据。", "Upload, inspect, preview, and register real project data.",
+        PARTIAL, ["workspace"], ["data_type_registry.xlsx", "data_quality_summary.xlsx"],
+        "python -m hydrolite data quality <workspace_dir>", "数据中心",
+        ["原始上传只读；不把未校验数据投入模型。"], ["workspace"], "CSV/XLSX/GeoJSON/ZIP/ASCII 轻量路径可用；重型格式按可选依赖降级。",
+    ),
+    WorkflowStage(
+        "data_acquisition", "外部数据获取", "Data acquisition",
+        "生成 GEE、Earthdata、CDS、STAC 获取计划，默认不下载。",
+        "Plan GEE, Earthdata, CDS, and STAC acquisition without downloading by default.",
+        PARTIAL, ["data_center", "optional connectors"], ["acquisition_plan.xlsx", "acquisition_plan.json"],
+        "python -m hydrolite connectors plan <workspace_dir> <workflow_id>", "数据中心",
+        ["真实下载必须显式确认；凭证不进入仓库。"], ["data_center", "optional connectors"], "连接器状态和 bounded dry-run 计划已实现。",
+    ),
+    WorkflowStage(
+        "data_standardization", "数据标准化", "Data standardization",
+        "执行字段映射、单位与时空质量检查，并写入 standardized。",
+        "Apply field mapping, units, temporal/spatial checks, and write standardized copies.",
+        PARTIAL, ["data_center", "field mapping", "unit system"], ["standardized data", "lineage manifest"],
+        "python -m hydrolite data quality <workspace_dir>", "数据中心",
+        ["低置信度映射需人工确认；不修改 raw。"], ["data_center"], "高置信度轻量表格和 GeoJSON 标准化已实现。",
+    ),
+    WorkflowStage(
+        "model_input_build", "模型输入构建", "Model input build",
+        "仅从 standardized/derived 构建 HydroLite 及其他模型输入。",
+        "Build HydroLite and other model inputs only from standardized/derived data.",
+        PARTIAL, ["standardized data", "model requirements"], ["input_build_summary.xlsx", "model input folders"],
+        "python -m hydrolite data build-inputs <workspace_dir>", "数据中心",
+        ["缺失数据保持 missing；不从 raw 直接运行模型。"], ["data_standardization"], "HydroLite 输入可生成；其他模型按数据就绪度准备。",
+    ),
+    WorkflowStage(
         "data_templates",
         "数据模板",
         "Data templates",

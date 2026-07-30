@@ -27,6 +27,8 @@ from hydrolite.ui.pages import (
     watershed_accounting,
     water_balance_audit,
     comparison,
+    data_center,
+    data_connectors,
     data_templates,
     data_validation,
     diagnostics,
@@ -63,6 +65,8 @@ from hydrolite.openhydronet.runner import detect_openhydronet_environment
 
 PAGES = {
     "项目首页": project_home.render,
+    "数据中心": data_center.render,
+    "数据连接器": data_connectors.render,
     "教程与 Demo": tutorial_demo.render,
     "Beta 反馈": beta_feedback.render,
     "数据模板": data_templates.render,

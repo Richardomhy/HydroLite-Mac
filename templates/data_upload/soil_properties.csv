@@ -1,0 +1,3 @@
+soil_id,subbasin_id,soil_type,k_factor,hydrologic_group,synthetic_demo
+SOIL1,S1,loam,0.25,B,true
+SOIL2,S2,sandy_loam,0.18,A,true

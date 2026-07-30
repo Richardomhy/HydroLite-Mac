@@ -1,0 +1,3 @@
+subbasin_id,area_km2,cn,lag_hours,synthetic_demo
+S1,12.5,75,1.5,true
+S2,8.0,72,1.0,true

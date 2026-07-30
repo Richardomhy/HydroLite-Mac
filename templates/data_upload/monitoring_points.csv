@@ -1,0 +1,2 @@
+station_id,station_name,longitude,latitude,crs,synthetic_demo
+OUT,Demo Outlet,113.95,22.52,EPSG:4326,true

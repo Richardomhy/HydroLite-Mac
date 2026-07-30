@@ -1,0 +1,2 @@
+timestamp,station_id,parameter,concentration_mg_l,unit,source,synthetic_demo
+2026-06-01 00:00:00,WQ1,TN,1.2,mg/L,synthetic_demo,true

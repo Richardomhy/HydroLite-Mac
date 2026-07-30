@@ -1,5 +1,7 @@
 # HydroLite Studio v0.7.0 Roadmap
 
+统一数据中心与连接器框架已进入 `partial` MVP：支持小型真实项目数据包和可审计输入准备；重型 GIS、大型远程下载和所有格式的业务验证仍是后续工作。
+
 HEC-HMS completed-event result extraction now provides a verified small-demo path from Simulation DSS to outlet hydrograph comparison. The HEC-HMS stage remains partial; production adaptation, calibration and flood forecasting are still roadmap items.
 
 ## 总目标

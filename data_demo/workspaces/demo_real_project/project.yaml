@@ -1,0 +1,6 @@
+project:
+  id: demo_real_project
+  name: Demo Real Project
+workspace:
+  synthetic_demo: true
+  raw_read_only: true

@@ -1,0 +1,3 @@
+timestamp,station_id,groundwater_level_m,unit,source,synthetic_demo
+2026-06-01 00:00:00,GW1,8.2,m,synthetic_demo,true
+2026-06-02 00:00:00,GW1,8.1,m,synthetic_demo,true

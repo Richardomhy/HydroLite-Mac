@@ -224,6 +224,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     conservation_audit_root = repo_root / "output" / "conservation_audit"
     balance_audit_root = repo_root / "output" / "water_balance_audit"
     forecast_root = repo_root / "output" / "flood_forecast"
+    data_center_root = repo_root / "output" / "data_center"
     calibration_candidates = calibration_root / "search" / "candidate_ranking.xlsx"
     validation = project / "reports" / "project_validation.xlsx"
     global_gee_summary = repo_root / "output" / "gee" / "gee_summary.xlsx"
@@ -309,6 +310,11 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "forecast_reservoir_distribution": _safe_read_excel(forecast_root / "ensemble" / "reservoir_stage_distribution.xlsx"),
         "forecast_thresholds": _safe_read_excel(forecast_root / "ensemble" / "threshold_exceedance.xlsx"),
         "forecast_report_text": _read_text(forecast_root / "reports" / "flood_forecast_report_zh.md"),
+        "data_center_report_text": _read_text(data_center_root / "data_center_report_zh.md"),
+        "data_quality_summary": _safe_read_excel(data_center_root / "data_quality_summary.xlsx", "datasets"),
+        "data_readiness_summary": _safe_read_excel(data_center_root / "model_data_readiness.xlsx"),
+        "connector_status": _safe_read_excel(data_center_root / "connector_status.xlsx"),
+        "lineage_summary": _safe_read_excel(data_center_root / "lineage_summary.xlsx"),
         "charts": existing_charts,
         "assets": list_report_assets(project),
         "missing_assets": pd.DataFrame(missing),
@@ -413,6 +419,18 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "## GEE Data Center",
         "",
         _df_to_markdown(data["gee_summary"]),
+        "",
+        "## Unified Data Center",
+        "",
+        data["data_center_report_text"] or "unavailable",
+        "",
+        _df_to_markdown(data["data_quality_summary"]),
+        "",
+        _df_to_markdown(data["data_readiness_summary"]),
+        "",
+        _df_to_markdown(data["connector_status"]),
+        "",
+        _df_to_markdown(data["lineage_summary"]),
         "",
         "## OpenHydroNet Input Summary",
         "",
@@ -527,6 +545,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
         ("SWMM Results", _df_to_html(data["swmm_metrics"])),
         ("HydroLite-SWMM Coupling", _df_to_html(data["coupling_metrics"])),
         ("GEE Data Center", _df_to_html(data["gee_summary"])),
+        ("Unified Data Center", _df_to_html(data["data_quality_summary"]) + _df_to_html(data["data_readiness_summary"]) + _df_to_html(data["connector_status"]) + _df_to_html(data["lineage_summary"])),
         ("Observed Flow Evaluation", _df_to_html(data["model_performance"])),
         ("HEC-HMS and HydroLite Event Comparison", _df_to_html(data["hms_comparison_metrics"])),
         ("Calibration / Cross-model Alignment", _df_to_html(data["calibration_candidates"])),
@@ -618,6 +637,7 @@ def render_project_report_docx(project_dir: str | Path, output_path: str | Path 
         ("SWMM Results", "swmm_metrics"),
         ("HydroLite-SWMM Coupling", "coupling_metrics"),
         ("GEE Data Center", "gee_summary"),
+        ("Unified Data Center", "data_quality_summary"),
         ("Observed Flow Evaluation", "model_performance"),
         ("HEC-HMS and HydroLite Event Comparison", "hms_comparison_metrics"),
         ("Flood Forecast Scenario Ensemble", "forecast_member_summary"),

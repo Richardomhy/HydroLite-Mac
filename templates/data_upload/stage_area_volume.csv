@@ -1,0 +1,4 @@
+stage_m,area_m2,volume_m3,stage_unit,area_unit,volume_unit,synthetic_demo
+100,500000,1000000,m,m2,m3,true
+101,550000,1525000,m,m2,m3,true
+102,600000,2100000,m,m2,m3,true
