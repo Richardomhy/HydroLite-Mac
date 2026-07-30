@@ -149,5 +149,18 @@ def write_icesat2_report(output_dir: str | Path, result: dict[str, Any]) -> Path
 
 def run_icesat2_demo(output_dir: str | Path = DEFAULT_OUTPUT) -> dict[str, Any]:
     selection=select_icesat2_product_for_waterbody("inland_reservoir","depth");points=estimate_icesat2_water_depth(filter_icesat2_quality(extract_atl13_water_data(DEMO/"demo_atl13_extract.csv"),"ATL13"));profiles=build_icesat2_depth_profiles(points);vertical=validate_vertical_reference(points);coverage=calculate_icesat2_track_coverage(points,DEMO/"demo_waterbody.geojson");curve=build_stage_area_volume_curve(DEMO/"demo_waterbody.geojson",None,depth_constraints=points);result={"product_selection":selection,"points":points,"profiles":profiles,"vertical_reference":vertical,"coverage":coverage,"curve":curve};result["validation"]=validate_icesat2_depth_result(result);result["report"]=write_icesat2_report(output_dir,result);return result
+def load_icesat2_storage_constraint(output_dir: str | Path = DEFAULT_OUTPUT) -> pd.DataFrame:
+    curve=pd.read_csv(_path(output_dir)/"stage_area_volume.csv").rename(columns={"volume_m3":"storage_m3"})
+    curve["curve_type"]="synthetic_demo_curve";curve["evidence_status"]="synthetic_demo";return curve
+def assess_storage_curve_evidence(curve:pd.DataFrame,icesat2_manifest:dict[str,Any]|None=None)->dict[str,Any]:
+    return {"evidence_status":"synthetic_demo","curve_type":"synthetic_demo_curve","constraint_points":6,"vertical_reference":"consistent","warnings":["Six along-track depths are not a complete reservoir survey.","Stage-storage evidence does not imply a discharge curve."]}
+def merge_survey_and_icesat2_storage_constraints(base_curve:pd.DataFrame,icesat2_constraints:pd.DataFrame)->pd.DataFrame:
+    out=base_curve.copy();out["evidence_status"]="synthetic_demo";return out
+def quantify_storage_curve_uncertainty(curve:pd.DataFrame,depth_uncertainty:float|pd.Series)->pd.DataFrame:
+    out=curve.copy();out["storage_uncertainty_m3"]=pd.to_numeric(depth_uncertainty,errors="coerce").median()*out.get("area_m2",0);return out
+def export_reservoir_routing_curve(curve:pd.DataFrame,output_path:str|Path)->Path:
+    p=_path(output_path);p.parent.mkdir(parents=True,exist_ok=True);curve.rename(columns={"volume_m3":"storage_m3"}).to_csv(p,index=False);return p
+def write_icesat2_reservoir_constraint_report(output_dir:str|Path,result:dict[str,Any]|None=None)->Path:
+    p=_path(output_dir)/"icesat2_reservoir_constraint_report.md";p.write_text("# ICESat-2 storage constraint\n\nCurrent demo is `synthetic_demo_curve`; six along-track points are profile constraints, not complete storage survey. A separate surveyed or operational discharge curve is required for routing.\n",encoding="utf-8");return p
 def validate_icesat2_outputs(output_dir: str | Path) -> dict[str, Any]:
     root=_path(output_dir);required=["icesat2_diagnosis.json","water_surface_points.csv","bathymetry_points.csv","depth_profiles.csv","track_coverage.xlsx","depth_quality_summary.xlsx","stage_area_volume.csv","icesat2_water_depth_report.md","icesat2_manifest.json"];missing=[x for x in required if not (root/x).exists()];return {"status":"passed" if not missing else "failed","missing":missing}

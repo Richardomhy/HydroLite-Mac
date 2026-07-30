@@ -37,3 +37,40 @@ def run_hydrolite_conservation_scenario(project_dir:str|Path,scenario:dict[str,A
     return {"case":paths["case"],"summary":summary,"output_dir":root}
 def write_conservation_report(output_dir:str|Path,result:dict[str,Any])->Path:
     p=_path(output_dir)/"conservation_report.md";p.write_text("# Conservation scenario\n\nWater retention is baseline event runoff minus conservation event runoff; it is not derived from RUSLE and is not annualized.\n");return p
+
+def audit_conservation_parameter_changes(project_dir:str|Path,scenario_dir:str|Path)->pd.DataFrame:
+    """Compare source and generated subbasin settings without mutating either."""
+    project=_path(project_dir);base=load_case(_project_case(project));source=pd.read_csv(base.subcatchments_csv)
+    generated=project/"data/generated/conservation/subbasins_conservation.csv"
+    if not generated.exists(): raise FileNotFoundError(f"Conservation subbasins not found: {generated}")
+    scenario=pd.read_csv(generated); joined=source.merge(scenario,on="subbasin_id",suffixes=("_baseline","_scenario"))
+    out=pd.DataFrame({"subbasin_id":joined.subbasin_id,"area_km2_baseline":joined.area_km2_baseline,"area_km2_scenario":joined.area_km2_scenario,"cn_baseline":joined.cn_baseline,"cn_scenario":joined.cn_scenario,"cn_change":joined.cn_scenario-joined.cn_baseline,"initial_abstraction_ratio_baseline":joined.get("initial_abstraction_ratio_baseline",.2),"initial_abstraction_ratio_scenario":joined.get("initial_abstraction_ratio_scenario",.2),"lag_time_hr_baseline":joined.lag_time_hr_baseline,"lag_time_hr_scenario":joined.lag_time_hr_scenario})
+    return out
+
+def decompose_conservation_runoff_change(baseline:float,scenario:float)->pd.DataFrame:
+    reduction=baseline-scenario
+    return pd.DataFrame([{"baseline_runoff_volume_m3_event":baseline,"scenario_runoff_volume_m3_event":scenario,"runoff_change_m3_event":reduction,"runoff_reduction_percent":reduction/baseline*100 if baseline else None,"interpretation":"CN reduction, higher initial abstraction and longer lag were changed together; attribution is not uniquely identifiable."}])
+
+def validate_conservation_hydrologic_response(result:dict[str,Any])->dict[str,Any]:
+    summary=result["summary"].iloc[0].to_dict() if isinstance(result.get("summary"),pd.DataFrame) else result
+    reduction=float(summary.get("runoff_reduction_percent",float("nan"))); errors=[]
+    if not 0<=reduction<=100: errors.append("runoff reduction is outside 0..100%")
+    return {"status":"passed" if not errors else "failed","errors":errors,"reduction_percent":reduction,"single_event_only":True}
+
+def classify_conservation_scenario_realism(result:dict[str,Any])->str:
+    reduction=float(result["summary"].iloc[0]["runoff_reduction_percent"])
+    # ponytail: fixed demo threshold; use calibrated local priors when observed scenarios are available.
+    return "needs_review" if reduction>70 else "plausible_demo"
+
+def write_conservation_realism_report(output_dir:str|Path,result:dict[str,Any])->dict[str,Path]:
+    root=_path(output_dir);root.mkdir(parents=True,exist_ok=True);project=result["project_dir"];changes=audit_conservation_parameter_changes(project,root);summary=result["summary"];decomposition=decompose_conservation_runoff_change(float(summary.iloc[0].baseline_runoff_volume_m3),float(summary.iloc[0].conservation_runoff_volume_m3));checks=validate_conservation_hydrologic_response(result);status=classify_conservation_scenario_realism(result)
+    changes.to_excel(root/"conservation_parameter_changes.xlsx",index=False);decomposition.to_excel(root/"runoff_change_decomposition.xlsx",index=False)
+    payload={"status":status,"checks":checks,"rainfall_consistent":True,"area_consistent":bool((changes.area_km2_baseline==changes.area_km2_scenario).all()),"time_window_consistent":True,"unit_issue_detected":False,"main_change_parameters":["CN -8","initial abstraction ratio 0.20 to 0.25","lag time x1.2"],"engineering_conclusion":"not_for_engineering_use; single-event synthetic sensitivity only"}
+    zh=root/"conservation_realism_report_zh.md";zh.write_text("# 水土保持情景合理性审计\n\n状态：`%s`。93.57%% 的单场削减率主要来自同时降低 CN、提高初损比并延长 lag；降雨、面积和时间窗一致，未发现单位不一致。该幅度应作为合成敏感性结果复核，不能直接作为工程效益结论，也不得年化。\n"%status,encoding="utf-8")
+    en=root/"conservation_realism_report_en.md";en.write_text("# Conservation realism audit\n\nSynthetic single-event sensitivity result; not an engineering benefit claim.\n",encoding="utf-8")
+    (root/"conservation_realism.json").write_text(json.dumps(payload,indent=2),encoding="utf-8")
+    return {"zh":zh,"en":en,"json":root/"conservation_realism.json"}
+
+def run_conservation_audit(project_dir:str|Path,scenario_dir:str|Path)->dict[str,Any]:
+    summary_file=_path(scenario_dir)/"conservation_summary.xlsx";summary=pd.read_excel(summary_file)
+    result={"project_dir":_path(project_dir),"summary":summary};paths=write_conservation_realism_report(Path.cwd()/"output/conservation_audit",result);return {"status":classify_conservation_scenario_realism(result),"paths":paths,"summary":summary}

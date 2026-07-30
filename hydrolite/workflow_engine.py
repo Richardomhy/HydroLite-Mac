@@ -194,11 +194,25 @@ _STAGES: tuple[WorkflowStage, ...] = (
         ["单事件保水量不得年化。"], ["hydrolite_simulation", "rusle_erosion"], "通过径流体积差计算保水量。",
     ),
     WorkflowStage(
+        "reservoir_routing", "水库调蓄", "Reservoir routing",
+        "使用明确库容与泄流曲线进行 level-pool 调蓄。", "Route a reservoir with explicit storage and discharge curves.", PARTIAL,
+        ["HydroLite inflow", "stage-storage curve", "discharge curve"], ["reservoir_routing_timeseries.csv", "reservoir_routing_summary.xlsx"],
+        "python -m hydrolite reservoir demo", "水库调蓄",
+        ["库容曲线不等于泄流曲线；缺泄流曲线时禁止路由。"], ["hydrolite_simulation", "icesat2_water_depth"], "原创合成曲线 level-pool MVP。",
+    ),
+    WorkflowStage(
+        "sediment_delivery", "泥沙交付与拦沙", "Sediment delivery and trapping",
+        "以显式 SDR 将 RUSLE 片蚀转换为坡面交付泥沙，并可选拦沙。", "Convert RUSLE sheet/rill erosion to hillslope delivery with explicit SDR and optional trapping.", PARTIAL,
+        ["RUSLE", "SDR", "optional reservoir"], ["sediment_delivery_summary.xlsx", "sediment_delivery_ledger.xlsx"],
+        "python -m hydrolite sediment demo", "泥沙交付与拦沙",
+        ["不把 RUSLE 当作出口输沙；沟蚀、河岸和河床过程保持 missing。"], ["rusle_erosion", "reservoir_routing"], "合成未率定 SDR MVP。",
+    ),
+    WorkflowStage(
         "watershed_accounting", "流域综合核算", "Watershed accounting",
         "列出水量与泥沙核算项及缺失项。", "List water/soil accounting components and gaps.", PARTIAL,
         ["HydroLite", "HEC-HMS", "ICESat-2", "RUSLE"], ["water_accounting_ledger.xlsx", "soil_sediment_accounting_ledger.xlsx"],
         "python -m hydrolite accounting build <project>", "流域综合核算",
-        ["默认 partial；missing 绝不视为零。"], ["hydrolite_simulation", "hec_hms_run", "icesat2_water_depth", "rusle_erosion", "conservation_scenario"], "核算完整性审计 MVP。",
+        ["默认 partial；missing 绝不视为零。"], ["hydrolite_simulation", "hec_hms_run", "icesat2_water_depth", "rusle_erosion", "conservation_scenario", "reservoir_routing", "sediment_delivery"], "核算完整性审计 MVP。",
     ),
     WorkflowStage(
         "flood_forecast",

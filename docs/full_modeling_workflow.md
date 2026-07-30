@@ -70,4 +70,6 @@ python -m hydrolite hms run output/hec_hms_project --dry-run
 `dry-run` 是默认行为，用于查看计划，不触发重计算或长任务。
 # Full Modeling Workflow
 
+Reservoir routing and sediment delivery are partial stages: routing requires independent storage and discharge curves; RUSLE-SDR remains hillslope-delivery-only when gully, bank, and channel processes are missing.
+
 After a completed-event HydroLite/HMS comparison, optional bounded sensitivity and cross-model alignment can create a new generated case without replacing original inputs.

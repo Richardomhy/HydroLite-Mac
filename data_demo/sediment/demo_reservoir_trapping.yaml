@@ -1,0 +1,5 @@
+synthetic_demo: true
+mode: user_defined
+trapping_efficiency: 0.6
+timescale: annual
+notes: Fixed synthetic demo value; no event-to-annual conversion.

@@ -1,0 +1,5 @@
+stage_m,area_m2,storage_m3,synthetic_demo
+100,20000,0,true
+101,60000,100000,true
+102,110000,250000,true
+103,160000,450000,true

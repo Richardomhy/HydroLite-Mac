@@ -1,0 +1,5 @@
+synthetic_demo: true
+mode: area_empirical_demo
+sdr: 0.25
+observed_calibrated: false
+notes: Uncalibrated synthetic demo; not for engineering use.

@@ -1,0 +1,12 @@
+synthetic_demo: true
+stage_area_volume_csv: demo_stage_area_volume.csv
+stage_discharge_csv: demo_stage_discharge.csv
+inflow_csv: demo_reservoir_inflow.csv
+initial_stage_m: 100.8
+time_step_hours: 1.0
+allow_boundary_hold: false
+curve_source: synthetic_demo_curve
+units:
+  stage: m
+  storage: m3
+  discharge: m3/s

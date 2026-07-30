@@ -219,6 +219,9 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     icesat2_root = repo_root / "output" / "icesat2"
     rusle_root = repo_root / "output" / "rusle"
     accounting_root = repo_root / "output" / "watershed_accounting"
+    reservoir_root = repo_root / "output" / "reservoir"
+    sediment_root = repo_root / "output" / "sediment_delivery"
+    conservation_audit_root = repo_root / "output" / "conservation_audit"
     calibration_candidates = calibration_root / "search" / "candidate_ranking.xlsx"
     validation = project / "reports" / "project_validation.xlsx"
     global_gee_summary = repo_root / "output" / "gee" / "gee_summary.xlsx"
@@ -292,6 +295,9 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "icesat2_profiles": _safe_read_csv(icesat2_root / "depth_profiles.csv"),
         "rusle_summary": _safe_read_excel(rusle_root / "subbasin_soil_loss.xlsx"),
         "accounting_completeness": _safe_read_excel(accounting_root / "accounting_completeness_matrix.xlsx"),
+        "reservoir_metrics": _safe_read_excel(reservoir_root / "reservoir_routing_summary.xlsx", "metrics"),
+        "sediment_delivery": _safe_read_excel(sediment_root / "sediment_delivery_summary.xlsx", "summary"),
+        "conservation_audit": _safe_read_excel(conservation_audit_root / "runoff_change_decomposition.xlsx"),
         "charts": existing_charts,
         "assets": list_report_assets(project),
         "missing_assets": pd.DataFrame(missing),
@@ -429,6 +435,14 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "",
         _df_to_markdown(data["accounting_completeness"]),
         "",
+        "## Reservoir / Sediment / Conservation Audit",
+        "",
+        _df_to_markdown(data["reservoir_metrics"]),
+        "",
+        _df_to_markdown(data["sediment_delivery"]),
+        "",
+        _df_to_markdown(data["conservation_audit"]),
+        "",
         "## Charts",
         "",
     ]
@@ -488,6 +502,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
         ("HEC-HMS and HydroLite Event Comparison", _df_to_html(data["hms_comparison_metrics"])),
         ("Calibration / Cross-model Alignment", _df_to_html(data["calibration_candidates"])),
         ("ICESat-2 / RUSLE / Accounting", _df_to_html(data["accounting_completeness"])),
+        ("Reservoir / Sediment / Conservation Audit", _df_to_html(data["reservoir_metrics"]) + _df_to_html(data["sediment_delivery"]) + _df_to_html(data["conservation_audit"])),
         ("Missing or Unavailable Outputs", _df_to_html(data["missing_assets"])),
     ]
     html = [

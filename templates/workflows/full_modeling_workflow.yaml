@@ -46,6 +46,14 @@ stages:
     enabled: false
     status: partial
     notes: Single-event runoff difference and soil-conservation scenario.
+  - stage_id: reservoir_routing
+    enabled: false
+    status: partial
+    notes: Explicit level-pool routing requires stage-storage and discharge curves; no inferred free outflow.
+  - stage_id: sediment_delivery
+    enabled: false
+    status: partial
+    notes: RUSLE-to-SDR hillslope delivery MVP; missing gully, bank, and channel processes stay missing.
   - stage_id: watershed_accounting
     enabled: false
     status: partial

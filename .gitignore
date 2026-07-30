@@ -6,6 +6,13 @@ __pycache__/
 env/
 .env
 output/
+output/conservation_audit/
+output/reservoir/
+output/hec_hms_reservoir_project/
+output/reservoir_comparison/
+output/sediment_delivery/
+*.dss
+hs_err_pid*.log
 outputs/
 output/hec_hms_reference/
 output/hec_hms_project_verified/

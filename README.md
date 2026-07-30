@@ -10,6 +10,8 @@
 
 The online version is best for demos, tutorials, data template downloads, and viewing example outputs; the local version is recommended for complete GEE, SWMM, OpenHydroNet-ready input, and project delivery workflows.
 
+v0.7.0-dev also includes partial, synthetic-demo-only reservoir level-pool routing and RUSLE-SDR sediment delivery. See `docs/reservoir_routing_mvp.md` and `docs/rusle_sdr_sediment_delivery.md`; these are not operational reservoir models or complete sediment-yield models.
+
 HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.7.0-dev starts the next development phase: a full modeling workflow engine for data templates, QGIS/GEE preprocessing, HydroLite simulation, future HEC-HMS bridges, SWMM coupling, forecast planning, comparison, reports, and user manuals. The current stable beta remains v0.6.0-beta.1.
 
 ## Built with Codex and GPT-5.6

@@ -46,6 +46,49 @@ def _unique_paths(paths: list[Path]) -> list[Path]:
     return result
 
 
+# Reservoir wrappers deliberately delegate to the local MVP.  They keep the
+# HEC-HMS interface discoverable without editing the installed application.
+def discover_reference_reservoir_projects() -> list[dict[str, Any]]:
+    return [row for row in discover_hms_reference_projects() if "reservoir" in str(row).lower()]
+
+
+def inspect_reference_reservoir_configuration(project_dir: str | Path) -> dict[str, Any]:
+    root = _resolve(project_dir)
+    files = [str(path) for path in root.rglob("*.basin")]
+    return {"status": "inspected" if files else "missing", "project_dir": str(root), "basin_files": files}
+
+
+def generate_hms_reservoir_component(project_dir: str | Path, reservoir_config: dict[str, Any]) -> Path:
+    root = _resolve(project_dir); path = root / "HydroLite_Reservoir_Project.basin"; path.write_text("Reservoir: %s\n     Method: Outflow Curve\nEnd:\n" % reservoir_config.get("reservoir_name", "DemoReservoir"), encoding="utf-8"); return path
+
+
+def generate_hms_reservoir_paired_data(project_dir: str | Path, curves: dict[str, Any]) -> Path:
+    path = _resolve(project_dir) / "data" / "reservoir_paired_data_note.md"; path.parent.mkdir(parents=True, exist_ok=True); path.write_text("Paired data must be verified in HEC-HMS; no official sample syntax was copied.\n", encoding="utf-8"); return path
+
+
+def insert_hms_reservoir_into_topology(project_dir: str | Path, upstream_element: str, downstream_element: str) -> dict[str, str]:
+    return {"status": "review_required", "upstream": upstream_element, "downstream": downstream_element}
+
+
+def validate_hms_reservoir_references(project_dir: str | Path) -> dict[str, Any]:
+    root = _resolve(project_dir); return {"status": "passed" if (root / "HydroLite_Reservoir_Project.hms").exists() else "failed", "warning": "Paired data semantics remain manual-review required."}
+
+def build_hms_reservoir_project(source_project_dir: str | Path, output_dir: str | Path, reservoir_config: dict[str, Any] | str | Path) -> dict[str, Any]:
+    from hydrolite.reservoir_routing import build_hms_reservoir_project as _build
+    return _build(reservoir_config if isinstance(reservoir_config, (str, Path)) else reservoir_config.get("_config_path"), output_dir)
+def run_hms_reservoir_open_probe(project_dir: str | Path) -> dict[str, Any]:
+    from hydrolite.reservoir_routing import run_hms_reservoir_open_probe as _open
+    return _open(project_dir)
+def run_hms_reservoir_compute_probe(project_dir: str | Path, timeout: int = 120) -> dict[str, Any]:
+    from hydrolite.reservoir_routing import run_hms_reservoir_compute_probe as _compute
+    return _compute(project_dir, timeout)
+def extract_hms_reservoir_results(project_dir: str | Path) -> dict[str, Any]:
+    from hydrolite.reservoir_routing import extract_hms_reservoir_results as _extract
+    return _extract(project_dir)
+def write_hms_reservoir_report(project_dir: str | Path, result: dict[str, Any]) -> Path:
+    path = _resolve(project_dir) / "reports" / "hec_hms_reservoir_report.md"; path.write_text("# HEC-HMS Reservoir\n\nStatus: `%s`.\n" % result.get("status", "unknown"), encoding="utf-8"); return path
+
+
 def detect_hec_hms_installations() -> list[dict[str, Any]]:
     home = Path.home()
     candidates = [

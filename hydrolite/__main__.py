@@ -28,8 +28,10 @@ from hydrolite.calibration import (
 )
 from hydrolite.icesat2 import DEFAULT_OUTPUT as ICESAT2_OUTPUT, detect_earthdata_access, detect_icesat2_dependencies, identify_icesat2_product, run_icesat2_demo, select_icesat2_product_for_waterbody, build_icesat2_depth_profiles, build_stage_area_volume_curve, validate_icesat2_outputs
 from hydrolite.rusle import detect_rusle_backends, run_rusle, validate_rusle_outputs
-from hydrolite.conservation import load_conservation_scenario, run_hydrolite_conservation_scenario, write_conservation_report
+from hydrolite.conservation import load_conservation_scenario, run_hydrolite_conservation_scenario, write_conservation_report, run_conservation_audit
 from hydrolite.watershed_accounting import build_watershed_accounting, export_watershed_accounting_bundle, validate_watershed_accounting, write_watershed_accounting_report
+from hydrolite.reservoir_routing import reservoir_diagnosis, run_reservoir_demo, load_reservoir_config, load_stage_area_volume_curve, load_stage_discharge_curve, validate_stage_area_volume_curve, validate_stage_discharge_curve, route_reservoir_level_pool, write_reservoir_routing_outputs, build_hms_reservoir_project, run_hms_reservoir_open_probe, run_hms_reservoir_compute_probe, extract_hms_reservoir_results, write_reservoir_comparison_report, validate_reservoir_routing
+from hydrolite.sediment_delivery import run_sediment_demo, _run as run_sediment_delivery, validate_sediment_outputs
 from hydrolite.beta import beta_checklist, beta_info, beta_smoke_local
 from hydrolite.compare import run_compare
 from hydrolite.data_templates import (
@@ -376,8 +378,25 @@ def build_parser() -> argparse.ArgumentParser:
     x = conservation_sub.add_parser("run"); x.add_argument("project_dir"); x.add_argument("scenario_yaml")
     x = conservation_sub.add_parser("report"); x.add_argument("output_dir")
     x = conservation_sub.add_parser("validate"); x.add_argument("output_dir")
+    x = conservation_sub.add_parser("audit"); x.add_argument("project_dir"); x.add_argument("scenario_dir")
+    reservoir_parser = subparsers.add_parser("reservoir"); reservoir_sub = reservoir_parser.add_subparsers(dest="reservoir_command", required=True)
+    reservoir_sub.add_parser("diagnose"); reservoir_sub.add_parser("demo")
+    x=reservoir_sub.add_parser("validate-curves");x.add_argument("config")
+    x=reservoir_sub.add_parser("route");x.add_argument("config");x.add_argument("output_dir")
+    x=reservoir_sub.add_parser("hms-project");x.add_argument("config");x.add_argument("output_dir")
+    x=reservoir_sub.add_parser("hms-open");x.add_argument("project_dir")
+    x=reservoir_sub.add_parser("hms-compute");x.add_argument("project_dir")
+    x=reservoir_sub.add_parser("compare");x.add_argument("reservoir_dir");x.add_argument("hms_project_dir")
+    x=reservoir_sub.add_parser("validate");x.add_argument("output_dir")
+    sediment_parser = subparsers.add_parser("sediment"); sediment_sub = sediment_parser.add_subparsers(dest="sediment_command", required=True)
+    sediment_sub.add_parser("diagnose"); sediment_sub.add_parser("demo")
+    x=sediment_sub.add_parser("deliver");x.add_argument("rusle_dir");x.add_argument("sdr_config");x.add_argument("output_dir")
+    x=sediment_sub.add_parser("trap");x.add_argument("output_dir");x.add_argument("trapping_config")
+    x=sediment_sub.add_parser("validate");x.add_argument("output_dir")
+    x=sediment_sub.add_parser("report");x.add_argument("output_dir")
     accounting_parser = subparsers.add_parser("accounting"); accounting_sub = accounting_parser.add_subparsers(dest="accounting_command", required=True)
     x = accounting_sub.add_parser("build"); x.add_argument("project_dir")
+    x = accounting_sub.add_parser("rebuild"); x.add_argument("project_dir")
     for command in ("completeness", "report", "bundle", "validate"):
         x = accounting_sub.add_parser(command); x.add_argument("output_dir")
 
@@ -512,6 +531,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    import json
     args = build_parser().parse_args(argv)
     if args.command == "run":
         outputs = run_case(args.case_file)
@@ -969,8 +989,31 @@ def main(argv: list[str] | None = None) -> int:
         if args.conservation_command == "run": result=run_hydrolite_conservation_scenario(args.project_dir,load_conservation_scenario(args.scenario_yaml),ROOT/"output/conservation"); write_conservation_report(ROOT/"output/conservation",result); print(result["summary"].to_string(index=False)); return 0
         if args.conservation_command == "report": print(Path(args.output_dir)/"conservation_report.md"); return 0
         if args.conservation_command == "validate": print({"status":"passed" if (Path(args.output_dir)/"conservation_summary.xlsx").exists() else "failed"}); return 0
+        if args.conservation_command == "audit": result=run_conservation_audit(args.project_dir,args.scenario_dir);print(result["status"]);return 0
+    if args.command == "reservoir":
+        if args.reservoir_command == "diagnose": print(json.dumps(reservoir_diagnosis(),indent=2));return 0
+        if args.reservoir_command == "demo": result=run_reservoir_demo();print(result["paths"]["report"]);return 0
+        if args.reservoir_command == "validate-curves":
+            cfg=load_reservoir_config(args.config);base=Path(args.config).expanduser().resolve().parent;checks={"stage_storage":validate_stage_area_volume_curve(load_stage_area_volume_curve(base/cfg["stage_area_volume_csv"])),"stage_discharge":validate_stage_discharge_curve(load_stage_discharge_curve(base/cfg["stage_discharge_csv"]))};print(json.dumps(checks,indent=2));return 0 if all(v["status"]=="passed" for v in checks.values()) else 1
+        if args.reservoir_command == "route": result=run_reservoir_demo(args.config,args.output_dir);print(result["paths"]["summary"]);return 0
+        if args.reservoir_command == "hms-project": print(build_hms_reservoir_project(args.config,args.output_dir)["report"]);return 0
+        if args.reservoir_command == "hms-open": print(json.dumps(run_hms_reservoir_open_probe(args.project_dir),indent=2,default=str));return 0
+        if args.reservoir_command == "hms-compute":
+            result=run_hms_reservoir_compute_probe(args.project_dir);result["results"]=str(extract_hms_reservoir_results(args.project_dir)["path"]);print(json.dumps(result,indent=2));return 0
+        if args.reservoir_command == "compare":
+            h=pd.read_csv(Path(args.reservoir_dir)/"reservoir_routing_timeseries.csv");print(write_reservoir_comparison_report(ROOT/"output/reservoir_comparison",h)["report"]);return 0
+        if args.reservoir_command == "validate":
+            frame=pd.read_csv(Path(args.output_dir)/"reservoir_routing_timeseries.csv");result=validate_reservoir_routing(frame);print(result);return 0 if result["status"]=="passed" else 1
+    if args.command == "sediment":
+        if args.sediment_command == "diagnose": print({"status":"available","methods":["user_defined","area_empirical_demo"],"warning":"RUSLE is not outlet sediment."});return 0
+        if args.sediment_command == "demo": print(run_sediment_demo()["output_dir"]);return 0
+        if args.sediment_command == "deliver": print(run_sediment_delivery(args.rusle_dir,args.sdr_config,None,args.output_dir)["output_dir"]);return 0
+        if args.sediment_command == "trap":
+            root=Path(args.output_dir);print(run_sediment_delivery(ROOT/"output/rusle",ROOT/"data_demo/sediment/demo_sdr_config.yaml",args.trapping_config,root)["output_dir"]);return 0
+        if args.sediment_command == "validate": result=validate_sediment_outputs(args.output_dir);print(result);return 0 if result["status"]=="passed" else 1
+        if args.sediment_command == "report": print(Path(args.output_dir)/"sediment_delivery_report.md");return 0
     if args.command == "accounting":
-        if args.accounting_command == "build": result=build_watershed_accounting(args.project_dir); print(result["accounting_status"]); return 0
+        if args.accounting_command in {"build","rebuild"}: result=build_watershed_accounting(args.project_dir); print(result["accounting_status"]); return 0
         if args.accounting_command == "completeness": print(pd.read_excel(Path(args.output_dir)/"accounting_completeness_matrix.xlsx").to_string(index=False)); return 0
         if args.accounting_command == "report": print(write_watershed_accounting_report(args.output_dir,{})); return 0
         if args.accounting_command == "bundle": print(export_watershed_accounting_bundle(args.output_dir)); return 0

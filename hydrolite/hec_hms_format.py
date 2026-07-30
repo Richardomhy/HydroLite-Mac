@@ -28,6 +28,16 @@ BLOCK_HEADERS = {
 }
 
 
+def format_reservoir_outflow_curve(curve: pd.DataFrame) -> str:
+    """Render a reviewable paired-data note; final HMS syntax still needs HMS validation."""
+    required = {"stage_m", "discharge_cms"}
+    if not required.issubset(curve.columns):
+        raise ValueError("Reservoir outflow curve requires stage_m and discharge_cms.")
+    rows = ["Paired Data: HydroLite Outflow Curve", "     Type: Elevation-Discharge"]
+    rows.extend(f"     {float(row.stage_m):.3f}, {float(row.discharge_cms):.6f}" for _, row in curve.iterrows())
+    return "\n".join(rows) + "\n"
+
+
 def _parse_component(path: str | Path, expected_type: str) -> dict[str, Any]:
     file_path = Path(path).expanduser().resolve()
     lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines()
