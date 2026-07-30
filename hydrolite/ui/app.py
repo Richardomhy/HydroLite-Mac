@@ -35,6 +35,8 @@ from hydrolite.ui.pages import (
     gee_center,
     hec_hms,
     openhydronet_center,
+    artifact_center,
+    project_center,
     project_home,
     project_wizard,
     qgis_bridge,
@@ -42,6 +44,9 @@ from hydrolite.ui.pages import (
     scenario_run,
     swmm_center,
     tutorial_demo,
+    run_center,
+    system_center,
+    task_center,
     watershed_delineation,
     workflow_engine,
 )
@@ -65,6 +70,11 @@ from hydrolite.openhydronet.runner import detect_openhydronet_environment
 
 PAGES = {
     "项目首页": project_home.render,
+    "项目中心": project_center.render,
+    "运行中心": run_center.render,
+    "任务中心": task_center.render,
+    "成果中心": artifact_center.render,
+    "系统与环境": system_center.render,
     "数据中心": data_center.render,
     "数据连接器": data_connectors.render,
     "教程与 Demo": tutorial_demo.render,

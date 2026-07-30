@@ -1,0 +1,5 @@
+run_name: demo-expected-optional-failure
+run_mode: test
+task_timeout: 5
+include_optional_failure: true
+synthetic_demo: true

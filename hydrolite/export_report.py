@@ -225,6 +225,21 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     balance_audit_root = repo_root / "output" / "water_balance_audit"
     forecast_root = repo_root / "output" / "flood_forecast"
     data_center_root = repo_root / "output" / "data_center"
+    runtime_project = None
+    runtime_runs = pd.DataFrame()
+    runtime_tasks = pd.DataFrame()
+    runtime_artifacts = pd.DataFrame()
+    try:
+        from hydrolite.runtime_db import list_artifact_records, list_project_records, list_run_records, list_task_records
+        runtime_project = next((row for row in list_project_records() if Path(row["workspace_path"]).resolve() == project), None)
+        if runtime_project:
+            run_rows = list_run_records(project_id=runtime_project["project_id"])
+            runtime_runs = pd.DataFrame(run_rows)
+            run_ids = {row["run_id"] for row in run_rows}
+            runtime_tasks = pd.DataFrame([row for row in list_task_records() if row["run_id"] in run_ids])
+            runtime_artifacts = pd.DataFrame(list_artifact_records(project_id=runtime_project["project_id"]))
+    except Exception:
+        pass
     calibration_candidates = calibration_root / "search" / "candidate_ranking.xlsx"
     validation = project / "reports" / "project_validation.xlsx"
     global_gee_summary = repo_root / "output" / "gee" / "gee_summary.xlsx"
@@ -315,6 +330,10 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "data_readiness_summary": _safe_read_excel(data_center_root / "model_data_readiness.xlsx"),
         "connector_status": _safe_read_excel(data_center_root / "connector_status.xlsx"),
         "lineage_summary": _safe_read_excel(data_center_root / "lineage_summary.xlsx"),
+        "runtime_project": runtime_project or {},
+        "runtime_runs": runtime_runs,
+        "runtime_tasks": runtime_tasks,
+        "runtime_artifacts": runtime_artifacts,
         "charts": existing_charts,
         "assets": list_report_assets(project),
         "missing_assets": pd.DataFrame(missing),
@@ -431,6 +450,23 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         _df_to_markdown(data["connector_status"]),
         "",
         _df_to_markdown(data["lineage_summary"]),
+        "",
+        "## Production Runtime",
+        "",
+        f"- Registered project ID: `{data['runtime_project'].get('project_id', 'unavailable')}`",
+        f"- Runtime readiness: `{data['runtime_project'].get('workflow_readiness', 'unavailable')}`",
+        "",
+        "### Runs",
+        "",
+        _df_to_markdown(data["runtime_runs"]),
+        "",
+        "### Tasks",
+        "",
+        _df_to_markdown(data["runtime_tasks"]),
+        "",
+        "### Artifacts",
+        "",
+        _df_to_markdown(data["runtime_artifacts"]),
         "",
         "## OpenHydroNet Input Summary",
         "",

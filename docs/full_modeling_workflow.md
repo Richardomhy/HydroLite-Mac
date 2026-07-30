@@ -1,5 +1,7 @@
 # HydroLite Studio v0.7.x Full Modeling Workflow
 
+生产运行顺序：`application_runtime -> project_operations -> data_center -> data_standardization -> model_input_build -> run_orchestration -> model stages -> artifact_management -> reporting -> deployment_readiness`。新增运行阶段均为 `partial`。
+
 The workflow now begins with `workspace -> data_center -> data_acquisition -> data_standardization -> model_input_build`. These stages are `partial`: raw uploads remain immutable, acquisition defaults to dry-run, and only standardized/derived data may enter model inputs.
 
 For a completed HEC-HMS run, the comparison branch is: Simulation DSS catalog -> flow classification -> bounded Java read -> topology mapping -> verified outlet -> HydroLite flow discovery -> unit/time alignment -> event/model metrics -> report and bundle. This branch analyzes completed event simulations only.

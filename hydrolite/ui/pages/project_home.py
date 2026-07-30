@@ -13,6 +13,17 @@ from hydrolite.ui.state import WorkbenchContext
 
 def render(context: WorkbenchContext) -> None:
     st.header("项目首页")
+    try:
+        from hydrolite.runtime_db import list_artifact_records, list_project_records, list_run_records
+        projects, runs, artifacts = list_project_records(), list_run_records(), list_artifact_records()
+        metrics = st.columns(4)
+        metrics[0].metric("已注册项目", len(projects))
+        metrics[1].metric("Ready 项目", sum(row.get("status") == "ready" for row in projects))
+        metrics[2].metric("运行中 Run", sum(row.get("status") in {"queued", "running"} for row in runs))
+        metrics[3].metric("失败 Run", sum(row.get("status") == "failed" for row in runs))
+        st.caption(f"成果资产：{len(artifacts)}。推荐：项目中心 -> 运行中心 -> 任务中心 -> 成果中心。")
+    except Exception as exc:
+        st.warning(f"生产运行中心尚未初始化：{exc}")
     st.caption("以项目为中心查看 HydroLite、GEE、SWMM 与 OpenHydroNet 输入工作流。")
     st.info(
         "当前开发版本：HydroLite Studio v0.7.0-dev；稳定 beta：v0.6.0-beta.1。在线版："

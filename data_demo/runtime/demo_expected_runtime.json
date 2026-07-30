@@ -1,0 +1,7 @@
+{
+  "workflow_id": "data_preparation",
+  "required_tasks_must_succeed": true,
+  "optional_failure_isolated": true,
+  "expected_run_status": "succeeded_with_warnings",
+  "synthetic_demo": true
+}

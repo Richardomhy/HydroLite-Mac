@@ -1,0 +1,4 @@
+run_name: demo-data-preparation
+run_mode: local_light
+task_timeout: 30
+synthetic_demo: true

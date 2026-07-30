@@ -53,6 +53,20 @@ class WorkflowStage:
 
 _STAGES: tuple[WorkflowStage, ...] = (
     WorkflowStage(
+        "application_runtime", "应用运行时", "Application runtime",
+        "初始化 SQLite 运行库、运行目录、模式和环境诊断。", "Initialize the SQLite runtime, directories, mode, and environment diagnosis.",
+        PARTIAL, ["writable runtime directory"], ["runtime database", "environment snapshot"],
+        "python -m hydrolite runtime init", "系统与环境",
+        ["数据库和日志不进入仓库；不保存凭证。"], ["filesystem", "sqlite3"], "本地、云端和只读模式门禁已实现。",
+    ),
+    WorkflowStage(
+        "project_operations", "项目运维", "Project operations",
+        "注册多个工作区并记录就绪度、快照和生命周期。", "Register workspaces and track readiness, snapshots, and lifecycle.",
+        PARTIAL, ["application_runtime", "workspace"], ["project record", "project snapshot"],
+        "python -m hydrolite projects list", "项目中心",
+        ["归档只修改注册记录，不删除用户工作区。"], ["application_runtime"], "项目注册、归档和元数据快照 MVP。",
+    ),
+    WorkflowStage(
         "workspace", "真实项目工作区", "Real project workspace",
         "创建 raw 只读、standardized/derived 分离且带 manifest 的项目工作区。",
         "Create a project workspace with immutable raw files, separated standardized/derived data, and a manifest.",
@@ -90,6 +104,26 @@ _STAGES: tuple[WorkflowStage, ...] = (
         PARTIAL, ["standardized data", "model requirements"], ["input_build_summary.xlsx", "model input folders"],
         "python -m hydrolite data build-inputs <workspace_dir>", "数据中心",
         ["缺失数据保持 missing；不从 raw 直接运行模型。"], ["data_standardization"], "HydroLite 输入可生成；其他模型按数据就绪度准备。",
+    ),
+    WorkflowStage(
+        "run_orchestration", "运行编排", "Run orchestration",
+        "将工作流转换为可追踪、可取消、可重试的本地任务。", "Convert workflows into traceable, cancellable, retryable local tasks.",
+        PARTIAL, ["project_operations", "model_input_build"], ["run plan", "task records", "run report"],
+        "python -m hydrolite runs plan <project_id> <workflow_id>", "运行中心",
+        ["外部进程使用参数数组和独立进程组；默认单并发。"], ["application_runtime", "project_operations"], "SQLite 队列和失败隔离 MVP。",
+    ),
+    WorkflowStage(
+        "artifact_management", "成果资产管理", "Artifact management",
+        "登记、校验、预览和安全打包每次 Run 的成果。", "Register, validate, preview, and safely bundle run artifacts.",
+        PARTIAL, ["run_orchestration"], ["artifact index", "artifact validation", "artifact bundle"],
+        "python -m hydrolite artifacts list", "成果中心",
+        ["大型 DSS/HDF5/NetCDF 仅展示元数据；bundle 排除敏感内容。"], ["run_orchestration"], "轻量成果索引和质量验证 MVP。",
+    ),
+    WorkflowStage(
+        "deployment_readiness", "部署就绪度", "Deployment readiness",
+        "诊断本地启动、Streamlit Cloud 降级、权限和入口。", "Diagnose local launch, Streamlit Cloud fallback, permissions, and entrypoint.",
+        PARTIAL, ["application_runtime"], ["deployment diagnosis"], "python -m hydrolite runtime diagnose", "系统与环境",
+        ["云端禁止本地 QGIS、HEC-HMS 和大型下载。"], ["application_runtime"], "本地启动/停止脚本和云端门禁 MVP。",
     ),
     WorkflowStage(
         "data_templates",

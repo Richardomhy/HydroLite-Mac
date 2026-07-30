@@ -615,6 +615,56 @@ def build_parser() -> argparse.ArgumentParser:
         child = hms_subparsers.add_parser(command, help=help_text)
         child.add_argument("output_dir")
 
+    runtime_parser = subparsers.add_parser("runtime", help="Production runtime operations.")
+    runtime_sub = runtime_parser.add_subparsers(dest="runtime_command", required=True)
+    for command in ("init", "status", "diagnose", "database", "processes", "recover"):
+        runtime_sub.add_parser(command)
+    runtime_cleanup = runtime_sub.add_parser("cleanup")
+    runtime_cleanup_mode = runtime_cleanup.add_mutually_exclusive_group()
+    runtime_cleanup_mode.add_argument("--dry-run", action="store_true")
+    runtime_cleanup_mode.add_argument("--execute", action="store_true")
+
+    projects_parser = subparsers.add_parser("projects", help="Registered project operations.")
+    projects_sub = projects_parser.add_subparsers(dest="projects_command", required=True)
+    for command in ("register", "import"):
+        child = projects_sub.add_parser(command); child.add_argument("path")
+    projects_sub.add_parser("list")
+    for command in ("inspect", "readiness", "snapshot", "archive"):
+        child = projects_sub.add_parser(command); child.add_argument("project_id")
+
+    runs_parser = subparsers.add_parser("runs", help="Run planning and execution.")
+    runs_sub = runs_parser.add_subparsers(dest="runs_command", required=True)
+    for command in ("plan", "create"):
+        child = runs_sub.add_parser(command); child.add_argument("project_id"); child.add_argument("workflow_id")
+    runs_sub.add_parser("list")
+    for command in ("start", "inspect", "progress", "cancel", "retry", "validate", "report"):
+        child = runs_sub.add_parser(command); child.add_argument("run_id")
+    retry_stage = runs_sub.add_parser("retry-stage"); retry_stage.add_argument("run_id"); retry_stage.add_argument("stage_id")
+
+    tasks_parser = subparsers.add_parser("tasks", help="Local task queue operations.")
+    tasks_sub = tasks_parser.add_subparsers(dest="tasks_command", required=True)
+    for command in ("list", "queue", "run-once", "run-until-empty"):
+        tasks_sub.add_parser(command)
+    for command in ("inspect", "cancel", "retry", "logs"):
+        child = tasks_sub.add_parser(command); child.add_argument("task_id")
+
+    artifacts_parser = subparsers.add_parser("artifacts", help="Run artifact operations.")
+    artifacts_sub = artifacts_parser.add_subparsers(dest="artifacts_command", required=True)
+    artifacts_sub.add_parser("list")
+    for command in ("run", "validate", "bundle"):
+        child = artifacts_sub.add_parser(command); child.add_argument("run_id")
+    inspect_artifact = artifacts_sub.add_parser("inspect"); inspect_artifact.add_argument("artifact_id")
+    verify_bundle = artifacts_sub.add_parser("verify-bundle"); verify_bundle.add_argument("bundle")
+
+    environment_parser = subparsers.add_parser("environment", help="Capture or compare environments.")
+    environment_sub = environment_parser.add_subparsers(dest="environment_command", required=True)
+    environment_sub.add_parser("capture")
+    environment_compare = environment_sub.add_parser("compare"); environment_compare.add_argument("left"); environment_compare.add_argument("right")
+
+    settings_parser = subparsers.add_parser("app-settings", help="Show and validate safe local settings.")
+    settings_sub = settings_parser.add_subparsers(dest="settings_command", required=True)
+    settings_sub.add_parser("show"); settings_sub.add_parser("validate")
+
     return parser
 
 
@@ -676,6 +726,103 @@ def main(argv: list[str] | None = None) -> int:
         print(f"milestones: {root / 'docs' / 'milestones_v0.7.0.md'}")
         print(f"issue_backlog: {root / 'docs' / 'issue_backlog_v0.7.0.md'}")
         return 0
+    if args.command == "runtime":
+        from hydrolite.deployment import build_deployment_manifest, write_deployment_report
+        from hydrolite.process_manager import cleanup_orphaned_runtime_processes, list_hydrolite_processes
+        from hydrolite.runtime_db import get_database_version, initialize_runtime_database, list_project_records, list_run_records, list_task_records
+        from hydrolite.runtime_paths import ensure_runtime_directories, get_runtime_db_path, get_runtime_root
+        from hydrolite.runtime_recovery import recover_all_runtime
+        if args.runtime_command == "init":
+            ensure_runtime_directories(); path = initialize_runtime_database()
+            print(json.dumps({"status": "passed", "database": str(path), "schema_version": get_database_version()}, indent=2)); return 0
+        if args.runtime_command == "status":
+            initialize_runtime_database()
+            print(json.dumps({"status": "passed", "runtime_root": str(get_runtime_root()), "database": str(get_runtime_db_path()), "projects": len(list_project_records()), "runs": len(list_run_records()), "tasks": len(list_task_records())}, indent=2)); return 0
+        if args.runtime_command == "diagnose":
+            result = build_deployment_manifest(); paths = write_deployment_report(get_runtime_root() / "reports", result)
+            print(json.dumps({"status": "passed", "outputs": {key: str(value) for key, value in paths.items()}}, indent=2)); return 0
+        if args.runtime_command == "database":
+            print(json.dumps({"status": "passed", "path": str(initialize_runtime_database()), "schema_version": get_database_version()}, indent=2)); return 0
+        if args.runtime_command == "processes":
+            print(json.dumps({"managed_processes": list_hydrolite_processes()}, indent=2)); return 0
+        if args.runtime_command == "recover":
+            print(json.dumps(recover_all_runtime(), indent=2, ensure_ascii=False)); return 0
+        root = get_runtime_root()
+        candidates = [path for name in ("temp", "cache") for path in root.glob(f"runs/*/{name}/*")]
+        if args.execute:
+            import shutil
+            for path in candidates:
+                shutil.rmtree(path) if path.is_dir() else path.unlink()
+        print(json.dumps({"status": "executed" if args.execute else "dry_run", "candidates": [str(path) for path in candidates], "orphan_check": cleanup_orphaned_runtime_processes(root)}, indent=2)); return 0
+    if args.command == "projects":
+        from hydrolite.project_service import archive_project, import_existing_project, list_recent_projects, open_project, register_workspace_as_project, update_project_readiness, create_project_snapshot
+        from hydrolite.runtime_paths import get_project_runtime_dir
+        if args.projects_command == "register": result = register_workspace_as_project(args.path)
+        elif args.projects_command == "import": result = import_existing_project(args.path)
+        elif args.projects_command == "list": result = list_recent_projects()
+        elif args.projects_command == "inspect": result = open_project(args.project_id)
+        elif args.projects_command == "readiness": result = update_project_readiness(args.project_id)
+        elif args.projects_command == "archive": result = archive_project(args.project_id)
+        else:
+            result = {"project_id": args.project_id, "snapshot": str(create_project_snapshot(args.project_id, get_project_runtime_dir(args.project_id) / "snapshots"))}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "runs":
+        from hydrolite.run_manager import calculate_run_progress, cancel_run, create_run, inspect_run, retry_failed_run, retry_from_stage, start_run, validate_run, write_run_reports
+        from hydrolite.run_planner import build_run_plan
+        from hydrolite.runtime_db import list_run_records
+        if args.runs_command == "plan": result = build_run_plan(args.project_id, args.workflow_id)
+        elif args.runs_command == "create": result = create_run(args.project_id, args.workflow_id)
+        elif args.runs_command == "list": result = list_run_records()
+        elif args.runs_command == "start": result = start_run(args.run_id)
+        elif args.runs_command == "inspect": result = inspect_run(args.run_id)
+        elif args.runs_command == "progress": result = calculate_run_progress(args.run_id)
+        elif args.runs_command == "cancel": result = cancel_run(args.run_id)
+        elif args.runs_command == "retry": result = retry_failed_run(args.run_id)
+        elif args.runs_command == "retry-stage": result = retry_from_stage(args.run_id, args.stage_id)
+        elif args.runs_command == "validate": result = validate_run(args.run_id)
+        else: result = {key: str(value) for key, value in write_run_reports(args.run_id).items()}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if not isinstance(result, dict) or result.get("status") != "failed" else 1
+    if args.command == "tasks":
+        from hydrolite.runtime_db import get_task_record, list_task_records
+        from hydrolite.runtime_logging import read_task_log
+        from hydrolite.task_engine import cancel_task, retry_task
+        from hydrolite.task_queue import get_queue_status, run_queue_once, run_queue_until_empty
+        if args.tasks_command == "list": result = list_task_records()
+        elif args.tasks_command == "queue": result = get_queue_status()
+        elif args.tasks_command == "run-once": result = run_queue_once()
+        elif args.tasks_command == "run-until-empty": result = run_queue_until_empty()
+        elif args.tasks_command == "inspect": result = get_task_record(args.task_id)
+        elif args.tasks_command == "cancel": result = cancel_task(args.task_id)
+        elif args.tasks_command == "retry": result = retry_task(args.task_id)
+        else: result = read_task_log(args.task_id)
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "artifacts":
+        from hydrolite.artifact_store import create_artifact_bundle, discover_run_artifacts, preview_artifact, search_artifacts, verify_artifact_bundle
+        from hydrolite.artifact_validation import validate_run_artifacts, write_artifact_validation_report
+        from hydrolite.runtime_db import list_artifact_records
+        from hydrolite.runtime_paths import get_run_dir
+        if args.artifacts_command == "list": result = list_artifact_records()
+        elif args.artifacts_command == "run": result = discover_run_artifacts(args.run_id)
+        elif args.artifacts_command == "inspect":
+            rows = [row for row in list_artifact_records() if row["artifact_id"] == args.artifact_id]
+            result = {"artifact": rows[0], "preview": preview_artifact(rows[0]["path"])} if rows else {"status": "missing"}
+        elif args.artifacts_command == "validate":
+            result = validate_run_artifacts(args.run_id); result["outputs"] = {key: str(value) for key, value in write_artifact_validation_report(get_run_dir(args.run_id) / "reports", result).items()}
+        elif args.artifacts_command == "bundle":
+            path = create_artifact_bundle(args.run_id, get_run_dir(args.run_id) / "reports"); result = {"status": "passed", "bundle": str(path)}
+        else: result = verify_artifact_bundle(args.bundle)
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if not isinstance(result, dict) or result.get("status") != "failed" else 1
+    if args.command == "environment":
+        from hydrolite.environment_capture import capture_environment, compare_environment_snapshots, write_environment_snapshot
+        from hydrolite.runtime_paths import get_runtime_root
+        if args.environment_command == "capture":
+            result = capture_environment(); result["outputs"] = {key: str(value) for key, value in write_environment_snapshot(get_runtime_root() / "environments" / result["environment_id"], result).items()}
+        else: result = compare_environment_snapshots(args.left, args.right)
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "app-settings":
+        from hydrolite.app_settings import load_settings, validate_settings
+        settings = load_settings()
+        print(json.dumps(settings if args.settings_command == "show" else validate_settings(settings), indent=2, ensure_ascii=False)); return 0
     if args.command == "gee":
         if args.gee_command == "diagnose":
             diagnosis = build_gee_diagnosis()

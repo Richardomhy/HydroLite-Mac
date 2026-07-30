@@ -1,0 +1,7 @@
+recipe_id: data_preparation
+stages:
+  - environment_capture
+  - workspace_validation
+  - demo_optional_probe
+  - reporting
+synthetic_demo: true

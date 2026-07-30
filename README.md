@@ -405,6 +405,18 @@ python -m hydrolite templates validate templates/data/examples/
 
 See `docs/data_templates.md`.
 
+## Production Runtime MVP
+
+HydroLite Studio now includes a partial production operations center: registered projects, SQLite-backed Runs and Tasks, timeout/cancellation, failure recovery, artifact indexing, environment snapshots, and explicit local/cloud modes.
+
+```bash
+python -m hydrolite runtime init
+python -m hydrolite projects register data_demo/workspaces/demo_real_project
+python -m hydrolite runs plan <project_id> data_preparation
+```
+
+Use the Streamlit pages `项目中心`, `运行中心`, `任务中心`, `成果中心`, and `系统与环境`. See [operations_user_guide_zh.md](docs/operations_user_guide_zh.md).
+
 ## Raw Data Safety
 
 `data_raw/` is reserved for original raw data. HydroLite should not modify or delete files under `data_raw/`. Demo inputs live in `data_demo/`, and generated outputs are written under `output/`.

@@ -2,6 +2,14 @@ workflow_name: full_modeling_workflow
 description: Full v0.7.x target chain from data templates to reports and user manuals.
 dry_run_default: true
 stages:
+  - stage_id: application_runtime
+    enabled: true
+    status: partial
+    notes: Initialize the local SQLite runtime and environment gates.
+  - stage_id: project_operations
+    enabled: true
+    status: partial
+    notes: Register workspaces without deleting or moving project data.
   - stage_id: workspace
     enabled: true
     status: available
@@ -22,6 +30,10 @@ stages:
     enabled: true
     status: partial
     notes: Build inputs only from standardized or derived data.
+  - stage_id: run_orchestration
+    enabled: true
+    status: partial
+    notes: Convert stages to timeout-bounded tasks with logs and recovery records.
   - stage_id: data_templates
     enabled: true
     status: available
@@ -98,6 +110,10 @@ stages:
     enabled: true
     status: available
     notes: Existing scenario comparison.
+  - stage_id: artifact_management
+    enabled: true
+    status: partial
+    notes: Index, validate, preview, and safely bundle run artifacts.
   - stage_id: report_export
     enabled: true
     status: available
@@ -106,3 +122,7 @@ stages:
     enabled: false
     status: planned
     notes: Planned Chinese/English manual export.
+  - stage_id: deployment_readiness
+    enabled: true
+    status: partial
+    notes: Validate local launch and Streamlit Cloud degradation gates.
