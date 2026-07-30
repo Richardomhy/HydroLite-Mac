@@ -8,7 +8,7 @@ test -d "$APP"
 case "$MODE" in
   ad_hoc) IDENTITY="-"; OPTIONS=(--timestamp=none) ;;
   developer_id)
-    : "${HYDROLITE_CODESIGN_IDENTITY:?credentials_required: set HYDROLITE_CODESIGN_IDENTITY}"
+    [[ -n "${HYDROLITE_CODESIGN_IDENTITY:-}" ]] || { echo "credentials_required: set HYDROLITE_CODESIGN_IDENTITY"; exit 78; }
     IDENTITY="$HYDROLITE_CODESIGN_IDENTITY"
     security find-identity -v -p codesigning | grep -F "$IDENTITY" >/dev/null || { echo "credentials_required: identity not found"; exit 78; }
     OPTIONS=(--timestamp --options runtime)

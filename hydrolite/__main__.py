@@ -213,6 +213,7 @@ from hydrolite.workflow_engine import (
     summarize_workflow_outputs,
     validate_workflow_config,
 )
+from hydrolite.drought_cli import register_drought_cli, run_drought_cli
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -707,6 +708,7 @@ def build_parser() -> argparse.ArgumentParser:
         child.add_argument("project")
         child.add_argument("event_id")
 
+    register_drought_cli(subparsers)
     return parser
 
 
@@ -768,6 +770,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"milestones: {root / 'docs' / 'milestones_v0.7.0.md'}")
         print(f"issue_backlog: {root / 'docs' / 'issue_backlog_v0.7.0.md'}")
         return 0
+    if args.command in {"continuous", "drought"}:
+        return run_drought_cli(args)
     if args.command == "desktop":
         from hydrolite.desktop.commands import run_desktop_command
 

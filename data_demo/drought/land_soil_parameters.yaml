@@ -1,0 +1,11 @@
+synthetic_demo: true
+parameter_source: synthetic_demo_default
+soil_depth_mm: 1000
+field_capacity: 0.3
+wilting_point: 0.12
+saturation: 0.45
+saturated_hydraulic_conductivity: 45
+percolation_coefficient: 0.03
+interflow_coefficient: 0.02
+root_depth_mm: 600
+initial_soil_moisture: 0.27

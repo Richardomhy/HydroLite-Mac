@@ -34,6 +34,7 @@ def test_export_report_collects_data_center_sections(tmp_path: Path):
     create_project(project_dir)
     data = collect_project_report_data(project_dir)
     assert {"data_center_report_text", "data_quality_summary", "data_readiness_summary", "connector_status", "lineage_summary"} <= data.keys()
+    assert {"continuous_balance", "drought_indices", "drought_monitoring", "drought_forecast"} <= data.keys()
 
 
 def test_project_report_generates_core_formats(tmp_path: Path):

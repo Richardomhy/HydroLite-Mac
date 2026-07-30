@@ -1,0 +1,2 @@
+event_id,start,end,duration,minimum_index,mean_index,cumulative_deficit,dominant_drought_type,data_quality
+DROUGHT-001,2024-01-01,2024-03-31,3,-1.5,-1.2,3.6,meteorological,ready

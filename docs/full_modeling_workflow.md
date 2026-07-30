@@ -1,5 +1,11 @@
 # HydroLite Studio v0.7.x Full Modeling Workflow
 
+连续干旱链路新增为：
+
+`continuous_hydrology -> evapotranspiration -> soil_water_balance -> groundwater_baseflow -> drought_indices -> drought_event_catalog -> drought_monitoring -> drought_scenarios -> drought_forecast -> drought_data_assimilation -> drought_model_validation`
+
+11 个阶段均为 `partial`。它们支持 20 年 synthetic Demo 和真实数据接口，但不是业务化预警。
+
 新增链路：`event_catalog -> observation_quality_control -> observation_mapping -> event_split -> multi_event_hindcast -> multi_event_calibration -> data_assimilation -> lead_time_validation -> model_validation`。九个阶段当前均为 `partial`。
 
 macOS 桌面壳只改变发行和生命周期管理，不改变模型算法或结果。`desktop_build`、`desktop_signing`、`desktop_packaging`、`desktop_notarization`、`desktop_update_readiness` 均保持 `partial`。
@@ -60,7 +66,7 @@ flowchart LR
 - 专业级 DEM 流域划分和真实出口点处理。
 - 已验证可运行的 HEC-HMS 项目语法、稳定真实计算和 DSS 时间序列读取。
 - 洪水预测。
-- 干旱预测。
+- 干旱预测的真实项目验证、正式季节预报订正与业务预警。
 - 参数率定与敏感性分析。
 - 中英文用户手册统一导出。
 

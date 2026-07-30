@@ -1,0 +1,2 @@
+date,reservoir_id,inflow_cms,release_cms,storage_m3,stage_m,quality_status,source
+2025-01-01,R1,1.2,1.0,2000000,92.0,ready,user

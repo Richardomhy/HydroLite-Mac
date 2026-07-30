@@ -21,6 +21,18 @@ def render(context) -> None:
         metrics[2].metric("同化状态", "available" if (DEFAULT_OUTPUT / "assimilation/assimilation_metrics.xlsx").exists() else "not_run")
     except Exception:
         pass
+    try:
+        import json
+        from hydrolite.drought_workflow import DEFAULT_ROOT as DROUGHT_OUTPUT
+        manifest = json.loads((DROUGHT_OUTPUT / "continuous/continuous_model_manifest.json").read_text(encoding="utf-8")) if (DROUGHT_OUTPUT / "continuous/continuous_model_manifest.json").exists() else {}
+        drought = json.loads((DROUGHT_OUTPUT / "monitoring/current_drought_status.json").read_text(encoding="utf-8")) if (DROUGHT_OUTPUT / "monitoring/current_drought_status.json").exists() else {}
+        metrics = st.columns(4)
+        metrics[0].metric("连续数据年数", round(manifest.get("record_days", 0) / 365.25, 1))
+        metrics[1].metric("连续模型", manifest.get("water_balance", {}).get("status", "not_run"))
+        metrics[2].metric("当前干旱", drought.get("class", "not_run"))
+        metrics[3].metric("最近干旱 Run", drought.get("analysis_date", "-"))
+    except Exception:
+        pass
     path = st.text_input("工作区或项目路径", value=str(context.project_dir))
     left, right = st.columns(2)
     if left.button("注册工作区"):

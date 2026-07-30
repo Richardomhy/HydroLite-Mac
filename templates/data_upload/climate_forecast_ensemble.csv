@@ -1,0 +1,2 @@
+issue_time,valid_start,valid_end,lead_month,member_id,variable,value,unit,subbasin_id,source,forecast_system,initialization_time,scenario_type,bias_correction,quality_status
+2026-01-01T00:00:00Z,2026-02-01,2026-02-28,1,demo_member_01,precipitation,100,mm,SB1,synthetic_demo,template_only,2026-01-01T00:00:00Z,synthetic_demo,none,synthetic_demo

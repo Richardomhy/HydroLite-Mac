@@ -11,3 +11,5 @@ def test_requirement_matrix_lists_upload_retrieval_and_missing(tmp_path: Path):
     assert not matrix.empty
     assert not find_missing_required_datasets(matrix).empty
     assert not find_auto_retrievable_datasets(matrix).empty
+    drought = build_project_data_requirement_matrix("drought_forecast", root)
+    assert {"daily_meteorology", "climate_forecast_ensemble"} <= set(drought["dataset_type"])

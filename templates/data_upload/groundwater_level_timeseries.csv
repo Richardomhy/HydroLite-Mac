@@ -1,0 +1,2 @@
+date,station_id,subbasin_id,groundwater_level_m,quality_status,source
+2025-01-01,GW1,SB1,12.3,ready,user

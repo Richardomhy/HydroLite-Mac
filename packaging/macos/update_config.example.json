@@ -1,6 +1,7 @@
 {
-  "sparkle_integrated": false,
-  "feed_url": "",
+  "sparkle_integrated": true,
+  "feed_url": "https://github.com/Richardomhy/HydroLite-Mac/releases/latest/download/appcast.xml",
   "public_key": "",
+  "status": "framework_integrated_signing_key_missing",
   "download_page": "https://github.com/Richardomhy/HydroLite-Mac/releases"
 }

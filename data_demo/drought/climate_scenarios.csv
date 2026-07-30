@@ -1,0 +1,9 @@
+scenario_id,scenario_type,precipitation_scale,temperature_offset_c,pet_scale
+baseline,synthetic_demo,1.0,0.0,1.0
+precip_80,user_scenario,0.8,0.0,1.0
+precip_60,user_scenario,0.6,0.0,1.0
+temperature_plus_1,user_scenario,1.0,1.0,1.0
+temperature_plus_2,user_scenario,1.0,2.0,1.0
+pet_plus_15,user_scenario,1.0,0.0,1.15
+delayed_rainfall,user_scenario,1.0,0.0,1.0
+dry_historical_analogue,synthetic_demo,0.5,1.0,1.1

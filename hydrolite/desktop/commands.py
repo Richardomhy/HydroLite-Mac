@@ -99,7 +99,7 @@ def write_release_reports(validate: bool = False) -> int:
         "developer_id_signed": "credentials_required",
         "notarized_distribution": "credentials_required",
         "security_status": security["status"],
-        "update_readiness": "framework_ready_configuration_missing",
+        "update_readiness": inspect_update_status(ROOT / "packaging" / "macos" / "update_config.example.json")["update_readiness"],
     }
     for language, title in (("zh", "macOS 发行报告"), ("en", "macOS Release Report")):
         path = OUTPUT / f"macos_release_report_{language}.md"

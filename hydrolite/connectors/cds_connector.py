@@ -19,7 +19,7 @@ class CdsConnector(DataConnector):
         return {"status": "detected" if (Path.home() / ".cdsapirc").exists() else "not_authenticated", "credentials_redacted": True}
 
     def list_supported_datasets(self):
-        return ["ERA5", "ERA5-Land"]
+        return ["ERA5", "ERA5-Land", "seasonal_forecast"]
 
     def search(self, config):
         self.validate_bounds(config)

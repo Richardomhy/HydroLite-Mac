@@ -6,6 +6,8 @@ def test_connectors_degrade_without_credentials_and_do_not_download():
     assert all(row["download_execute_default"] is False for row in rows)
     assert get_connector("earthdata").download({}, execute=False)["status"] == "dry_run"
     assert get_connector("cds").detect_authentication().get("credentials_redacted") is True
+    assert "seasonal_forecast" in get_connector("cds").list_supported_datasets()
+    assert {"GRACE", "GRACE-FO"} <= set(get_connector("earthdata").list_supported_datasets())
 
 
 def test_connector_bbox_date_and_stac_whitelist_gates():

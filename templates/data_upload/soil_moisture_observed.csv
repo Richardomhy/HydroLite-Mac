@@ -1,0 +1,2 @@
+date,subbasin_id,soil_moisture_fraction,depth_cm,quality_status,source
+2025-01-01,SB1,0.28,20,ready,user

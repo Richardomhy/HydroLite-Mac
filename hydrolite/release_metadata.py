@@ -34,7 +34,7 @@ def build_release_manifest(**overrides) -> dict:
         "architecture": "arm64", "distribution_level": "local_ad_hoc_app",
         "code_signing": {"mode": "ad_hoc", "developer_id": False},
         "notarization": {"status": "credentials_required"},
-        "update_readiness": "framework_ready_configuration_missing",
+        "update_readiness": "framework_integrated_signing_key_missing",
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     manifest.update(overrides)

@@ -1,0 +1,15 @@
+synthetic_demo: true
+baseline_period:
+- '2000-01-01'
+- '2014-12-31'
+scales_months:
+- 1
+- 3
+- 6
+- 12
+- 24
+distributions:
+  SPI: gamma
+  SPEI: normal
+  SSI: gamma
+classification_source: diagnostic_default_thresholds

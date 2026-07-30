@@ -98,3 +98,77 @@ def route_reaches(
 
     result["outflow_cms"] = current
     return result
+
+
+def route_continuous_daily(
+    inflow_m3: float,
+    state: dict[str, float] | None = None,
+    method: str = "linear_reservoir",
+    *,
+    k_days: float = 2.0,
+    x: float = 0.2,
+    reach_id: str = "continuous_reach",
+) -> dict[str, float | str]:
+    """Advance a reach by one day without draining its end-of-day storage."""
+    if inflow_m3 < 0:
+        raise ValueError("continuous reach inflow_m3 must be non-negative")
+    storage0 = max(float((state or {}).get("channel_storage_m3", 0.0)), 0.0)
+    available = storage0 + float(inflow_m3)
+    if method == "pass_through":
+        outflow = float(inflow_m3)
+        storage1 = storage0
+        stability = "diagnostic_pass_through"
+    elif method == "linear_reservoir":
+        if k_days <= 0:
+            raise ValueError(f"reach_id={reach_id}: k_days must be > 0")
+        fraction = 1.0 - math.exp(-1.0 / float(k_days))
+        outflow = available * fraction
+        storage1 = available - outflow
+        stability = "passed"
+    elif method == "Muskingum":
+        validate_muskingum_parameters(reach_id, float(k_days) * 24.0, float(x), 24.0)
+        # A one-step Muskingum reach needs the preceding inflow/outflow. Storage
+        # is retained explicitly so the daily ledger remains conservative.
+        previous_inflow = float((state or {}).get("previous_inflow_m3", inflow_m3))
+        previous_outflow = float((state or {}).get("previous_outflow_m3", min(available, inflow_m3)))
+        denom = k_days * (1 - x) + 0.5
+        c0 = (-k_days * x + 0.5) / denom
+        c1 = (k_days * x + 0.5) / denom
+        c2 = (k_days * (1 - x) - 0.5) / denom
+        requested = max(c0 * inflow_m3 + c1 * previous_inflow + c2 * previous_outflow, 0.0)
+        outflow = min(requested, available)
+        storage1 = available - outflow
+        stability = "passed"
+    else:
+        raise ValueError(f"Unsupported continuous routing method: {method}")
+    residual = inflow_m3 - outflow - (storage1 - storage0)
+    return {
+        "reach_id": reach_id,
+        "method": method,
+        "inflow_m3": float(inflow_m3),
+        "outflow_m3": float(outflow),
+        "initial_storage_m3": storage0,
+        "final_storage_m3": float(storage1),
+        "residual_m3": float(residual),
+        "stability": stability,
+        "previous_inflow_m3": float(inflow_m3),
+        "previous_outflow_m3": float(outflow),
+    }
+
+
+def route_continuous_series(
+    inflow_m3: np.ndarray | pd.Series,
+    method: str = "linear_reservoir",
+    **parameters,
+) -> pd.DataFrame:
+    state: dict[str, float] = {"channel_storage_m3": float(parameters.pop("initial_storage_m3", 0.0))}
+    rows = []
+    for value in np.asarray(inflow_m3, dtype=float):
+        row = route_continuous_daily(float(value), state, method, **parameters)
+        rows.append(row)
+        state = {
+            "channel_storage_m3": float(row["final_storage_m3"]),
+            "previous_inflow_m3": float(row["previous_inflow_m3"]),
+            "previous_outflow_m3": float(row["previous_outflow_m3"]),
+        }
+    return pd.DataFrame(rows)

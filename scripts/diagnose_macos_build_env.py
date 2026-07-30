@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 import importlib.metadata
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -15,8 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "output" / "macos_packaging"
 
 
-def _run(command: list[str]) -> str:
-    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
+def _run(command: list[str], env: dict[str, str] | None = None) -> str:
+    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30, env=env)
     return (result.stdout or result.stderr).strip()
 
 
@@ -25,6 +26,10 @@ def main() -> int:
     envs = json.loads(_run(["conda", "env", "list", "--json"]) or '{"envs": []}') if shutil.which("conda") else {"envs": []}
     env_path = next((item for item in envs["envs"] if item.endswith("/hydrolite-build")), "")
     python = str(Path(env_path) / "bin" / "python") if env_path else ""
+    developer_dir = os.getenv("HYDROLITE_XCODE_DEVELOPER_DIR", "")
+    if not developer_dir and Path("/Applications/Xcode.app/Contents/Developer").is_dir():
+        developer_dir = "/Applications/Xcode.app/Contents/Developer"
+    xcode_env = {**os.environ, "DEVELOPER_DIR": developer_dir} if developer_dir else None
     payload = {
         "status": "available" if python and Path(python).exists() else "missing",
         "environment_name": "hydrolite-build",
@@ -36,7 +41,8 @@ def main() -> int:
         "conda": _run(["conda", "--version"]) if shutil.which("conda") else "missing",
         "swift": _run(["swift", "--version"]) if shutil.which("swift") else "missing",
         "xcode_select": _run(["xcode-select", "-p"]) if shutil.which("xcode-select") else "missing",
-        "xcode": _run(["xcodebuild", "-version"]) if shutil.which("xcodebuild") else "Command Line Tools only",
+        "developer_dir_used": developer_dir or "active xcode-select",
+        "xcode": _run(["xcodebuild", "-version"], xcode_env) if shutil.which("xcodebuild") else "missing",
         "pyinstaller": "",
         "streamlit": "",
         "generated_at": datetime.now(timezone.utc).isoformat(),

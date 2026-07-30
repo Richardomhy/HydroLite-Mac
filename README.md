@@ -1,5 +1,18 @@
 # HydroLite Studio v0.7.0-dev
 
+## Continuous Hydrology and Drought MVP
+
+v0.7.0-dev now includes a partial daily continuous water-cycle and drought workflow: PET selection, two-layer soil water, conceptual groundwater/baseflow, persistent channel storage, SPI/SPEI/SSI and percentiles, historical events, freshness-aware monitoring, bounded scenario ensembles, 1/3/6/12-month outputs, explicit assimilation adjustments, and optional ML/LSTM readiness gates.
+
+```bash
+bash scripts/create_hydrolite_science_env.sh
+conda run -n hydrolite-science python -m hydrolite continuous run data_demo/drought/continuous_model_config.yaml
+conda run -n hydrolite-science python -m hydrolite drought forecast-demo
+conda run -n hydrolite-science python -m hydrolite drought validate output/drought_model
+```
+
+The 20-year demo is synthetic and verifies the workflow only. Scenario member fractions are not forecast probabilities, modeled groundwater storage is not an observed groundwater level, and diagnostic drought classes are not statutory warnings. See [the Chinese guide](docs/drought_user_guide_zh.md) and [English guide](docs/drought_user_guide_en.md).
+
 ## Historical flood validation
 
 v0.7.0-dev includes a partial multi-event hindcast and data-assimilation workflow: event catalog, observation QC, chronological calibration/validation/test splitting, HydroLite hindcasts, bounded calibration, Nudging/EnKF, lead-time validation, and bilingual reports. Start with [the Chinese guide](docs/hindcast_user_guide_zh.md). Synthetic demo results are not real-project validation.
@@ -32,7 +45,7 @@ v0.7.0-dev also includes partial, synthetic-demo-only reservoir level-pool routi
 
 The flood forecast MVP is available as a bounded synthetic demonstration. Operational use still requires cumulative SCS-CN increment accounting, full routing tails, verified HEC-HMS Reservoir semantics, and real multi-event observations; see `docs/hydrologic_water_balance_audit.md`.
 
-Flood forecasting is now a `partial` scenario/hindcast MVP: six rainfall scenarios can run through the verified HydroLite event model, synthetic-demo reservoir routing, optional ML/LSTM smoke tests, ensemble quantiles, thresholds, charts, and bilingual reports. HEC-HMS event members remain optional-local, HEC-HMS Reservoir remains blocked, and drought forecasting remains planned. See `docs/flood_forecast_mvp.md`.
+Flood forecasting is now a `partial` scenario/hindcast MVP: six rainfall scenarios can run through the verified HydroLite event model, synthetic-demo reservoir routing, optional ML/LSTM smoke tests, ensemble quantiles, thresholds, charts, and bilingual reports. HEC-HMS event members remain optional-local and HEC-HMS Reservoir remains blocked. Drought forecasting is now a separate `partial` continuous-state scenario MVP. See `docs/flood_forecast_mvp.md` and `docs/drought_forecast_mvp.md`.
 
 HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.7.0-dev starts the next development phase: a full modeling workflow engine for data templates, QGIS/GEE preprocessing, HydroLite simulation, future HEC-HMS bridges, SWMM coupling, forecast planning, comparison, reports, and user manuals. The current stable beta remains v0.6.0-beta.1.
 
@@ -76,7 +89,7 @@ Quick demo entry points:
 
 ## v0.7.0 Planning
 
-v0.6.0-beta.1 is the current stable beta. v0.7.0-dev is the active development branch for full workflow orchestration. HEC-HMS, watershed delineation, flood forecasting, drought forecasting, calibration, and user-manual export are staged as planned or partial work until implemented and tested.
+v0.6.0-beta.1 is the current stable beta. v0.7.0-dev is the active development branch for full workflow orchestration. HEC-HMS, watershed delineation, flood forecasting, drought forecasting, calibration, and user-manual export remain partial until real-project validation is complete.
 
 v0.7.0-dev also includes constrained ICESat-2 along-track water-depth diagnostics, synthetic RUSLE annual sheet/rill erosion scenarios, water/soil conservation event comparisons, and a partial watershed-accounting ledger. These are not flood forecasts, full bathymetry, sediment routing, or complete water accounting.
 

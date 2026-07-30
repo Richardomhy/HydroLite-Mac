@@ -1,0 +1,2 @@
+date,subbasin_id,precipitation_mm,temperature_min_c,temperature_max_c,temperature_mean_c,quality_status,source
+2025-01-01,SB1,0.0,12.0,20.0,16.0,ready,user

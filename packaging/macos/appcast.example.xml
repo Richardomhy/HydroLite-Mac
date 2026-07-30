@@ -3,6 +3,6 @@
   <channel>
     <title>HydroLite Studio updates</title>
     <link>https://github.com/Richardomhy/HydroLite-Mac/releases</link>
-    <description>Example only. No update feed is configured.</description>
+    <description>HydroLite Studio signed update feed. Release items are generated only after Developer ID, notarization, and Sparkle EdDSA signing succeed.</description>
   </channel>
 </rss>

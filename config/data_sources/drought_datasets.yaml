@@ -1,0 +1,27 @@
+version: 1
+default_mode: dry_run
+limits:
+  max_bbox_area_deg2: 25
+  max_date_span_days: 10950
+  max_granules: 20
+datasets:
+  gee:
+    precipitation: UCSB-CHG/CHIRPS/DAILY
+    temperature: ECMWF/ERA5_LAND/DAILY_AGGR
+    evapotranspiration: MODIS/061/MOD16A2GF
+    soil_moisture: NASA/SMAP/SPL4SMGP/007
+    vegetation_index: MODIS/061/MOD13Q1
+    land_cover: GOOGLE/DYNAMICWORLD/V1
+    surface_water: JRC/GSW1_4/GlobalSurfaceWater
+  cds:
+    reanalysis: reanalysis-era5-land
+    seasonal_forecast: seasonal-monthly-single-levels
+  earthdata:
+    precipitation: GPM_3IMERGDF
+    soil_moisture: SPL4SMGP
+    vegetation: MOD13Q1
+    terrestrial_water_storage: GRACE_GRGS_L3
+notes:
+  - All connector operations default to dry-run and require bounded bbox, dates, and variables.
+  - GRACE terrestrial water storage anomaly is not shallow groundwater level.
+  - Dataset identifiers are configurable and must be reviewed before real acquisition.

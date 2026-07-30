@@ -1,5 +1,7 @@
 # HydroLite Studio v0.7.0 Roadmap
 
+日尺度连续水文、干旱指标/事件/监测、情景集合、状态同化和可选 ML/LSTM 门禁 MVP 已进入 `partial`。20 年 Demo 为合成数据，真实项目仍需要长期连续观测、预热、独立验证和已发布预报输入。
+
 多事件历史回放与数据同化 MVP 已进入 `partial`：软件链路可用，真实项目等级仍由合格观测事件和独立验证决定，不等于业务预报发布能力。
 
 The macOS desktop packaging MVP now covers an isolated build environment, native SwiftUI/WKWebView shell, ad-hoc App/ZIP/DMG, diagnostics, signing/notarization gates, and secure-update metadata. Developer ID, notarization, a production Sparkle feed, Universal 2, and broad macOS compatibility remain future release work.
@@ -66,6 +68,7 @@ v0.6.0-beta.1 是当前稳定 beta，已经包含项目工作流、数据模板�
 - QGIS 相关功能可在无 QGIS 环境下给出清晰诊断。
 - 流域划分 MVP 在后端不完整时不崩溃，fallback 产物明确标记且通过 HydroLite 数据模板校验。
 - HEC-HMS 不可用时仍可生成项目骨架；运行默认 dry-run，probe/execute 失败时保留报告并优雅降级。
+- 连续模型逐日/累计水量门禁通过；干旱情景与正式预报标签严格分开。
 - 轻量率定输出参数、指标、图表和报告。
 - 报告模板能生成可交付的中文示例报告。
 - `pytest -q`、healthcheck、smoke test 通过。

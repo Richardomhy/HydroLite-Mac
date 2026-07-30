@@ -26,7 +26,11 @@ def inspect_update_status(path: str | Path | None = None) -> dict:
     feed = str(config.get("feed_url") or "")
     if feed:
         validate_update_url(feed)
-    readiness = "feed_available" if feed and config.get("public_key") else "framework_ready_configuration_missing"
+    readiness = (
+        "feed_available" if feed and config.get("public_key")
+        else "framework_integrated_signing_key_missing" if feed and config.get("sparkle_integrated")
+        else "framework_ready_configuration_missing"
+    )
     return {
         "status": "passed",
         "sparkle_integrated": bool(config.get("sparkle_integrated")),

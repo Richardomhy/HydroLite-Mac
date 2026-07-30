@@ -11,6 +11,18 @@ from hydrolite.runtime_paths import get_run_dir
 
 def render(context) -> None:
     st.header("成果中心")
+    drought_root = Path(__file__).resolve().parents[3] / "output" / "drought_model"
+    drought_assets = [
+        path for relative in (
+            "continuous/daily_water_balance.csv", "continuous/daily_states.csv",
+            "indices/drought_indices_monthly.csv", "indices/drought_event_catalog.xlsx",
+            "forecast/drought_forecast_members.csv", "assimilation/assimilation_adjustments.csv",
+            "summary/drought_model_report_zh.md", "summary/drought_model_bundle.zip",
+        ) if (path := drought_root / relative).exists()
+    ]
+    if drought_assets:
+        with st.expander("连续水文与干旱成果", expanded=False):
+            st.dataframe([{"artifact": path.name, "path": str(path), "size_bytes": path.stat().st_size} for path in drought_assets], use_container_width=True)
     runs = list_run_records()
     project_filter = st.text_input("项目 ID 筛选")
     run_filter = st.selectbox("Run", [""] + [row["run_id"] for row in runs])

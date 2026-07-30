@@ -277,3 +277,59 @@ def write_reservoir_comparison_report(output_dir: str | Path, hydrolite_result: 
         for file in root.glob("*"):
             if file.is_file() and file.suffix.lower() not in {".dss", ".h5", ".hdf5"}: z.write(file,file.name)
     return {"aligned":root/"aligned_reservoir_timeseries.csv","metrics":root/"reservoir_metrics.xlsx","report":report,"bundle":bundle}
+
+
+def route_reservoir_daily(
+    inflow_m3: float,
+    state: dict[str, float] | None,
+    config: dict[str, Any],
+    observation: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    """Advance an optional conceptual reservoir for one day."""
+    mode = str(config.get("mode", "no_reservoir"))
+    storage0 = max(float((state or {}).get("reservoir_storage_m3", config.get("initial_storage_m3", 0.0))), 0.0)
+    if inflow_m3 < 0:
+        raise ValueError("reservoir inflow_m3 must be non-negative")
+    evaporation = max(float(config.get("evaporation_mm", 0.0)), 0.0) / 1000.0 * max(float(config.get("surface_area_m2", 0.0)), 0.0)
+    seepage = max(float(config.get("seepage_fraction_per_day", 0.0)), 0.0) * storage0
+    available = max(storage0 + float(inflow_m3) - evaporation - seepage, 0.0)
+    if mode == "no_reservoir":
+        release, spill, storage1 = float(inflow_m3), 0.0, storage0
+    elif mode == "observed_release":
+        if not observation or observation.get("release_m3") is None:
+            raise ValueError("observed_release mode requires observation.release_m3")
+        release = min(max(float(observation["release_m3"]), 0.0), available)
+        spill = 0.0
+        storage1 = available - release
+    elif mode in {"stage_discharge", "storage_discharge"}:
+        coefficient = max(float(config.get("release_coefficient_per_day", 0.05)), 0.0)
+        release = min(available * coefficient, available)
+        spill = 0.0
+        storage1 = available - release
+    elif mode == "simple_rule_curve":
+        target = max(float(config.get("target_storage_m3", storage0)), 0.0)
+        release = min(max(available - target, float(config.get("minimum_release_m3_day", 0.0))), available)
+        maximum = max(float(config.get("maximum_storage_m3", max(target, storage0))), 0.0)
+        spill = max(available - release - maximum, 0.0)
+        storage1 = available - release - spill
+    else:
+        raise ValueError(f"Unsupported reservoir mode: {mode}")
+    residual = float(inflow_m3) - release - spill - evaporation - seepage - (storage1 - storage0)
+    relation = config.get("storage_stage_relation")
+    stage = None if not relation else float(relation.get("intercept_m", 0.0)) + float(relation.get("slope_m_per_m3", 0.0)) * storage1
+    capacity = float(config.get("maximum_storage_m3", 0.0))
+    percentile = storage1 / capacity * 100 if capacity > 0 else None
+    return {
+        "mode": mode,
+        "inflow_m3": float(inflow_m3),
+        "release_m3": float(release),
+        "spill_m3": float(spill),
+        "evaporation_m3": float(evaporation),
+        "seepage_m3": float(seepage),
+        "initial_storage_m3": storage0,
+        "final_storage_m3": float(storage1),
+        "storage_change_m3": float(storage1 - storage0),
+        "water_balance_residual_m3": float(residual),
+        "stage_m": stage,
+        "storage_percentile": percentile,
+    }

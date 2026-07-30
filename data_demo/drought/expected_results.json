@@ -1,0 +1,9 @@
+{
+  "synthetic_demo": true,
+  "start_date": "2000-01-01",
+  "end_date": "2019-12-31",
+  "record_days": 7305,
+  "subbasin_count": 2,
+  "minimum_drought_events": 3,
+  "truthfulness": "Workflow verification only; not observed climate or operational drought warning."
+}

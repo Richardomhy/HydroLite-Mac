@@ -22,7 +22,7 @@ The unified data-center guides now document required uploads, supported formats,
 
 ## HEC-HMS / 洪水 / 干旱
 
-这些章节在功能未实现前只能标记为 planned，不能写成可用教程。
+HEC-HMS、洪水预测和干旱预测均为 partial。连续水文与干旱的中英文指南已经提供，但必须保留 synthetic_demo、scenario/forecast、基线期、时效、水量门禁和非业务预警边界。
 
 ## 导出形式
 

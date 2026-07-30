@@ -1,6 +1,6 @@
 # 平台能力矩阵
 
-Historical Flood Validation 与 Data Assimilation 当前为 `partial`。它们支持合成链路验证和真实观测导入框架，但未达到 operational；`flood_forecast` 保持 `partial`，干旱与水质保持 `planned`。
+Historical Flood Validation 与 Data Assimilation 当前为 `partial`。它们支持合成链路验证和真实观测导入框架，但未达到 operational；`flood_forecast`、`continuous_hydrology`、`drought_monitoring`、`drought_forecast` 和 `drought_data_assimilation` 均为 `partial`，水质保持 `planned`。
 
 | macOS desktop 0.7.0-dev | 状态 |
 |---|---|
@@ -10,7 +10,7 @@ Historical Flood Validation 与 Data Assimilation 当前为 `partial`。它们�
 | Developer ID / 公证 | credentials_required |
 | Sparkle 正式 Feed | configuration missing；手动 manifest fallback |
 
-平台统一使用 available、partial、planned、blocked 和 unavailable_optional 状态。洪水预测在本版本由 planned 提升为 partial；干旱预测和 water_quality 保持 planned；HEC-HMS Reservoir 保持 blocked。
+平台统一使用 available、partial、planned、blocked 和 unavailable_optional 状态。洪水与干旱预测均为受限 partial；water_quality 保持 planned；HEC-HMS Reservoir 保持 blocked。
 
 统一数据中心和外部连接器现为 `partial`：小型上传、字段映射、质量、血缘和输入准备可用；大型 GIS、NetCDF/HDF5 和真实平台下载依赖可选本地环境与显式确认。Water quality 仍为 `planned`，仅完成数据接口。
 

@@ -17,3 +17,5 @@ def test_input_builder_uses_standardized_not_raw(tmp_path: Path):
     assert hydrolite["status"] == "ready"
     assert result["validation"]["status"] == "passed"
     assert not any("raw" in Path(path).parts for path in hydrolite["files"].values())
+    drought = next(row for row in result["models"] if row["model_id"] == "continuous_hydrology_drought")
+    assert drought["status"] == "incomplete"

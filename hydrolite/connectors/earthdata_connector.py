@@ -21,7 +21,7 @@ class EarthdataConnector(DataConnector):
         return {"status": "detected" if present else "not_authenticated", "credentials_redacted": True}
 
     def list_supported_datasets(self):
-        return ["ICESat2_ATL03", "ICESat2_ATL13", "ICESat2_ATL24", "GPM", "SMAP", "MODIS", "SRTM", "NASADEM"]
+        return ["ICESat2_ATL03", "ICESat2_ATL13", "ICESat2_ATL24", "GPM", "SMAP", "MODIS", "GRACE", "GRACE-FO", "SRTM", "NASADEM"]
 
     def search(self, config):
         self.validate_bounds(config)

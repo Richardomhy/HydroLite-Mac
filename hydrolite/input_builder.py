@@ -85,6 +85,25 @@ def build_flood_forecast_inputs(workspace_dir: str | Path, output_dir: str | Pat
     return {"model_id": "flood_forecast", "status": "ready_scenario_input", "files": {"rainfall": str(path)}}
 
 
+def build_continuous_drought_inputs(workspace_dir: str | Path, output_dir: str | Path) -> dict[str, Any]:
+    root, output = Path(workspace_dir).resolve(), Path(output_dir).resolve() / "drought"
+    available = _eligible(root)
+    aliases = {
+        "daily_meteorology": "daily_meteorology.csv",
+        "potential_evapotranspiration": "potential_evapotranspiration.csv",
+        "soil_moisture_observed": "observed_soil_moisture.csv",
+        "groundwater_storage": "observed_groundwater.csv",
+        "streamflow_observed": "observed_streamflow.csv",
+        "reservoir_daily_balance": "observed_reservoir.csv",
+        "vegetation_index_timeseries": "vegetation_index_timeseries.csv",
+        "climate_forecast_ensemble": "climate_forecast_ensemble.csv",
+        "drought_scenario": "drought_scenario.csv",
+    }
+    files = {kind: str(_copy_input(available[kind], output / name, root, kind)) for kind, name in aliases.items() if kind in available}
+    missing = [] if "daily_meteorology" in files else ["daily_meteorology"]
+    return {"model_id": "continuous_hydrology_drought", "status": "ready" if not missing else "incomplete", "files": files, "missing": missing}
+
+
 def build_future_water_quality_inputs(workspace_dir: str | Path, output_dir: str | Path) -> dict[str, Any]:
     available = _eligible(workspace_dir)
     missing = [name for name in ("water_quality_observations", "streamflow_observed") if name not in available]
@@ -118,6 +137,7 @@ def build_all_inputs(workspace_dir: str | Path, output_dir: str | Path) -> dict[
         build_rusle_inputs(workspace_dir, output),
         build_reservoir_inputs(workspace_dir, output),
         build_flood_forecast_inputs(workspace_dir, output),
+        build_continuous_drought_inputs(workspace_dir, output),
         build_future_water_quality_inputs(workspace_dir, output),
     ]
     result = {"status": "completed", "created_at": datetime.now(timezone.utc).isoformat(), "workspace_dir": str(Path(workspace_dir).resolve()), "models": models}

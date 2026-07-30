@@ -6,11 +6,19 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [.executable(name: "HydroLiteStudio", targets: ["HydroLiteStudio"])],
     targets: [
+        .binaryTarget(
+            name: "Sparkle",
+            path: ".build/vendor/Sparkle.xcframework"
+        ),
         .executableTarget(
             name: "HydroLiteStudio",
+            dependencies: ["Sparkle"],
             path: ".",
             sources: ["Sources"],
-            resources: [.copy("Resources")]
+            resources: [.copy("Resources")],
+            linkerSettings: [
+                .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])
+            ]
         )
     ]
 )

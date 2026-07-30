@@ -10,6 +10,6 @@ def test_model_and_capability_registries(tmp_path: Path):
     assert get_model("hydrolite_event_model")["status"] == "available"
     assert get_model("hec_hms_reservoir_model")["status"] == "blocked_gate"
     assert get_capability("flood_forecast")["status"] == "partial"
-    assert get_capability("drought_forecast")["status"] == "planned"
+    assert get_capability("drought_forecast")["status"] == "partial"
     assert write_model_registry_report(tmp_path)["xlsx"].exists()
     assert write_capability_registry(tmp_path)["xlsx"].exists()

@@ -9,3 +9,5 @@
 5. 使用 `HydroLite Studio > Quit` 正常退出。
 
 用户数据位于 `~/Library/Application Support/HydroLite Studio/`，日志位于 `~/Library/Logs/HydroLite Studio/`。QGIS、HEC-HMS、GEE 与外部连接器为可选能力，不随 App 内置。0.7.0-dev 为开发通道，ad-hoc 包仅供本机验证。
+
+侧栏“干旱分析与预测”可查看连续水量、PET、土壤水、地下水、SPI/SPEI/SSI、历史事件、当前状态、情景预测和同化成果。本地科学环境使用 `hydrolite-science`；诊断等级不等于法定预警。

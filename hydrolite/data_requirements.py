@@ -15,7 +15,10 @@ _MODEL_REQUIREMENTS = {
     "watershed_delineation": [("dem", True), ("outlet_points", True), ("watershed_boundary", False)],
     "flood_forecast": [("rainfall_forecast", True), ("rainfall_observed", False), ("streamflow_observed", False), ("reservoir_level", False)],
     "multi_event_hindcast": [("rainfall_observed", True), ("streamflow_observed", True), ("flood_event_catalog", True), ("subbasins", True), ("reaches", True), ("water_level_observed", False), ("data_assimilation_observations", False)],
-    "drought_forecast": [("rainfall_observed", True), ("temperature", False), ("streamflow_observed", False)],
+    "continuous_hydrology": [("daily_meteorology", True), ("potential_evapotranspiration", False), ("soil_moisture_observed", False), ("groundwater_storage", False), ("streamflow_observed", False), ("reservoir_daily_balance", False)],
+    "drought_monitoring": [("daily_meteorology", True), ("soil_moisture_observed", False), ("streamflow_observed", False), ("groundwater_storage", False), ("reservoir_daily_balance", False), ("vegetation_index_timeseries", False)],
+    "drought_forecast": [("daily_meteorology", True), ("climate_forecast_ensemble", False), ("drought_scenario", False), ("streamflow_observed", False), ("soil_moisture_observed", False)],
+    "drought_data_assimilation": [("daily_meteorology", True), ("soil_moisture_observed", False), ("streamflow_observed", False), ("groundwater_storage", False), ("reservoir_daily_balance", False)],
     "icesat2": [("waterbody_boundary", True), ("ICESat2_ATL13", False)],
     "rusle": [("dem", True), ("RUSLE_R", True), ("RUSLE_K", True), ("RUSLE_C", True), ("RUSLE_P", True)],
     "sediment_delivery": [("RUSLE_R", True), ("sediment_observations", False)],
@@ -24,7 +27,7 @@ _MODEL_REQUIREMENTS = {
     "watershed_accounting": [("rainfall_observed", True), ("streamflow_observed", False), ("sediment_observations", False)],
     "water_quality": [("water_quality_observations", True), ("pollutant_sources", False), ("streamflow_observed", True)],
 }
-_SYSTEM = {"dem": ["GEE", "Earthdata", "STAC"], "rainfall_forecast": ["GEE", "CDS"], "temperature": ["GEE", "CDS"], "ICESat2_ATL13": ["Earthdata"], "RUSLE_R": ["GEE"], "land_use": ["GEE", "STAC"]}
+_SYSTEM = {"dem": ["GEE", "Earthdata", "STAC"], "rainfall_forecast": ["GEE", "CDS"], "temperature": ["GEE", "CDS"], "daily_meteorology": ["GEE", "CDS", "Earthdata"], "potential_evapotranspiration": ["GEE", "CDS"], "climate_forecast_ensemble": ["CDS"], "soil_moisture_observed": ["GEE", "Earthdata"], "vegetation_index_timeseries": ["GEE", "Earthdata"], "ICESat2_ATL13": ["Earthdata"], "RUSLE_R": ["GEE"], "land_use": ["GEE", "STAC"]}
 
 
 def list_model_data_requirements(model_id: str) -> list[dict[str, Any]]:

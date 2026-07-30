@@ -11,13 +11,13 @@ import pandas as pd
 _GROUPS = {
     "spatial": ["watershed_boundary", "administrative_boundary", "subbasins", "reaches", "river_network", "waterbody_boundary", "reservoir_boundary", "monitoring_points", "pollution_sources", "outlet_points"],
     "terrain": ["dem", "slope", "aspect", "flow_direction", "flow_accumulation", "landform"],
-    "meteorology": ["rainfall_observed", "rainfall_forecast", "rainfall_ensemble", "temperature", "humidity", "wind", "radiation", "pressure", "evapotranspiration", "snow", "meteorological_station_metadata"],
-    "hydrology": ["streamflow_observed", "water_level_observed", "reservoir_level", "reservoir_storage", "reservoir_release", "groundwater_level", "soil_moisture", "baseflow", "rating_curve", "flood_event_catalog", "discharge_rating_curve", "reservoir_operation_observations", "initial_condition_observations", "event_quality_flags", "data_assimilation_observations"],
+    "meteorology": ["rainfall_observed", "rainfall_forecast", "rainfall_ensemble", "temperature", "humidity", "wind", "radiation", "pressure", "evapotranspiration", "snow", "meteorological_station_metadata", "daily_meteorology", "potential_evapotranspiration", "actual_evapotranspiration", "climate_forecast_ensemble", "drought_scenario"],
+    "hydrology": ["streamflow_observed", "water_level_observed", "reservoir_level", "reservoir_storage", "reservoir_release", "groundwater_level", "soil_moisture", "baseflow", "rating_curve", "flood_event_catalog", "discharge_rating_curve", "reservoir_operation_observations", "initial_condition_observations", "event_quality_flags", "data_assimilation_observations", "soil_moisture_observed", "groundwater_storage", "baseflow_observed", "reservoir_daily_balance", "drought_index_observed", "drought_event_catalog"],
     "land_soil": ["land_use", "land_cover", "soil_type", "soil_properties", "curve_number", "imperviousness", "RUSLE_R", "RUSLE_K", "RUSLE_LS", "RUSLE_C", "RUSLE_P"],
     "water_environment": ["water_quality_observations", "pollutant_sources", "point_source_discharge", "nonpoint_source_parameters", "wastewater_outlets", "agricultural_sources", "livestock_sources", "aquaculture_sources", "sediment_observations", "nutrient_observations"],
     "reservoir_channel": ["stage_area_volume", "stage_discharge", "storage_discharge", "cross_sections", "roughness", "gate_operations", "reservoir_rules"],
     "model": ["hydrolite_project", "hec_hms_project", "hec_dss", "swmm_inp", "observed_model_pair", "calibration_parameters"],
-    "remote_sensing": ["ICESat2_ATL03", "ICESat2_ATL13", "ICESat2_ATL24", "satellite_image", "NDVI", "surface_water_extent", "remote_sensing_product"],
+    "remote_sensing": ["ICESat2_ATL03", "ICESat2_ATL13", "ICESat2_ATL24", "satellite_image", "NDVI", "surface_water_extent", "remote_sensing_product", "vegetation_index_timeseries"],
 }
 
 _FIELDS = {
@@ -39,6 +39,19 @@ _FIELDS = {
     "stage_discharge": ["stage_m", "discharge_cms"],
     "water_quality_observations": ["timestamp", "station_id", "concentration_mg_l"],
     "soil_properties": ["soil_id"],
+    "daily_meteorology": ["date", "subbasin_id", "precipitation_mm", "temperature_min_c", "temperature_max_c", "temperature_mean_c", "quality_status", "source"],
+    "potential_evapotranspiration": ["date", "subbasin_id", "potential_et_mm", "quality_status", "source"],
+    "actual_evapotranspiration": ["date", "subbasin_id", "actual_et_mm", "quality_status", "source"],
+    "soil_moisture_observed": ["date", "subbasin_id", "soil_moisture_fraction", "quality_status", "source"],
+    "groundwater_storage": ["date", "subbasin_id", "groundwater_storage_mm", "quality_status", "source"],
+    "groundwater_level": ["date", "station_id", "groundwater_level_m", "quality_status", "source"],
+    "baseflow_observed": ["date", "station_id", "baseflow_cms", "quality_status", "source"],
+    "reservoir_daily_balance": ["date", "reservoir_id", "inflow_cms", "release_cms", "storage_m3", "quality_status", "source"],
+    "vegetation_index_timeseries": ["date", "subbasin_id", "ndvi", "quality_status", "source"],
+    "drought_index_observed": ["date", "subbasin_id", "index_name", "index_value", "quality_status", "source"],
+    "climate_forecast_ensemble": ["issue_time", "valid_start", "valid_end", "lead_month", "member_id", "variable", "value", "unit", "subbasin_id", "source", "forecast_system", "initialization_time", "scenario_type", "bias_correction", "quality_status"],
+    "drought_scenario": ["date", "subbasin_id", "member_id", "scenario_type", "precipitation_mm"],
+    "drought_event_catalog": ["event_id", "start", "end", "duration", "minimum_index", "dominant_drought_type"],
 }
 
 _FORMATS = {

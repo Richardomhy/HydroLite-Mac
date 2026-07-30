@@ -225,6 +225,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     balance_audit_root = repo_root / "output" / "water_balance_audit"
     forecast_root = repo_root / "output" / "flood_forecast"
     hindcast_root = repo_root / "output" / "hindcast_validation"
+    drought_root = repo_root / "output" / "drought_model"
     data_center_root = repo_root / "output" / "data_center"
     runtime_project = None
     runtime_runs = pd.DataFrame()
@@ -262,6 +263,10 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         *sorted((calibration_root / "search" / "charts").glob("*.png")),
         *sorted((calibration_root / "sensitivity" / "charts").glob("*.png")),
         *sorted((forecast_root / "charts").glob("*.png")),
+        *sorted((drought_root / "continuous" / "charts").glob("*.png")),
+        *sorted((drought_root / "indices").glob("*.png")),
+        *sorted((drought_root / "forecast").glob("*.png")),
+        *sorted((drought_root / "assimilation").glob("*.png")),
     ]
     existing_charts = [path for path in charts if path.exists()]
     expected = {
@@ -331,6 +336,14 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "hindcast_assimilation": _safe_read_excel(hindcast_root / "assimilation" / "assimilation_metrics.xlsx"),
         "hindcast_lead_time": _safe_read_excel(hindcast_root / "lead_time" / "lead_time_summary.xlsx"),
         "hindcast_report_text": _read_text(hindcast_root / "summary" / "model_validation_report_zh.md"),
+        "continuous_balance": _safe_read_csv(drought_root / "continuous" / "daily_water_balance.csv"),
+        "continuous_manifest": _read_text(drought_root / "continuous" / "continuous_model_manifest.json"),
+        "drought_indices": _safe_read_csv(drought_root / "indices" / "drought_indices_monthly.csv"),
+        "drought_events": _safe_read_excel(drought_root / "indices" / "drought_event_catalog.xlsx"),
+        "drought_monitoring": _safe_read_excel(drought_root / "monitoring" / "current_drought_status.xlsx", "overview"),
+        "drought_forecast": _safe_read_csv(drought_root / "forecast" / "drought_index_quantiles.csv"),
+        "drought_assimilation": _safe_read_excel(drought_root / "assimilation" / "drought_assimilation_metrics.xlsx"),
+        "drought_report_text": _read_text(drought_root / "summary" / "drought_model_report_zh.md"),
         "data_center_report_text": _read_text(data_center_root / "data_center_report_zh.md"),
         "data_quality_summary": _safe_read_excel(data_center_root / "data_quality_summary.xlsx", "datasets"),
         "data_readiness_summary": _safe_read_excel(data_center_root / "model_data_readiness.xlsx"),
@@ -544,6 +557,24 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "",
         data["hindcast_report_text"] or "unavailable",
         "",
+        "## Continuous Hydrology and Drought",
+        "",
+        data["continuous_manifest"] or "unavailable",
+        "",
+        _df_to_markdown(data["continuous_balance"]),
+        "",
+        _df_to_markdown(data["drought_indices"]),
+        "",
+        _df_to_markdown(data["drought_events"]),
+        "",
+        _df_to_markdown(data["drought_monitoring"]),
+        "",
+        _df_to_markdown(data["drought_forecast"]),
+        "",
+        _df_to_markdown(data["drought_assimilation"]),
+        "",
+        data["drought_report_text"] or "unavailable",
+        "",
         "## Charts",
         "",
     ]
@@ -607,6 +638,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
         ("Reservoir / Sediment / Conservation Audit", _df_to_html(data["reservoir_metrics"]) + _df_to_html(data["sediment_delivery"]) + _df_to_html(data["conservation_audit"])),
         ("Hydrologic Balance Audit / Flood Gate", _df_to_html(data["hydrologic_balance_audit"])),
         ("Flood Forecast Scenario Ensemble", _df_to_html(data["forecast_member_summary"]) + _df_to_html(data["forecast_peak_distribution"]) + _df_to_html(data["forecast_reservoir_distribution"]) + _df_to_html(data["forecast_thresholds"])),
+        ("Continuous Hydrology and Drought", _df_to_html(data["continuous_balance"]) + _df_to_html(data["drought_indices"]) + _df_to_html(data["drought_monitoring"]) + _df_to_html(data["drought_forecast"])),
         ("Missing or Unavailable Outputs", _df_to_html(data["missing_assets"])),
     ]
     html = [
@@ -695,6 +727,10 @@ def render_project_report_docx(project_dir: str | Path, output_path: str | Path 
         ("Observed Flow Evaluation", "model_performance"),
         ("HEC-HMS and HydroLite Event Comparison", "hms_comparison_metrics"),
         ("Flood Forecast Scenario Ensemble", "forecast_member_summary"),
+        ("Continuous Hydrology", "continuous_balance"),
+        ("Drought Indices", "drought_indices"),
+        ("Current Drought Status", "drought_monitoring"),
+        ("Drought Forecast", "drought_forecast"),
         ("Missing or Unavailable Outputs", "missing_assets"),
     ]:
         document.add_heading(title, level=1)
