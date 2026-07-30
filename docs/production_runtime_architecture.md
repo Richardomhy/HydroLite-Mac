@@ -1,5 +1,7 @@
 # 生产运行中心架构
 
+macOS 原生壳只管理一个打包后端子进程，并通过 loopback 健康端点和 manifest 通信。runtime DB、日志、上传和结果均位于只读 App Bundle 之外；stale lock 只有在 PID 启动时间校验后才恢复。
+
 HydroLite Studio 使用标准库 SQLite、本地 FIFO 队列和独立进程组形成生产运行中心 MVP，不依赖 Redis、Celery 或常驻服务。
 
 流程：项目注册 -> 数据就绪度 -> Recipe/Workflow 计划 -> Run -> Task -> Artifact -> 校验 -> 快照与报告。

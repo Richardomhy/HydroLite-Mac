@@ -1,5 +1,9 @@
 # 本地部署
 
+## macOS 桌面版
+
+0.7.0-dev 使用独立 `hydrolite-build` 环境构建 arm64 SwiftUI/WKWebView App，后端只监听动态 `127.0.0.1` 端口；QGIS 和 HEC-HMS 保持外部探测。参见 [构建环境](macos_build_environment.md) 和 [桌面用户指南](desktop_user_guide_zh.md)。
+
 启动：
 
 ```bash

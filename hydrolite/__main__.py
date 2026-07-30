@@ -665,6 +665,21 @@ def build_parser() -> argparse.ArgumentParser:
     settings_sub = settings_parser.add_subparsers(dest="settings_command", required=True)
     settings_sub.add_parser("show"); settings_sub.add_parser("validate")
 
+    desktop_parser = subparsers.add_parser("desktop", help="Build and validate the macOS desktop distribution.")
+    desktop_sub = desktop_parser.add_subparsers(dest="desktop_command", required=True)
+    for command in (
+        "diagnose", "build-env", "resources", "build-backend", "build-shell", "assemble",
+        "build", "launch", "verify", "security-audit", "signing-status", "package-zip",
+        "package-dmg", "notarization-gate", "staple", "update-status", "report", "validate",
+    ):
+        desktop_sub.add_parser(command)
+    desktop_sign = desktop_sub.add_parser("sign")
+    desktop_sign.add_argument("mode", nargs="?", default="ad_hoc", choices=["unsigned", "ad_hoc", "developer_id"])
+    desktop_notarize = desktop_sub.add_parser("notarize")
+    desktop_notarize.add_argument("mode", nargs="?", default="dry-run", choices=["dry-run", "execute"])
+    desktop_appcast = desktop_sub.add_parser("appcast")
+    desktop_appcast.add_argument("mode", nargs="?", default="dry-run", choices=["dry-run"])
+
     return parser
 
 
@@ -726,6 +741,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"milestones: {root / 'docs' / 'milestones_v0.7.0.md'}")
         print(f"issue_backlog: {root / 'docs' / 'issue_backlog_v0.7.0.md'}")
         return 0
+    if args.command == "desktop":
+        from hydrolite.desktop.commands import run_desktop_command
+
+        return run_desktop_command(args.desktop_command, getattr(args, "mode", None))
     if args.command == "runtime":
         from hydrolite.deployment import build_deployment_manifest, write_deployment_report
         from hydrolite.process_manager import cleanup_orphaned_runtime_processes, list_hydrolite_processes

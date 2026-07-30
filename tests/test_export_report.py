@@ -121,3 +121,4 @@ def test_report_export_does_not_track_secrets_weights_or_external_repo():
     assert not any(path.endswith((".pt", ".pth", ".ckpt", ".onnx")) for path in tracked)
     assert not any("secrets.toml" in path or "credentials" in path.lower() for path in tracked)
     assert not any(path.startswith("external/") for path in tracked)
+    assert not any(path.endswith((".app", ".dmg")) or path.startswith("dist/") for path in tracked)

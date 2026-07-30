@@ -1,5 +1,13 @@
 # 平台能力矩阵
 
+| macOS desktop 0.7.0-dev | 状态 |
+|---|---|
+| SwiftUI/WKWebView arm64 壳 | local ad-hoc MVP |
+| HydroLite/Streamlit onedir 后端 | partial |
+| QGIS / HEC-HMS | optional external |
+| Developer ID / 公证 | credentials_required |
+| Sparkle 正式 Feed | configuration missing；手动 manifest fallback |
+
 平台统一使用 available、partial、planned、blocked 和 unavailable_optional 状态。洪水预测在本版本由 planned 提升为 partial；干旱预测和 water_quality 保持 planned；HEC-HMS Reservoir 保持 blocked。
 
 统一数据中心和外部连接器现为 `partial`：小型上传、字段映射、质量、血缘和输入准备可用；大型 GIS、NetCDF/HDF5 和真实平台下载依赖可选本地环境与显式确认。Water quality 仍为 `planned`，仅完成数据接口。

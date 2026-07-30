@@ -1,0 +1,16 @@
+import json
+import pytest
+
+from hydrolite.desktop.desktop_update import inspect_update_status, parse_appcast, validate_update_url
+
+
+def test_update_fallback_and_https_gate(tmp_path):
+    config = tmp_path / "update.json"
+    config.write_text(json.dumps({"enabled": False, "feed_url": ""}), encoding="utf-8")
+    assert inspect_update_status(config)["update_readiness"] == "framework_ready_configuration_missing"
+    with pytest.raises(ValueError):
+        validate_update_url("http://example.com/appcast.xml")
+
+
+def test_example_appcast_parses():
+    assert parse_appcast("packaging/macos/appcast.example.xml") == []

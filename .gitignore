@@ -2,6 +2,7 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 *.pyc
+*.egg-info/
 .venv/
 env/
 .env
@@ -119,3 +120,19 @@ checkpoints/
 model_weights/
 wandb/
 mlruns/
+.build/
+DerivedData/
+build/
+dist/
+output/macos_packaging/
+*.app
+*.dmg
+HydroLite-Studio-*.zip
+*.p12
+*.cer
+*.p8
+*.xcuserstate
+*.xcuserdata/
+appcast-generated/
+notarization-private/
+desktop_runtime_logs/

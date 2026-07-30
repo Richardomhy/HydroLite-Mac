@@ -450,4 +450,8 @@ SWMM cases can inject a HydroLite flow hydrograph into the copied `working.inp` 
 The original `data_raw/swmm/demo.inp` is not edited. Coupling writes `[TIMESERIES]` and `[INFLOWS]` only into `output/<case_name>/swmm/working.inp`, then writes `coupling_summary.xlsx`.
 # HydroLite Studio
 
+> macOS desktop MVP: [architecture](docs/macos_desktop_architecture.md) · [中文桌面指南](docs/desktop_user_guide_zh.md) · [build/sign/notarize](docs/release_process_en.md)
+
+The `0.7.0-dev` desktop channel wraps the existing Streamlit workbench in a SwiftUI/WKWebView shell with a dynamic loopback backend. Local ad-hoc packages are supported; Developer ID signing and notarization remain `credentials_required` unless valid Apple credentials are supplied.
+
 > v0.7.0-dev includes a bounded single-event sensitivity and calibration/alignment MVP. HEC-HMS results are reference-model outputs, not observations; see [calibration notes](docs/calibration_sensitivity_mvp.md).

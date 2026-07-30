@@ -1,5 +1,7 @@
 # User Manual Export Plan
 
+桌面手册已覆盖 Finder 启动、数据/日志目录、安全退出、外部后端、ad-hoc 与 Developer ID、DMG、异常恢复和 dev 限制，见 `desktop_user_guide_zh.md` 与 `desktop_user_guide_en.md`。
+
 新增运维手册入口：`operations_user_guide_zh.md` 与 `operations_user_guide_en.md`，覆盖项目、运行、任务、失败恢复、日志、成果和本地/云端差异。
 
 The unified data-center guides now document required uploads, supported formats, field meanings, units, authentication boundaries, quality states, lineage, model readiness, project creation and output export in Chinese and English.

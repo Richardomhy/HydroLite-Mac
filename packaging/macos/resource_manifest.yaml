@@ -1,0 +1,13 @@
+required:
+  - backend/hydrolite-backend/hydrolite-backend
+  - backend/hydrolite-backend/streamlit_app.py
+  - backend/hydrolite-backend/templates
+  - backend/hydrolite-backend/configs
+  - backend/hydrolite-backend/docs
+  - backend/hydrolite-backend/data_demo
+forbidden:
+  - data_raw
+  - output
+  - external
+  - tests
+  - .git

@@ -5,6 +5,7 @@ from pathlib import Path
 import importlib.metadata
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from typing import Any
@@ -14,7 +15,25 @@ from hydrolite.openhydronet.runner import detect_openhydronet_environment
 from hydrolite.project import project_info
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+def _project_root() -> Path:
+    if not getattr(sys, "frozen", False):
+        return Path(__file__).resolve().parents[2]
+    bundle = Path(getattr(sys, "_MEIPASS"))
+    root = Path.home() / "Library" / "Application Support" / "HydroLite Studio"
+    root.mkdir(parents=True, exist_ok=True)
+    for source_name, target_name in (
+        ("demo_project_template", "projects/demo_project"),
+        ("data_demo", "data_demo"),
+        ("cases", "cases"),
+    ):
+        source, target = bundle / source_name, root / target_name
+        if source.exists() and not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(source, target)
+    return root
+
+
+PROJECT_ROOT = _project_root()
 CASES_DIR = PROJECT_ROOT / "cases"
 OUTPUT_ROOT = PROJECT_ROOT / "output"
 PROJECTS_ROOT = PROJECT_ROOT / "projects"

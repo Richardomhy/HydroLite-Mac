@@ -8,6 +8,7 @@ def test_deployment_and_streamlit_pages(monkeypatch, tmp_path):
     assert diagnose_local_deployment()["status"] == "passed"
     assert diagnose_streamlit_cloud_deployment()["status"] == "passed"
     assert all(callable(page.render) for page in (project_center, run_center, task_center, artifact_center, system_center))
+    assert callable(system_center._desktop_action)
 
 
 def test_stop_script_refuses_unrelated_process(monkeypatch, tmp_path):

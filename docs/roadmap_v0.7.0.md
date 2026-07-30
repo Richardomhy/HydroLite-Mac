@@ -1,5 +1,7 @@
 # HydroLite Studio v0.7.0 Roadmap
 
+The macOS desktop packaging MVP now covers an isolated build environment, native SwiftUI/WKWebView shell, ad-hoc App/ZIP/DMG, diagnostics, signing/notarization gates, and secure-update metadata. Developer ID, notarization, a production Sparkle feed, Universal 2, and broad macOS compatibility remain future release work.
+
 生产运行中心 MVP 已进入 `partial`：项目注册、Run/Task、失败恢复、资产索引和运行模式已形成轻量闭环。分布式调度、多用户权限、桌面安装包仍不在本阶段。
 
 统一数据中心与连接器框架已进入 `partial` MVP：支持小型真实项目数据包和可审计输入准备；重型 GIS、大型远程下载和所有格式的业务验证仍是后续工作。
