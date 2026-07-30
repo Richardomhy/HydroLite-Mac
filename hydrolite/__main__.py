@@ -36,6 +36,25 @@ from hydrolite.hec_hms import discover_hms_reservoir_reference_projects, select_
 from hydrolite.sediment_delivery import run_sediment_demo, _run as run_sediment_delivery, validate_sediment_outputs
 from hydrolite.beta import beta_checklist, beta_info, beta_smoke_local
 from hydrolite.compare import run_compare
+from hydrolite.capability_registry import list_capabilities, write_capability_registry
+from hydrolite.flood_forecast import (
+    DEFAULT_OUTPUT as FORECAST_OUTPUT,
+    assess_flood_forecast_readiness,
+    create_flood_forecast_config,
+    export_flood_forecast_bundle,
+    run_flood_forecast_demo,
+    run_flood_forecast_project,
+    validate_flood_forecast_bundle,
+    validate_flood_forecast_outputs,
+)
+from hydrolite.forecast_rainfall import load_forecast_rainfall, write_rainfall_ensemble
+from hydrolite.forecast_uncertainty import (
+    calculate_exceedance_probability,
+    load_user_flood_thresholds,
+)
+from hydrolite.lstm_forecast import detect_torch_environment, run_lstm_synthetic_smoke_test
+from hydrolite.ml_forecast import assess_ml_data_readiness, detect_ml_dependencies, run_ml_synthetic_demo
+from hydrolite.model_registry import get_available_models, write_model_registry_report
 from hydrolite.data_templates import (
     export_all_data_templates,
     export_data_template,
@@ -416,6 +435,19 @@ def build_parser() -> argparse.ArgumentParser:
     x = accounting_sub.add_parser("rebuild"); x.add_argument("project_dir")
     for command in ("completeness", "report", "bundle", "validate"):
         x = accounting_sub.add_parser(command); x.add_argument("output_dir")
+
+    forecast_parser = subparsers.add_parser("forecast", help="Flood forecast and scenario ensemble MVP.")
+    forecast_sub = forecast_parser.add_subparsers(dest="forecast_command", required=True)
+    for command in ("diagnose", "models", "capabilities", "rainfall-demo", "physics-demo", "hydrolite-members", "hms-members", "reservoir-members", "ml-demo", "lstm-smoke", "hybrid-demo", "ensemble", "run-demo"):
+        forecast_sub.add_parser(command)
+    for command in ("readiness", "ml-readiness", "lstm-readiness"):
+        x = forecast_sub.add_parser(command); x.add_argument("project_dir")
+    x = forecast_sub.add_parser("create-config"); x.add_argument("project_dir"); x.add_argument("output_path")
+    x = forecast_sub.add_parser("rainfall-ensemble"); x.add_argument("rainfall_file")
+    x = forecast_sub.add_parser("thresholds"); x.add_argument("threshold_file")
+    for command in ("report", "bundle", "validate"):
+        x = forecast_sub.add_parser(command); x.add_argument("output_dir")
+    x = forecast_sub.add_parser("run"); x.add_argument("project_dir"); x.add_argument("config_path"); x.add_argument("--output-dir", default=str(FORECAST_OUTPUT))
 
     workflow_parser = subparsers.add_parser("workflow", help="v0.7.x full modeling workflow orchestration.")
     workflow_subparsers = workflow_parser.add_subparsers(dest="workflow_command", required=True)
@@ -1061,6 +1093,34 @@ def main(argv: list[str] | None = None) -> int:
         if args.accounting_command == "report": print(write_watershed_accounting_report(args.output_dir,{})); return 0
         if args.accounting_command == "bundle": print(export_watershed_accounting_bundle(args.output_dir)); return 0
         if args.accounting_command == "validate": result=validate_watershed_accounting(args.output_dir); print(result); return 0 if result["status"]=="passed" else 1
+    if args.command == "forecast":
+        command = args.forecast_command
+        if command == "diagnose":
+            print(json.dumps({"status": "available_partial", "ml": detect_ml_dependencies(), "torch": detect_torch_environment(), "hec_hms_reservoir": "blocked_gate"}, indent=2, default=str)); return 0
+        if command == "models":
+            write_model_registry_report(FORECAST_OUTPUT); print(json.dumps(get_available_models({"project_dir": ROOT/"projects/qgis_workflow_project"}), indent=2, default=str)); return 0
+        if command == "capabilities":
+            write_capability_registry(FORECAST_OUTPUT); print(json.dumps(list_capabilities(), indent=2)); return 0
+        if command == "readiness":
+            result=assess_flood_forecast_readiness(args.project_dir); print(json.dumps(result,indent=2,default=str)); return 0 if result["status"]!="blocked_water_balance" else 1
+        if command == "create-config": print(create_flood_forecast_config(args.project_dir,args.output_path)); return 0
+        if command in {"rainfall-demo","rainfall-ensemble"}:
+            source=ROOT/"data_demo/flood_forecast/demo_rainfall_forecast.csv" if command=="rainfall-demo" else args.rainfall_file
+            rainfall=load_forecast_rainfall(source); paths=write_rainfall_ensemble(FORECAST_OUTPUT/"rainfall",rainfall);print(paths["summary"]);return 0
+        if command == "ml-readiness": print(json.dumps(assess_ml_data_readiness(args.project_dir),indent=2));return 0
+        if command == "lstm-readiness": print(json.dumps({"status":"insufficient_data","real_training_ready":False,**detect_torch_environment()},indent=2,default=str));return 0
+        if command == "ml-demo": print(json.dumps(run_ml_synthetic_demo(ROOT/"data_demo/flood_forecast/demo_ml_timeseries.csv",FORECAST_OUTPUT/"ml"),indent=2,default=str));return 0
+        if command == "lstm-smoke": print(json.dumps(run_lstm_synthetic_smoke_test(FORECAST_OUTPUT/"lstm"),indent=2,default=str));return 0
+        if command in {"physics-demo","hydrolite-members","hms-members","reservoir-members","hybrid-demo","ensemble"}:
+            if not (FORECAST_OUTPUT/"reports/flood_forecast_manifest.json").exists(): run_flood_forecast_demo()
+            print(FORECAST_OUTPUT);return 0
+        if command == "thresholds":
+            ensemble=pd.read_csv(FORECAST_OUTPUT/"ensemble/ensemble_timeseries.csv");result=calculate_exceedance_probability(ensemble,load_user_flood_thresholds(args.threshold_file));result.to_excel(FORECAST_OUTPUT/"ensemble/threshold_exceedance.xlsx",index=False);print(result.to_string(index=False));return 0
+        if command == "run-demo": result=run_flood_forecast_demo();print(json.dumps({"status":result["status"],"validation":result["validation"]},indent=2));return 0
+        if command == "run": result=run_flood_forecast_project(args.project_dir,args.config_path,args.output_dir);print(json.dumps({"status":result["status"],"validation":result["validation"]},indent=2));return 0
+        if command == "report": print(Path(args.output_dir)/"reports/flood_forecast_report_zh.md");return 0
+        if command == "bundle": print(export_flood_forecast_bundle(args.output_dir));return 0 if validate_flood_forecast_bundle(args.output_dir)["status"]=="passed" else 1
+        if command == "validate": result=validate_flood_forecast_outputs(args.output_dir);print(result);return 0 if result["status"]=="passed" else 1
     if args.command == "workflow":
         if args.workflow_command == "list":
             for stage in list_workflow_stages():

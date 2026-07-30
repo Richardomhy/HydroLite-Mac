@@ -12,7 +12,9 @@ The online version is best for demos, tutorials, data template downloads, and vi
 
 v0.7.0-dev also includes partial, synthetic-demo-only reservoir level-pool routing and RUSLE-SDR sediment delivery. See `docs/reservoir_routing_mvp.md` and `docs/rusle_sdr_sediment_delivery.md`; these are not operational reservoir models or complete sediment-yield models.
 
-Flood forecasting remains planned. The current prerequisite audit requires cumulative SCS-CN increment accounting, full routing tails, and verified HEC-HMS Reservoir semantics; see `docs/hydrologic_water_balance_audit.md`.
+The flood forecast MVP is available as a bounded synthetic demonstration. Operational use still requires cumulative SCS-CN increment accounting, full routing tails, verified HEC-HMS Reservoir semantics, and real multi-event observations; see `docs/hydrologic_water_balance_audit.md`.
+
+Flood forecasting is now a `partial` scenario/hindcast MVP: six rainfall scenarios can run through the verified HydroLite event model, synthetic-demo reservoir routing, optional ML/LSTM smoke tests, ensemble quantiles, thresholds, charts, and bilingual reports. HEC-HMS event members remain optional-local, HEC-HMS Reservoir remains blocked, and drought forecasting remains planned. See `docs/flood_forecast_mvp.md`.
 
 HydroLite-Mac is a local lightweight hydrologic and hydraulic modeling MVP for macOS. HydroLite Studio v0.7.0-dev starts the next development phase: a full modeling workflow engine for data templates, QGIS/GEE preprocessing, HydroLite simulation, future HEC-HMS bridges, SWMM coupling, forecast planning, comparison, reports, and user manuals. The current stable beta remains v0.6.0-beta.1.
 

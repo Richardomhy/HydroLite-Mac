@@ -19,6 +19,7 @@ from hydrolite.ui.components import (
 from hydrolite.ui.pages import (
     beta_feedback,
     calibration,
+    flood_forecast,
     icesat2_water_depth,
     reservoir_routing,
     rusle_erosion,
@@ -75,6 +76,7 @@ PAGES = {
     "泥沙交付与拦沙": sediment_delivery.render,
     "流域综合核算": watershed_accounting.render,
     "水量平衡审计": water_balance_audit.render,
+    "洪水预测": flood_forecast.render,
     "情景运行": scenario_run.render,
     "GEE 数据中心": gee_center.render,
     "QGIS Bridge": qgis_bridge.render,

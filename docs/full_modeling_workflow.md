@@ -75,3 +75,5 @@ Reservoir routing and sediment delivery are partial stages: routing requires ind
 After a completed-event HydroLite/HMS comparison, optional bounded sensitivity and cross-model alignment can create a new generated case without replacing original inputs.
 
 洪水预测前需同时通过 HydroLite 子流域、河段和出口的完整过程线水量平衡门禁，以及 HEC-HMS Reservoir paired-data/compute 门禁；本阶段后者未通过，因此 flood_forecast 继续为 `planned`。
+
+洪水预测现为 `partial` 情景/历史回放 MVP：HydroLite 物理集合已接通，HEC-HMS 普通事件成员为 optional_local，HydroLite 水库使用 synthetic-demo 曲线，HEC-HMS Reservoir 保持 blocked。它不改变 drought_forecast 的 planned 状态。

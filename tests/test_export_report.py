@@ -54,6 +54,7 @@ def test_project_report_generates_core_formats(tmp_path: Path):
     assert pdf_or_note.exists()
     assert pdf_or_note.name in {"project_report.pdf", "project_report_pdf_unavailable.md"}
     assert "Executive Summary" in markdown.read_text(encoding="utf-8")
+    assert "Flood Forecast Scenario Ensemble" in markdown.read_text(encoding="utf-8")
     assert _snapshot_data_raw() == before
 
 

@@ -29,6 +29,8 @@ The HEC-HMS/HydroLite event comparison is an implemented analysis input, not a f
 HydroLite 提供快速情景模拟；HEC-HMS 后续可作为专业模型对照。洪水预测模块只消费这些模型的输出，不替代它们。
 # Flood Forecast Plan
 
-Flood forecasting remains planned. Single-event sensitivity or cross-model alignment does not create a flood forecast.
+Flood forecasting is now partial as a scenario-ensemble and hindcast-demo workflow. Single-event sensitivity or cross-model alignment still does not create an operational forecast.
 
 进入预测 MVP 前，必须确认 SCS-CN 的累计产流已转换为时段增量、单位线和 Muskingum 退水尾部完整、且 HEC-HMS Reservoir compute 能读回可确认单位的结果。
+
+HydroLite 水量门禁已通过，因此 HydroLite 情景集合开放。HEC-HMS Reservoir compute 门禁仍失败，该分支继续跳过，不阻断 HydroLite 水库集合。scenario member fraction 不等于严格概率。

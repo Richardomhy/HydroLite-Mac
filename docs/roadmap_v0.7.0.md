@@ -75,4 +75,6 @@ The reservoir and SDR MVPs are constrained diagnostic/demo tools, not a release 
 
 The lightweight calibration milestone is now partial: observed calibration is supported only when real observations exist; HMS alignment is available for small completed events.
 
-洪水预测仍未启动。其前置条件是水量平衡审计和 HEC-HMS Reservoir compute 门禁均通过；当前仅前者已达到数值优秀等级。
+洪水预测已进入 `partial`：当前仅提供合成演示和可选本地后端适配。水量平衡审计已达到数值优秀等级，但 HEC-HMS Reservoir compute 门禁仍未通过，因此不能作为业务级预测。
+
+洪水预测现已进入 partial：HydroLite 物理情景集合、synthetic-demo 水库、可选 ML/LSTM smoke test 和不确定性报告已实现。真实多事件验证、实时预报接入、HEC-HMS 成员 DSS 适配、HEC-HMS Reservoir 和业务运行监控仍属后续路线。

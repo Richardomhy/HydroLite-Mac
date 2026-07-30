@@ -1,0 +1,4 @@
+timestamp,outlet_flow_cms,reservoir_stage_m,reservoir_storage_m3,antecedent_precipitation_mm,soil_moisture_proxy,baseflow_cms,source,quality_status
+2026-06-01 00:00,0,100.8,80000,0,0.30,0,synthetic,synthetic_demo
+2026-06-01 01:00,0,100.8,80000,0,0.30,0,synthetic,synthetic_demo
+2026-06-01 02:00,0,100.8,80000,4,0.32,0,synthetic,synthetic_demo

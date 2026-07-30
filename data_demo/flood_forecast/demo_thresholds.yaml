@@ -1,0 +1,13 @@
+thresholds:
+  - name: diagnostic_flow_40
+    threshold: 40
+    units: m3/s
+    source: diagnostic_demo_threshold
+  - name: diagnostic_flow_60
+    threshold: 60
+    units: m3/s
+    source: diagnostic_demo_threshold
+  - name: diagnostic_flow_80
+    threshold: 80
+    units: m3/s
+    source: diagnostic_demo_threshold

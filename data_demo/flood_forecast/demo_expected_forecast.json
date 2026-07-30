@@ -1,0 +1,7 @@
+{
+  "validation_level": "synthetic_demo",
+  "forecast_mode": "hindcast_demo",
+  "rainfall_member_count": 6,
+  "hec_hms_reservoir_status": "blocked_gate",
+  "operational_forecast": false
+}

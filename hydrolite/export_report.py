@@ -223,6 +223,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     sediment_root = repo_root / "output" / "sediment_delivery"
     conservation_audit_root = repo_root / "output" / "conservation_audit"
     balance_audit_root = repo_root / "output" / "water_balance_audit"
+    forecast_root = repo_root / "output" / "flood_forecast"
     calibration_candidates = calibration_root / "search" / "candidate_ranking.xlsx"
     validation = project / "reports" / "project_validation.xlsx"
     global_gee_summary = repo_root / "output" / "gee" / "gee_summary.xlsx"
@@ -243,6 +244,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         *sorted((repo_root / "output" / "hec_hms_alignment_best" / "charts").glob("*.png")),
         *sorted((calibration_root / "search" / "charts").glob("*.png")),
         *sorted((calibration_root / "sensitivity" / "charts").glob("*.png")),
+        *sorted((forecast_root / "charts").glob("*.png")),
     ]
     existing_charts = [path for path in charts if path.exists()]
     expected = {
@@ -253,6 +255,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "batch_summary": project / "output" / "batch_summary.xlsx",
         "gee_summary": gee_summary or project / "output" / "gee" / "gee_summary.xlsx",
         "openhydronet_report": openhydronet_report or project / "output" / "openhydronet" / "inputs" / "openhydronet_input_report.md",
+        "flood_forecast_report": forecast_root / "reports" / "flood_forecast_report_zh.md",
     }
     missing = [
         {"asset": name, "path": str(path), "status": "missing"}
@@ -300,6 +303,12 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "sediment_delivery": _safe_read_excel(sediment_root / "sediment_delivery_summary.xlsx", "summary"),
         "conservation_audit": _safe_read_excel(conservation_audit_root / "runoff_change_decomposition.xlsx"),
         "hydrologic_balance_audit": _safe_read_excel(balance_audit_root / "hydrologic_balance_ledger.xlsx", "outlet"),
+        "forecast_readiness_text": _read_text(forecast_root / "forecast_readiness_report_zh.md"),
+        "forecast_member_summary": _safe_read_excel(forecast_root / "physics" / "member_run_summary.xlsx"),
+        "forecast_peak_distribution": _safe_read_excel(forecast_root / "ensemble" / "peak_distribution.xlsx"),
+        "forecast_reservoir_distribution": _safe_read_excel(forecast_root / "ensemble" / "reservoir_stage_distribution.xlsx"),
+        "forecast_thresholds": _safe_read_excel(forecast_root / "ensemble" / "threshold_exceedance.xlsx"),
+        "forecast_report_text": _read_text(forecast_root / "reports" / "flood_forecast_report_zh.md"),
         "charts": existing_charts,
         "assets": list_report_assets(project),
         "missing_assets": pd.DataFrame(missing),
@@ -449,6 +458,20 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "",
         _df_to_markdown(data["hydrologic_balance_audit"]),
         "",
+        "## Flood Forecast Scenario Ensemble",
+        "",
+        data["forecast_readiness_text"] or "unavailable",
+        "",
+        _df_to_markdown(data["forecast_member_summary"]),
+        "",
+        _df_to_markdown(data["forecast_peak_distribution"]),
+        "",
+        _df_to_markdown(data["forecast_reservoir_distribution"]),
+        "",
+        _df_to_markdown(data["forecast_thresholds"]),
+        "",
+        data["forecast_report_text"] or "unavailable",
+        "",
         "## Charts",
         "",
     ]
@@ -510,6 +533,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
         ("ICESat-2 / RUSLE / Accounting", _df_to_html(data["accounting_completeness"])),
         ("Reservoir / Sediment / Conservation Audit", _df_to_html(data["reservoir_metrics"]) + _df_to_html(data["sediment_delivery"]) + _df_to_html(data["conservation_audit"])),
         ("Hydrologic Balance Audit / Flood Gate", _df_to_html(data["hydrologic_balance_audit"])),
+        ("Flood Forecast Scenario Ensemble", _df_to_html(data["forecast_member_summary"]) + _df_to_html(data["forecast_peak_distribution"]) + _df_to_html(data["forecast_reservoir_distribution"]) + _df_to_html(data["forecast_thresholds"])),
         ("Missing or Unavailable Outputs", _df_to_html(data["missing_assets"])),
     ]
     html = [
@@ -596,6 +620,7 @@ def render_project_report_docx(project_dir: str | Path, output_path: str | Path 
         ("GEE Data Center", "gee_summary"),
         ("Observed Flow Evaluation", "model_performance"),
         ("HEC-HMS and HydroLite Event Comparison", "hms_comparison_metrics"),
+        ("Flood Forecast Scenario Ensemble", "forecast_member_summary"),
         ("Missing or Unavailable Outputs", "missing_assets"),
     ]:
         document.add_heading(title, level=1)

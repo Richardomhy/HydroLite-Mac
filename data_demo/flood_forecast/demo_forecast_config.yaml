@@ -1,0 +1,20 @@
+forecast_validation_level: synthetic_demo
+forecast_mode: hindcast_demo
+project_name: qgis_workflow_project
+rainfall_file: data_demo/flood_forecast/demo_rainfall_forecast.csv
+threshold_file: data_demo/flood_forecast/demo_thresholds.yaml
+maximum_members: 20
+hec_hms:
+  enabled: false
+  maximum_members: 5
+  timeout_seconds: 120
+reservoir:
+  enabled: true
+  validation_level: synthetic_demo
+machine_learning:
+  real_training: false
+  synthetic_smoke_test: true
+lstm:
+  real_training: false
+  synthetic_smoke_test: true
+  timeout_seconds: 120

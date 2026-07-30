@@ -64,8 +64,8 @@ stages:
     notes: Explicit partial completeness audit; missing components are not zero.
   - stage_id: flood_forecast
     enabled: false
-    status: planned
-    notes: Planned rule-based lightweight flood forecast.
+    status: partial
+    notes: Scenario/hindcast HydroLite ensemble MVP; optional local HEC-HMS and ML, HEC-HMS Reservoir blocked, not operationally validated.
   - stage_id: drought_forecast
     enabled: false
     status: planned

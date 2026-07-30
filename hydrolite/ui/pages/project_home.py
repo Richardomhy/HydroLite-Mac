@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from hydrolite.capability_registry import list_capabilities
 from hydrolite.project import export_project_package, write_project_summary
 from hydrolite.ui.components import recent_files, show_download, show_markdown_file
 from hydrolite.ui.state import WorkbenchContext
@@ -31,6 +32,9 @@ def render(context: WorkbenchContext) -> None:
         "数据模板问题或整体体验反馈。提交前请勿上传敏感数据。"
     )
     st.info("v0.7.0-dev 新增 `全流程工作流` 页面，用于查看阶段状态和 dry-run 计划；planned 阶段不代表已实现。")
+    st.info("洪水预测 MVP 已进入 `partial`：可运行情景降雨、HydroLite 物理集合、synthetic-demo 水库联算和可选 ML/LSTM smoke test；它不是业务化洪水预警系统。")
+    st.subheader("平台能力矩阵")
+    st.dataframe(pd.DataFrame(list_capabilities()), use_container_width=True, hide_index=True)
     if not context.project_loaded:
         st.error(context.error_message)
         st.info("请先在终端运行 `python -m hydrolite project create projects/demo_project`，或输入已有项目路径。")

@@ -1,0 +1,19 @@
+issue_time,valid_time,lead_time_hr,member_id,subbasin_id,precipitation_mm,interval_minutes,source,scenario_type,units,quality_status
+2026-06-01 00:00,2026-06-01 00:00,0,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 01:00,1,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 02:00,2,baseline,ALL,4,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 03:00,3,baseline,ALL,12,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 04:00,4,baseline,ALL,24,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 05:00,5,baseline,ALL,31,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 06:00,6,baseline,ALL,20,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 07:00,7,baseline,ALL,10,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 08:00,8,baseline,ALL,4,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 09:00,9,baseline,ALL,1,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 10:00,10,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 11:00,11,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 12:00,12,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 13:00,13,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 14:00,14,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 15:00,15,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 16:00,16,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo
+2026-06-01 00:00,2026-06-01 17:00,17,baseline,ALL,0,60,scenario,observed_replay,mm,synthetic_demo

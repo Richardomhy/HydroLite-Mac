@@ -1,5 +1,7 @@
 # Drought Forecast Plan
 
+洪水预测 MVP 的实现不改变本模块状态；drought_forecast 继续保持 `planned`，本阶段没有新增 SPI/SPEI、长期连续模拟或干旱预测代码。
+
 ## 目标
 
 建立轻量干旱评估和预测骨架，支持水文项目中对降雨、径流和遥感指标的快速研判。

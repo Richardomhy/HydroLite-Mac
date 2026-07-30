@@ -49,13 +49,14 @@ def test_workflow_engine_import_and_stage_schema():
     assert next(stage for stage in stages if stage["stage_id"] == "calibration")["status"] == "partial"
     for stage in stages:
         assert required <= set(stage)
-        if stage["stage_id"] in {"flood_forecast", "drought_forecast"}:
+        if stage["stage_id"] == "drought_forecast":
             assert stage["status"] in {"planned", "not_implemented"}
         if stage["stage_id"] in {"hec_hms_project", "hec_hms_run"}:
             assert stage["status"] == "partial"
             assert "partial" in stage["implementation_notes"]
     hms_project = next(stage for stage in stages if stage["stage_id"] == "hec_hms_project")
     assert "HEC-DSS" in hms_project["implementation_notes"]
+    assert next(stage for stage in stages if stage["stage_id"] == "flood_forecast")["status"] == "partial"
 
 
 def test_workflow_templates_and_plan_outputs(tmp_path: Path):

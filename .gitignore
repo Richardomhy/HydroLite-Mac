@@ -16,6 +16,9 @@ output/conservation_audit_v2/
 output/hec_hms_reservoir_reference/
 output/hec_hms_reservoir_verified/
 output/reservoir_comparison_verified/
+output/flood_forecast/
+output/flood_forecast/models/
+output/flood_forecast/hec_hms_members/
 *.dss
 hs_err_pid*.log
 outputs/
@@ -74,6 +77,8 @@ external/
 *.pth
 *.ckpt
 *.onnx
+*.joblib
+*.scaler
 checkpoints/
 model_weights/
 wandb/
