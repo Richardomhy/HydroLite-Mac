@@ -6,6 +6,8 @@ import sys
 
 import pandas as pd
 
+ROOT = Path(__file__).resolve().parents[1]
+
 from hydrolite.__version__ import __app_name__, __release_date__, __version__
 from hydrolite.batch import run_batch
 from hydrolite.calibration import (
@@ -24,6 +26,10 @@ from hydrolite.calibration import (
     write_parameter_outputs,
     write_target_outputs,
 )
+from hydrolite.icesat2 import DEFAULT_OUTPUT as ICESAT2_OUTPUT, detect_earthdata_access, detect_icesat2_dependencies, identify_icesat2_product, run_icesat2_demo, select_icesat2_product_for_waterbody, build_icesat2_depth_profiles, build_stage_area_volume_curve, validate_icesat2_outputs
+from hydrolite.rusle import detect_rusle_backends, run_rusle, validate_rusle_outputs
+from hydrolite.conservation import load_conservation_scenario, run_hydrolite_conservation_scenario, write_conservation_report
+from hydrolite.watershed_accounting import build_watershed_accounting, export_watershed_accounting_bundle, validate_watershed_accounting, write_watershed_accounting_report
 from hydrolite.beta import beta_checklist, beta_info, beta_smoke_local
 from hydrolite.compare import run_compare
 from hydrolite.data_templates import (
@@ -350,6 +356,30 @@ def build_parser() -> argparse.ArgumentParser:
     calibration_report = calibration_subparsers.add_parser("report"); calibration_report.add_argument("output_dir")
     calibration_bundle = calibration_subparsers.add_parser("bundle"); calibration_bundle.add_argument("output_dir")
     calibration_validate = calibration_subparsers.add_parser("validate"); calibration_validate.add_argument("output_dir")
+
+    icesat2_parser = subparsers.add_parser("icesat2")
+    icesat2_sub = icesat2_parser.add_subparsers(dest="icesat2_command", required=True)
+    icesat2_sub.add_parser("diagnose")
+    x = icesat2_sub.add_parser("product-info"); x.add_argument("file")
+    x = icesat2_sub.add_parser("select-product"); x.add_argument("waterbody_type"); x.add_argument("purpose")
+    x = icesat2_sub.add_parser("search"); x.add_argument("bbox"); x.add_argument("start"); x.add_argument("end")
+    x = icesat2_sub.add_parser("extract"); x.add_argument("file"); x.add_argument("waterbody_geojson"); x.add_argument("output_dir")
+    x = icesat2_sub.add_parser("depth-profiles"); x.add_argument("output_dir")
+    x = icesat2_sub.add_parser("storage-curve"); x.add_argument("output_dir")
+    icesat2_sub.add_parser("demo"); x = icesat2_sub.add_parser("validate"); x.add_argument("output_dir")
+    rusle_parser = subparsers.add_parser("rusle"); rusle_sub = rusle_parser.add_subparsers(dest="rusle_command", required=True)
+    rusle_sub.add_parser("diagnose"); rusle_sub.add_parser("demo")
+    x = rusle_sub.add_parser("run"); x.add_argument("config"); x.add_argument("output_dir")
+    x = rusle_sub.add_parser("validate"); x.add_argument("output_dir")
+    x = rusle_sub.add_parser("report"); x.add_argument("output_dir")
+    conservation_parser = subparsers.add_parser("conservation"); conservation_sub = conservation_parser.add_subparsers(dest="conservation_command", required=True)
+    x = conservation_sub.add_parser("run"); x.add_argument("project_dir"); x.add_argument("scenario_yaml")
+    x = conservation_sub.add_parser("report"); x.add_argument("output_dir")
+    x = conservation_sub.add_parser("validate"); x.add_argument("output_dir")
+    accounting_parser = subparsers.add_parser("accounting"); accounting_sub = accounting_parser.add_subparsers(dest="accounting_command", required=True)
+    x = accounting_sub.add_parser("build"); x.add_argument("project_dir")
+    for command in ("completeness", "report", "bundle", "validate"):
+        x = accounting_sub.add_parser(command); x.add_argument("output_dir")
 
     workflow_parser = subparsers.add_parser("workflow", help="v0.7.x full modeling workflow orchestration.")
     workflow_subparsers = workflow_parser.add_subparsers(dest="workflow_command", required=True)
@@ -919,6 +949,32 @@ def main(argv: list[str] | None = None) -> int:
             required = [output / "calibration_target.json", output / "baseline_parameters.xlsx", output / "search" / "calibration_candidates.xlsx"]
             missing = [str(path) for path in required if not path.exists()]
             print(json.dumps({"status": "passed" if not missing else "failed", "missing": missing}, indent=2, ensure_ascii=False)); return 0 if not missing else 1
+    if args.command == "icesat2":
+        import json
+        if args.icesat2_command == "diagnose": print(json.dumps({"dependencies": detect_icesat2_dependencies(), "earthdata": detect_earthdata_access()}, indent=2)); return 0
+        if args.icesat2_command == "product-info": print(json.dumps(identify_icesat2_product(args.file), indent=2)); return 0
+        if args.icesat2_command == "select-product": print(json.dumps(select_icesat2_product_for_waterbody(args.waterbody_type, args.purpose), indent=2)); return 0
+        if args.icesat2_command == "demo": result=run_icesat2_demo(); print(f"ICESat-2 demo: {result['report']}"); return 0
+        if args.icesat2_command == "depth-profiles": print(build_icesat2_depth_profiles(pd.read_csv(Path(args.output_dir)/"water_surface_points.csv")).to_string(index=False)); return 0
+        if args.icesat2_command == "storage-curve": print(build_stage_area_volume_curve(ROOT/"data_demo/icesat2/demo_waterbody.geojson", None, depth_constraints=pd.read_csv(Path(args.output_dir)/"water_surface_points.csv")).to_string(index=False)); return 0
+        if args.icesat2_command == "validate": result=validate_icesat2_outputs(args.output_dir); print(json.dumps(result,indent=2)); return 0 if result["status"]=="passed" else 1
+        print(json.dumps({"status":"not_executed","message":"Online/HDF5 extraction is optional; no download."},indent=2)); return 0
+    if args.command == "rusle":
+        if args.rusle_command == "diagnose": print(detect_rusle_backends()); return 0
+        if args.rusle_command == "demo": result=run_rusle(ROOT/"data_demo/rusle/demo_rusle_config.yaml", ROOT/"output/rusle"); print(result["output_dir"]); return 0
+        if args.rusle_command == "run": result=run_rusle(args.config,args.output_dir); print(result["output_dir"]); return 0
+        if args.rusle_command == "validate": result=validate_rusle_outputs(args.output_dir); print(result); return 0 if result["status"]=="passed" else 1
+        if args.rusle_command == "report": print(Path(args.output_dir)/"rusle_report_zh.md"); return 0
+    if args.command == "conservation":
+        if args.conservation_command == "run": result=run_hydrolite_conservation_scenario(args.project_dir,load_conservation_scenario(args.scenario_yaml),ROOT/"output/conservation"); write_conservation_report(ROOT/"output/conservation",result); print(result["summary"].to_string(index=False)); return 0
+        if args.conservation_command == "report": print(Path(args.output_dir)/"conservation_report.md"); return 0
+        if args.conservation_command == "validate": print({"status":"passed" if (Path(args.output_dir)/"conservation_summary.xlsx").exists() else "failed"}); return 0
+    if args.command == "accounting":
+        if args.accounting_command == "build": result=build_watershed_accounting(args.project_dir); print(result["accounting_status"]); return 0
+        if args.accounting_command == "completeness": print(pd.read_excel(Path(args.output_dir)/"accounting_completeness_matrix.xlsx").to_string(index=False)); return 0
+        if args.accounting_command == "report": print(write_watershed_accounting_report(args.output_dir,{})); return 0
+        if args.accounting_command == "bundle": print(export_watershed_accounting_bundle(args.output_dir)); return 0
+        if args.accounting_command == "validate": result=validate_watershed_accounting(args.output_dir); print(result); return 0 if result["status"]=="passed" else 1
     if args.command == "workflow":
         if args.workflow_command == "list":
             for stage in list_workflow_stages():

@@ -34,6 +34,22 @@ stages:
     enabled: true
     status: partial
     notes: Existing graceful SWMM coupling and fallback.
+  - stage_id: icesat2_water_depth
+    enabled: false
+    status: partial
+    notes: Local/synthetic along-track water-depth constraints only; no complete bathymetry.
+  - stage_id: rusle_erosion
+    enabled: false
+    status: partial
+    notes: Annual average sheet/rill erosion MVP, not sediment delivery.
+  - stage_id: conservation_scenario
+    enabled: false
+    status: partial
+    notes: Single-event runoff difference and soil-conservation scenario.
+  - stage_id: watershed_accounting
+    enabled: false
+    status: partial
+    notes: Explicit partial completeness audit; missing components are not zero.
   - stage_id: flood_forecast
     enabled: false
     status: planned

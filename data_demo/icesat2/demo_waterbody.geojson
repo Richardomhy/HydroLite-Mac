@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"waterbody_id":"synthetic_reservoir","area_m2":250000,"synthetic_demo":true},"geometry":{"type":"Polygon","coordinates":[[[113.8998,22.4998],[113.9010,22.4998],[113.9010,22.5010],[113.8998,22.5010],[113.8998,22.4998]]]}}]}

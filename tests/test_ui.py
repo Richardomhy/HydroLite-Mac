@@ -40,6 +40,9 @@ def test_ui_workbench_modules_import():
         "hydrolite.ui.pages.report_export",
         "hydrolite.ui.pages.diagnostics",
         "hydrolite.ui.pages.calibration",
+        "hydrolite.ui.pages.icesat2_water_depth",
+        "hydrolite.ui.pages.rusle_erosion",
+        "hydrolite.ui.pages.watershed_accounting",
     ]
     for module in modules:
         assert importlib.import_module(module)

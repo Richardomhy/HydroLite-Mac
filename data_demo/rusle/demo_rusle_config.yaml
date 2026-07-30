@@ -1,0 +1,9 @@
+synthetic_demo: true
+factors:
+  R: demo_r.asc
+  K: demo_k.asc
+  LS: demo_ls.asc
+  C_baseline: demo_c_baseline.asc
+  C_conservation: demo_c_conservation.asc
+  P_baseline: demo_p_baseline.asc
+  P_conservation: demo_p_conservation.asc

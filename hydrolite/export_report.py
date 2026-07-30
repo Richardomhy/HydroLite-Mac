@@ -216,6 +216,9 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     hms_comparison_dir = _hms_comparison_for_project(repo_root, project) or project / "output" / "hec_hms_comparison"
     hms_comparison = hms_comparison_dir / "model_comparison_metrics.xlsx"
     calibration_root = repo_root / "output" / "calibration"
+    icesat2_root = repo_root / "output" / "icesat2"
+    rusle_root = repo_root / "output" / "rusle"
+    accounting_root = repo_root / "output" / "watershed_accounting"
     calibration_candidates = calibration_root / "search" / "candidate_ranking.xlsx"
     validation = project / "reports" / "project_validation.xlsx"
     global_gee_summary = repo_root / "output" / "gee" / "gee_summary.xlsx"
@@ -286,6 +289,9 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "calibration_target": _read_text(calibration_root / "calibration_target_report.md"),
         "calibration_candidates": _safe_read_excel(calibration_candidates),
         "calibration_report_text": _read_text(calibration_root / "calibration_report.md"),
+        "icesat2_profiles": _safe_read_csv(icesat2_root / "depth_profiles.csv"),
+        "rusle_summary": _safe_read_excel(rusle_root / "subbasin_soil_loss.xlsx"),
+        "accounting_completeness": _safe_read_excel(accounting_root / "accounting_completeness_matrix.xlsx"),
         "charts": existing_charts,
         "assets": list_report_assets(project),
         "missing_assets": pd.DataFrame(missing),
@@ -415,6 +421,14 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "",
         data["calibration_report_text"] or "unavailable",
         "",
+        "## ICESat-2 / RUSLE / Accounting",
+        "",
+        _df_to_markdown(data["icesat2_profiles"]),
+        "",
+        _df_to_markdown(data["rusle_summary"]),
+        "",
+        _df_to_markdown(data["accounting_completeness"]),
+        "",
         "## Charts",
         "",
     ]
@@ -473,6 +487,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
         ("Observed Flow Evaluation", _df_to_html(data["model_performance"])),
         ("HEC-HMS and HydroLite Event Comparison", _df_to_html(data["hms_comparison_metrics"])),
         ("Calibration / Cross-model Alignment", _df_to_html(data["calibration_candidates"])),
+        ("ICESat-2 / RUSLE / Accounting", _df_to_html(data["accounting_completeness"])),
         ("Missing or Unavailable Outputs", _df_to_html(data["missing_assets"])),
     ]
     html = [

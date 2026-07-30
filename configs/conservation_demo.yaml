@@ -1,0 +1,8 @@
+name: synthetic_conservation_demo
+measures:
+  - reforestation
+  - contour_farming
+hydrolite_changes:
+  cn_delta: -8
+  initial_abstraction_ratio: 0.25
+  lag_multiplier: 1.2

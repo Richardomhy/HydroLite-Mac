@@ -1,0 +1,8 @@
+product,product_version,granule_id,acquisition_time,beam,latitude,longitude,along_track_distance_m,water_surface_height_m,bottom_height_m,apparent_depth_m,corrected_depth_m,vertical_reference,depth_uncertainty_m,signal_confidence,quality_flag,source_group,processing_status,warnings
+ATL13,006,SYNTHETIC_ATL13_A,2026-06-01T00:00:00,gt1l,22.5000,113.9000,0,102.0,100.8,,,WGS84 ellipsoidal,0.18,0.95,0,synthetic,synthetic_demo,
+ATL13,006,SYNTHETIC_ATL13_A,2026-06-01T00:00:10,gt1l,22.5001,113.9001,100,102.1,100.4,,,WGS84 ellipsoidal,0.20,0.90,0,synthetic,synthetic_demo,
+ATL13,006,SYNTHETIC_ATL13_A,2026-06-01T00:00:20,gt1l,22.5002,113.9002,200,102.0,99.8,,,WGS84 ellipsoidal,0.24,0.85,0,synthetic,synthetic_demo,
+ATL13,006,SYNTHETIC_ATL13_A,2026-06-01T00:00:30,gt1l,22.5003,113.9003,300,102.1,,,,WGS84 ellipsoidal,0.30,0.90,0,synthetic,synthetic_demo,surface_only
+ATL13,006,SYNTHETIC_ATL13_B,2026-06-02T00:00:00,gt2r,22.5000,113.9005,0,102.0,100.6,,,WGS84 ellipsoidal,0.19,0.92,0,synthetic,synthetic_demo,
+ATL13,006,SYNTHETIC_ATL13_B,2026-06-02T00:00:10,gt2r,22.5001,113.9006,100,102.0,100.0,,,WGS84 ellipsoidal,0.22,0.83,0,synthetic,synthetic_demo,
+ATL13,006,SYNTHETIC_ATL13_B,2026-06-02T00:00:20,gt2r,22.5002,113.9007,200,102.1,99.7,,,WGS84 ellipsoidal,0.25,0.80,0,synthetic,synthetic_demo,

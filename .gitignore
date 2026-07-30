@@ -16,6 +16,17 @@ output/hec_hms_results/
 output/hec_hms_comparison/
 output/hec_hms_alignment_best/
 output/calibration/
+output/icesat2/
+output/rusle/
+output/conservation/
+output/watershed_accounting/
+data_raw/icesat2/
+projects/*/data/generated/conservation/
+projects/*/output/*conservation*/
+*.h5
+*.hdf5
+.netrc
+cookies
 **/.hydrolite_scripts/
 logs/
 templates_export/
