@@ -27,6 +27,23 @@ def scs_cn_runoff_depth_mm(
     )
 
 
+def scs_cn_excess_rainfall_increments_mm(
+    rainfall_mm: pd.Series | np.ndarray | list[float], curve_number: float, initial_abstraction_ratio: float = 0.2
+) -> np.ndarray:
+    """Return period excess rainfall from cumulative SCS-CN runoff differences.
+
+    SCS-CN is a cumulative storm relation. Applying it independently to each
+    interval wrongly re-applies initial abstraction and loses storm volume.
+    """
+    rain = np.asarray(rainfall_mm, dtype=float)
+    if (rain < 0).any():
+        raise ValueError("rainfall increments must not be negative")
+    cumulative_runoff = np.array(
+        [scs_cn_runoff_depth_mm(value, curve_number, initial_abstraction_ratio) for value in np.cumsum(rain)]
+    )
+    return np.diff(np.r_[0.0, cumulative_runoff])
+
+
 def triangular_unit_hydrograph(lag_hours: float, dt_hours: float) -> np.ndarray:
     """Create a compact triangular unit hydrograph with unit area."""
     if lag_hours <= 0 or dt_hours <= 0:
@@ -75,9 +92,7 @@ def runoff_to_flow_cms(
 
     for row in subcatchments.itertuples(index=False):
         ia_ratio = float(getattr(row, "initial_abstraction_ratio", 0.2))
-        runoff_mm = np.array(
-            [scs_cn_runoff_depth_mm(v, float(row.curve_number), ia_ratio) for v in rainfall["rain_mm"]]
-        )
+        runoff_mm = scs_cn_excess_rainfall_increments_mm(rainfall["rain_mm"], float(row.curve_number), ia_ratio)
         volume_m3 = runoff_mm / 1000.0 * float(row.area_km2) * 1_000_000.0
         direct_flow_cms = volume_m3 / (dt_hours * 3600.0)
         routed_full = np.convolve(direct_flow_cms, unit_hydrographs[row.id], mode="full")

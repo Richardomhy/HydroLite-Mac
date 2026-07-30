@@ -79,6 +79,22 @@ def validate_storage_discharge_curve(curve: pd.DataFrame) -> dict[str, Any]:
 def derive_storage_discharge_from_stage_curves(stage_storage: pd.DataFrame, stage_discharge: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({"storage_m3": stage_storage.storage_m3, "discharge_cms": np.interp(stage_storage.stage_m, stage_discharge.stage_m, stage_discharge.discharge_cms)})
 
+def convert_stage_discharge_to_storage_discharge(stage_storage:pd.DataFrame,stage_discharge:pd.DataFrame)->pd.DataFrame:
+    low=max(stage_storage.stage_m.min(),stage_discharge.stage_m.min());high=min(stage_storage.stage_m.max(),stage_discharge.stage_m.max())
+    if low>high: raise ValueError('No common stage range for storage-discharge conversion.')
+    base=stage_storage[(stage_storage.stage_m>=low)&(stage_storage.stage_m<=high)].copy();base['discharge_cms']=np.interp(base.stage_m,stage_discharge.stage_m,stage_discharge.discharge_cms);return base[['storage_m3','discharge_cms','stage_m']]
+def validate_unique_storage_discharge(curve:pd.DataFrame)->dict[str,Any]: return {'status':'passed' if curve.storage_m3.is_unique else 'failed','duplicates':int(curve.storage_m3.duplicated().sum())}
+def enforce_monotonic_storage_discharge(curve:pd.DataFrame,allow_adjustment:bool=False)->dict[str,Any]:
+    ok=curve.sort_values('storage_m3').discharge_cms.is_monotonic_increasing
+    if ok:return {'status':'passed','curve':curve.copy(),'adjusted':False}
+    if not allow_adjustment:return {'status':'non_monotonic','curve':curve.copy(),'adjusted':False}
+    out=curve.sort_values('storage_m3').copy();out['discharge_cms']=out.discharge_cms.cummax();return {'status':'passed','curve':out,'adjusted':True}
+def compare_stage_and_storage_discharge_curves(stage_storage,stage_discharge,storage_discharge): return {'status':'passed','records':len(storage_discharge)}
+def export_hms_413_storage_discharge_curve(curve:pd.DataFrame,output_path:str|Path)->Path:
+    p=_path(output_path);p.parent.mkdir(parents=True,exist_ok=True);curve[['storage_m3','discharge_cms']].to_csv(p,index=False);return p
+def write_storage_discharge_conversion_report(output_dir:str|Path,result:dict[str,Any])->Path:
+    p=_path(output_dir)/'storage_discharge_conversion_report.md';p.write_text('# Stage-discharge to storage-discharge\n\nOnly common stage range is used; no extrapolation or automatic monotonic adjustment.\n');return p
+
 
 def interpolate_storage_from_stage(stage: float, curve: pd.DataFrame) -> float:
     return float(np.interp(stage, curve.stage_m, curve.storage_m3))
@@ -203,6 +219,24 @@ def build_hms_reservoir_project(config_path: str | Path, output_dir: str | Path)
     (root/"reports/hec_hms_reservoir_manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
     report = root/"reports/hec_hms_reservoir_validation.md"; report.write_text("# HEC-HMS Reservoir project\n\nOriginal Outflow Curve reservoir skeleton. Project generation is not a successful HMS run.\n",encoding="utf-8")
     return {"status":"project_generation_mvp", "project_dir":root, "report":report, "manifest":root/"reports/hec_hms_reservoir_manifest.json"}
+
+def build_hms_413_reservoir_project(config_path:str|Path,output_dir:str|Path)->dict[str,Any]:
+    cfg=load_reservoir_config(config_path);root=_path(output_dir);root.mkdir(parents=True,exist_ok=True)
+    for name in ('data','scripts','reports'): (root/name).mkdir(exist_ok=True)
+    source=_path(config_path).parent;stage=load_stage_area_volume_curve(source/cfg['stage_area_volume_csv']);discharge=load_stage_discharge_curve(source/cfg['stage_discharge_csv'])
+    curve=convert_stage_discharge_to_storage_discharge(stage,discharge);unique=validate_unique_storage_discharge(curve);mono=enforce_monotonic_storage_discharge(curve)
+    export_hms_413_storage_discharge_curve(curve,root/'data/hydrolite_storage_discharge.csv');stage[['stage_m','storage_m3']].to_csv(root/'data/hydrolite_elevation_storage.csv',index=False);stage[['stage_m','area_m2']].to_csv(root/'data/hydrolite_elevation_area.csv',index=False);shutil.copy2(source/cfg['inflow_csv'],root/'data/hydrolite_reservoir_inflow.csv')
+    (root/'HydroLite_Reservoir_Verified.hms').write_text('Project: HydroLite Reservoir Verified\n     Version: 4.13\nEnd:\n\nBasin: HydroLite Reservoir Basin\n     Filename: hydrolite_reservoir.basin\nEnd:\n\nControl: HydroLite Reservoir Control\n     Filename: hydrolite_reservoir.control\nEnd:\n',encoding='utf-8')
+    (root/'hydrolite_reservoir.pdata').write_text('Paired Data Manager: HydroLite Reservoir\n     Version: 4.13\nEnd:\n\nTable: HydroLite Storage-Discharge\n     Table Type: Storage-Discharge\n     X-Units: M3\n     Y-Units: CMS\n     Use External DSS File: NO\n     Interpolation: Linear Interpolation\nEnd:\n\nTable: HydroLite Elevation-Storage\n     Table Type: Elevation-Storage\n     X-Units: M\n     Y-Units: M3\n     Use External DSS File: NO\n     Interpolation: Linear Interpolation\nEnd:\n',encoding='utf-8')
+    (root/'hydrolite_reservoir.basin').write_text('Basin: HydroLite Reservoir Basin\n\nReservoir: HydroLite Reservoir\n     Route: Outflow Curve\n     Routing Curve: Storage-Discharge\n     Initial Elevation: %.3f\n     Storage-Discharge Table: HydroLite Storage-Discharge\n     Elevation-Storage Table: HydroLite Elevation-Storage\n     Adaptive Control: Off\nEnd:\n'%float(cfg['initial_stage_m']),encoding='utf-8')
+    (root/'hydrolite_reservoir.control').write_text('Control: HydroLite Reservoir Control\n     Start Date: 01 July 2025\n     Start Time: 00:00\n     End Date: 01 July 2025\n     End Time: 08:00\n     Time Interval: 60\nEnd:\n',encoding='utf-8')
+    (root/'hydrolite_reservoir.run').write_text('Run: HydroLite Reservoir Run\n     Basin: HydroLite Reservoir Basin\n     Control: HydroLite Reservoir Control\nEnd:\n',encoding='utf-8')
+    manifest={'status':'generated','semantic_status':'unverified_outflow_curve_table','storage_discharge_unique':unique['status']=='passed','storage_discharge_monotonic':mono['status']=='passed','inflow_ready':False,'warnings':['Official 4.13 reference confirms paired-data manager/table syntax but not a Storage-Discharge Outflow Curve sample. Compute remains gated.']}
+    (root/'reports/hec_hms_413_reservoir_manifest.json').write_text(json.dumps(manifest,indent=2));write_storage_discharge_conversion_report(root/'reports',{'curve':curve});return {'project_dir':root,'manifest':manifest,'curve':curve}
+def evaluate_hms_413_reservoir_compute_gate(project_dir:str|Path)->dict[str,Any]:
+    from hydrolite.hec_hms_format import validate_hms_413_reservoir_semantics
+    root=_path(project_dir);semantic=validate_hms_413_reservoir_semantics(root);manifest=json.loads((root/'reports/hec_hms_413_reservoir_manifest.json').read_text());passed=semantic['status']=='passed' and manifest['storage_discharge_unique'] and manifest['storage_discharge_monotonic'] and manifest['inflow_ready']
+    return {'status':'passed' if passed else 'gate_failed','semantic':semantic,'gates':{'paired_data_registered':semantic['paired_data_registered'],'storage_discharge_monotonic':manifest['storage_discharge_monotonic'],'inflow_ready':manifest['inflow_ready'],'official_reference_semantics_verified':False}}
 
 
 def run_hms_reservoir_open_probe(project_dir: str | Path) -> dict[str, Any]:

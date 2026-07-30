@@ -22,3 +22,5 @@
 # User Manual Plan
 
 The manual will distinguish observed calibration, synthetic demo calibration, and HMS cross-model alignment. It will not describe alignment as flood prediction.
+
+在“水量平衡审计”页面中，用户应以 full hydrograph 检查降雨、超额降雨、单位线、河段库容变化和出口体积；comparison window 仅用于与 HEC-HMS 的共同时间窗展示。

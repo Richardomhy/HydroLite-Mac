@@ -88,6 +88,45 @@ def extract_hms_reservoir_results(project_dir: str | Path) -> dict[str, Any]:
 def write_hms_reservoir_report(project_dir: str | Path, result: dict[str, Any]) -> Path:
     path = _resolve(project_dir) / "reports" / "hec_hms_reservoir_report.md"; path.write_text("# HEC-HMS Reservoir\n\nStatus: `%s`.\n" % result.get("status", "unknown"), encoding="utf-8"); return path
 
+def discover_hms_reservoir_reference_projects() -> list[dict[str, Any]]:
+    candidates=[]
+    for item in discover_hms_reference_projects():
+        source=item['project_path']
+        text=''
+        if '::' in source:
+            archive,prefix=source.split('::',1)
+            with zipfile.ZipFile(archive) as z:
+                text='\n'.join(z.read(x.filename).decode('utf-8',errors='replace') for x in z.infolist() if x.filename.startswith(prefix+'/') and x.filename.endswith('.basin'))
+        else:
+            text='\n'.join(p.read_text(encoding='utf-8',errors='replace') for p in Path(source).glob('*.basin'))
+        if 'Reservoir:' in text: candidates.append({**item,'reservoir_count':text.count('Reservoir:')})
+    return candidates
+def score_hms_reservoir_reference_project(project_dir: str | Path | dict[str,Any])->dict[str,Any]:
+    item=inspect_hms_reference_project(project_dir);return {**item,'score':100 if item.get('likely_official') and item.get('suitable_for_short_compute') else 10}
+def inspect_hms_reservoir_basin_blocks(project_dir: str | Path)->dict[str,Any]:
+    from hydrolite.hec_hms_format import parse_reservoir_basin_block
+    root=_resolve(project_dir);return {'blocks':[parse_reservoir_basin_block(p) for p in root.glob('*.basin')]}
+def inspect_hms_reservoir_paired_data(project_dir: str | Path)->dict[str,Any]:
+    from hydrolite.hec_hms_format import resolve_hms_paired_data_references
+    return resolve_hms_paired_data_references(project_dir)
+def inspect_hms_reservoir_run_references(project_dir: str | Path)->dict[str,Any]: return {'run_names':discover_hms_run_names(project_dir)}
+def inspect_hms_reservoir_result_pathnames(project_dir: str | Path)->dict[str,Any]: return {'status':'not_read','pathnames':[]}
+def select_hms_413_outflow_curve_reference(candidates:list[dict[str,Any]])->dict[str,Any]|None:
+    return min(candidates,key=lambda x:(x.get('total_size_bytes',0),x.get('total_files',0))) if candidates else None
+def copy_hms_reservoir_reference_to_output(source,output_dir): return copy_hms_reference_project_to_output(source,output_dir)
+def run_hms_reservoir_reference_open(project_dir): return run_hms_open_probe(project_dir,timeout=60)
+def run_hms_reservoir_reference_compute(project_dir,run_name=None,timeout=120): return run_hms_compute_probe(project_dir,run_name,timeout,execute=True)
+def write_hms_reservoir_reference_report(output_dir,result):
+    from hydrolite.hec_hms_format import compare_reservoir_generated_to_reference, write_hms_reservoir_format_comparison
+    root=_resolve(output_dir);reports=root/'reports';reports.mkdir(exist_ok=True);p=reports/'reservoir_reference_structure.json';p.write_text(json.dumps(result,indent=2,default=str))
+    paired=[]
+    for file_result in result.get('paired',{}).get('parsed',[]):
+        for block in file_result.get('blocks',[]): paired.append({'file':file_result.get('path'),'name':block.get('name'),'header':block.get('header'),'table_type':block.get('properties',{}).get('Table Type'),'x_units':block.get('properties',{}).get('X-Units'),'y_units':block.get('properties',{}).get('Y-Units'),'unknown_lines':'\n'.join(block.get('unknown_lines',[]))})
+    pd.DataFrame(paired).to_excel(reports/'reservoir_paired_data_structure.xlsx',index=False)
+    generated=PROJECT_ROOT/'output/hec_hms_reservoir_verified';comparison=compare_reservoir_generated_to_reference(root,generated) if generated.exists() else {'status':'reference_only','reference':result}
+    write_hms_reservoir_format_comparison(reports,comparison)
+    return p
+
 
 def detect_hec_hms_installations() -> list[dict[str, Any]]:
     home = Path.home()

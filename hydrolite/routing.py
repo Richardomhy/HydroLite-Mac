@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 
 import numpy as np
 import pandas as pd
@@ -69,6 +70,14 @@ def route_reaches(
     logger: logging.Logger | None = None,
 ) -> pd.DataFrame:
     result = flow.copy()
+    # Preserve the direct-runoff recession and give Muskingum storage enough
+    # zero-inflow intervals to release.  Balances must use this full series.
+    max_k = max(float(row.K_hours) for row in reaches.itertuples(index=False)) if not reaches.empty else 0.0
+    tail_steps = max(0, int(math.ceil(20 * max_k / dt_hours)) + 2)
+    if tail_steps and "time" in result:
+        tail = pd.DataFrame(0.0, index=range(tail_steps), columns=[c for c in result.columns if c != "time"])
+        tail["time"] = pd.date_range(result["time"].iloc[-1] + pd.to_timedelta(dt_hours, unit="h"), periods=tail_steps, freq=pd.to_timedelta(dt_hours, unit="h"))
+        result = pd.concat([result, tail[result.columns]], ignore_index=True)
     current = result["inflow_cms"].to_numpy(dtype=float)
 
     for row in reaches.itertuples(index=False):

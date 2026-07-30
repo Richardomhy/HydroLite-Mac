@@ -28,9 +28,11 @@ from hydrolite.calibration import (
 )
 from hydrolite.icesat2 import DEFAULT_OUTPUT as ICESAT2_OUTPUT, detect_earthdata_access, detect_icesat2_dependencies, identify_icesat2_product, run_icesat2_demo, select_icesat2_product_for_waterbody, build_icesat2_depth_profiles, build_stage_area_volume_curve, validate_icesat2_outputs
 from hydrolite.rusle import detect_rusle_backends, run_rusle, validate_rusle_outputs
-from hydrolite.conservation import load_conservation_scenario, run_hydrolite_conservation_scenario, write_conservation_report, run_conservation_audit
+from hydrolite.conservation import load_conservation_scenario, run_hydrolite_conservation_scenario, write_conservation_report, run_conservation_audit, run_conservation_audit_v2
+from hydrolite.water_balance_audit import reconcile_hydrologic_water_balance, write_water_balance_audit
 from hydrolite.watershed_accounting import build_watershed_accounting, export_watershed_accounting_bundle, validate_watershed_accounting, write_watershed_accounting_report
-from hydrolite.reservoir_routing import reservoir_diagnosis, run_reservoir_demo, load_reservoir_config, load_stage_area_volume_curve, load_stage_discharge_curve, validate_stage_area_volume_curve, validate_stage_discharge_curve, route_reservoir_level_pool, write_reservoir_routing_outputs, build_hms_reservoir_project, run_hms_reservoir_open_probe, run_hms_reservoir_compute_probe, extract_hms_reservoir_results, write_reservoir_comparison_report, validate_reservoir_routing
+from hydrolite.reservoir_routing import reservoir_diagnosis, run_reservoir_demo, load_reservoir_config, load_stage_area_volume_curve, load_stage_discharge_curve, validate_stage_area_volume_curve, validate_stage_discharge_curve, route_reservoir_level_pool, write_reservoir_routing_outputs, build_hms_reservoir_project, run_hms_reservoir_open_probe, run_hms_reservoir_compute_probe, extract_hms_reservoir_results, write_reservoir_comparison_report, validate_reservoir_routing, convert_stage_discharge_to_storage_discharge, validate_unique_storage_discharge, enforce_monotonic_storage_discharge, export_hms_413_storage_discharge_curve, build_hms_413_reservoir_project, evaluate_hms_413_reservoir_compute_gate
+from hydrolite.hec_hms import discover_hms_reservoir_reference_projects, select_hms_413_outflow_curve_reference, copy_hms_reservoir_reference_to_output, run_hms_reservoir_reference_open, run_hms_reservoir_reference_compute, inspect_hms_reservoir_basin_blocks, inspect_hms_reservoir_paired_data, write_hms_reservoir_reference_report
 from hydrolite.sediment_delivery import run_sediment_demo, _run as run_sediment_delivery, validate_sediment_outputs
 from hydrolite.beta import beta_checklist, beta_info, beta_smoke_local
 from hydrolite.compare import run_compare
@@ -379,6 +381,12 @@ def build_parser() -> argparse.ArgumentParser:
     x = conservation_sub.add_parser("report"); x.add_argument("output_dir")
     x = conservation_sub.add_parser("validate"); x.add_argument("output_dir")
     x = conservation_sub.add_parser("audit"); x.add_argument("project_dir"); x.add_argument("scenario_dir")
+    x = conservation_sub.add_parser("audit-v2"); x.add_argument("project_dir"); x.add_argument("scenario_dir")
+    balance_parser = subparsers.add_parser("balance"); balance_sub = balance_parser.add_subparsers(dest="balance_command",required=True)
+    x=balance_sub.add_parser("audit");x.add_argument("project_dir")
+    x=balance_sub.add_parser("case");x.add_argument("project_dir");x.add_argument("case_name")
+    x=balance_sub.add_parser("validate");x.add_argument("output_dir")
+    x=balance_sub.add_parser("report");x.add_argument("output_dir")
     reservoir_parser = subparsers.add_parser("reservoir"); reservoir_sub = reservoir_parser.add_subparsers(dest="reservoir_command", required=True)
     reservoir_sub.add_parser("diagnose"); reservoir_sub.add_parser("demo")
     x=reservoir_sub.add_parser("validate-curves");x.add_argument("config")
@@ -388,6 +396,15 @@ def build_parser() -> argparse.ArgumentParser:
     x=reservoir_sub.add_parser("hms-compute");x.add_argument("project_dir")
     x=reservoir_sub.add_parser("compare");x.add_argument("reservoir_dir");x.add_argument("hms_project_dir")
     x=reservoir_sub.add_parser("validate");x.add_argument("output_dir")
+    reservoir_sub.add_parser("reference-scan"); reservoir_sub.add_parser("reference-info"); reservoir_sub.add_parser("reference-open"); reservoir_sub.add_parser("reference-compute"); reservoir_sub.add_parser("compare-format")
+    x=reservoir_sub.add_parser("convert-storage-discharge");x.add_argument("config")
+    x=reservoir_sub.add_parser("hms413-project");x.add_argument("config");x.add_argument("output_dir")
+    x=reservoir_sub.add_parser("hms413-open");x.add_argument("project_dir")
+    x=reservoir_sub.add_parser("hms413-gate");x.add_argument("project_dir")
+    x=reservoir_sub.add_parser("hms413-compute");x.add_argument("project_dir")
+    x=reservoir_sub.add_parser("hms413-results");x.add_argument("project_dir")
+    x=reservoir_sub.add_parser("compare-verified");x.add_argument("reservoir_dir");x.add_argument("hms_project_dir")
+    x=reservoir_sub.add_parser("validate-verified");x.add_argument("project_dir")
     sediment_parser = subparsers.add_parser("sediment"); sediment_sub = sediment_parser.add_subparsers(dest="sediment_command", required=True)
     sediment_sub.add_parser("diagnose"); sediment_sub.add_parser("demo")
     x=sediment_sub.add_parser("deliver");x.add_argument("rusle_dir");x.add_argument("sdr_config");x.add_argument("output_dir")
@@ -990,7 +1007,24 @@ def main(argv: list[str] | None = None) -> int:
         if args.conservation_command == "report": print(Path(args.output_dir)/"conservation_report.md"); return 0
         if args.conservation_command == "validate": print({"status":"passed" if (Path(args.output_dir)/"conservation_summary.xlsx").exists() else "failed"}); return 0
         if args.conservation_command == "audit": result=run_conservation_audit(args.project_dir,args.scenario_dir);print(result["status"]);return 0
+        if args.conservation_command == "audit-v2": result=run_conservation_audit_v2(args.project_dir,args.scenario_dir);print(result["status"]);return 0
+    if args.command == "balance":
+        if args.balance_command in {"audit","case"}:
+            result=reconcile_hydrologic_water_balance(args.project_dir,getattr(args,"case_name",None));paths=write_water_balance_audit(ROOT/"output/water_balance_audit",result);print(paths["report"]);return 0 if result["validation"]["status"]=="passed" else 1
+        if args.balance_command == "validate":
+            gate=json.loads((Path(args.output_dir)/"flood_forecast_gate.json").read_text());print(gate);return 0 if gate["status"]=="passed" else 1
+        if args.balance_command == "report": print(Path(args.output_dir)/"water_balance_audit_report.md");return 0
     if args.command == "reservoir":
+        if args.reservoir_command in {"reference-scan","reference-info","reference-open","reference-compute","compare-format"}:
+            refs=discover_hms_reservoir_reference_projects();selected=select_hms_413_outflow_curve_reference(refs)
+            if args.reservoir_command=="reference-scan": print(json.dumps(refs,indent=2,default=str));return 0
+            if not selected: print("reference_unavailable");return 0
+            root=ROOT/"output/hec_hms_reservoir_reference";copied=copy_hms_reservoir_reference_to_output(selected,root)
+            if args.reservoir_command=="reference-info":
+                info={"selected":selected,"basin":inspect_hms_reservoir_basin_blocks(copied),"paired":inspect_hms_reservoir_paired_data(copied)};write_hms_reservoir_reference_report(copied,info);print(json.dumps(info,indent=2,default=str));return 0
+            if args.reservoir_command=="reference-open": print(json.dumps(run_hms_reservoir_reference_open(copied),indent=2,default=str));return 0
+            if args.reservoir_command=="reference-compute": print(json.dumps(run_hms_reservoir_reference_compute(copied,timeout=120),indent=2,default=str));return 0
+            print(json.dumps({"reference":selected,"generated":"not_built"},indent=2));return 0
         if args.reservoir_command == "diagnose": print(json.dumps(reservoir_diagnosis(),indent=2));return 0
         if args.reservoir_command == "demo": result=run_reservoir_demo();print(result["paths"]["report"]);return 0
         if args.reservoir_command == "validate-curves":
@@ -1004,6 +1038,15 @@ def main(argv: list[str] | None = None) -> int:
             h=pd.read_csv(Path(args.reservoir_dir)/"reservoir_routing_timeseries.csv");print(write_reservoir_comparison_report(ROOT/"output/reservoir_comparison",h)["report"]);return 0
         if args.reservoir_command == "validate":
             frame=pd.read_csv(Path(args.output_dir)/"reservoir_routing_timeseries.csv");result=validate_reservoir_routing(frame);print(result);return 0 if result["status"]=="passed" else 1
+        if args.reservoir_command=="convert-storage-discharge":
+            cfg=load_reservoir_config(args.config);base=Path(args.config).expanduser().resolve().parent;curve=convert_stage_discharge_to_storage_discharge(load_stage_area_volume_curve(base/cfg["stage_area_volume_csv"]),load_stage_discharge_curve(base/cfg["stage_discharge_csv"]));out=ROOT/"output/hec_hms_reservoir_verified/data/hydrolite_storage_discharge.csv";export_hms_413_storage_discharge_curve(curve,out);print({"path":str(out),"unique":validate_unique_storage_discharge(curve),"monotonic":enforce_monotonic_storage_discharge(curve)["status"]});return 0
+        if args.reservoir_command=="hms413-project": print(build_hms_413_reservoir_project(args.config,args.output_dir)["project_dir"]);return 0
+        if args.reservoir_command=="hms413-open": print(json.dumps(run_hms_reservoir_open_probe(args.project_dir),indent=2,default=str));return 0
+        if args.reservoir_command=="hms413-gate": print(json.dumps(evaluate_hms_413_reservoir_compute_gate(args.project_dir),indent=2));return 0
+        if args.reservoir_command=="hms413-compute": print(json.dumps({"status":"gate_failed","gate":evaluate_hms_413_reservoir_compute_gate(args.project_dir)},indent=2));return 0
+        if args.reservoir_command=="hms413-results": print(json.dumps(extract_hms_reservoir_results(args.project_dir),indent=2,default=str));return 0
+        if args.reservoir_command=="compare-verified": print(write_reservoir_comparison_report(ROOT/"output/reservoir_comparison_verified",pd.read_csv(Path(args.reservoir_dir)/"reservoir_routing_timeseries.csv"))["report"]);return 0
+        if args.reservoir_command=="validate-verified": print(evaluate_hms_413_reservoir_compute_gate(args.project_dir));return 0
     if args.command == "sediment":
         if args.sediment_command == "diagnose": print({"status":"available","methods":["user_defined","area_empirical_demo"],"warning":"RUSLE is not outlet sediment."});return 0
         if args.sediment_command == "demo": print(run_sediment_demo()["output_dir"]);return 0

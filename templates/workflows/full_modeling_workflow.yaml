@@ -22,6 +22,10 @@ stages:
     enabled: true
     status: available
     notes: Existing SCS-CN, unit hydrograph, Muskingum workflow.
+  - stage_id: hydrologic_balance_audit
+    enabled: false
+    status: partial
+    notes: Full-hydrograph volume audit; flood forecast remains planned until all gates pass.
   - stage_id: hec_hms_project
     enabled: false
     status: partial

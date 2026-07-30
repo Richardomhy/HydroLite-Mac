@@ -211,6 +211,92 @@ def find_hms_excess_precipitation_pathnames(catalog: dict[str, Any] | list[str])
     ]
 
 
+def classify_hms_reservoir_pathname(pathname: str) -> dict[str, Any]:
+    """Classify a Reservoir DSS pathname without guessing unknown units."""
+    row = parse_dss_pathname(pathname)
+    parameter = row["parameter"].upper()
+    if "ELEVATION" in parameter or "POOL" in parameter:
+        kind = "elevation"
+    elif "STORAGE" in parameter:
+        kind = "storage"
+    elif "INFLOW" in parameter:
+        kind = "inflow"
+    elif "OUTFLOW" in parameter or "SPILLWAY" in parameter:
+        kind = "outflow"
+    elif "FLOW" in parameter:
+        kind = "flow"
+    else:
+        kind = "other"
+    return {**row, "reservoir_series": kind}
+
+
+def _find_reservoir_pathnames(catalog: dict[str, Any] | list[str], kinds: set[str]) -> list[str]:
+    pathnames = catalog if isinstance(catalog, list) else catalog.get("pathnames", [])
+    return [path for path in pathnames if classify_hms_reservoir_pathname(path)["reservoir_series"] in kinds]
+
+
+def find_hms_reservoir_inflow_pathnames(catalog: dict[str, Any] | list[str]) -> list[str]:
+    return _find_reservoir_pathnames(catalog, {"inflow"})
+
+
+def find_hms_reservoir_outflow_pathnames(catalog: dict[str, Any] | list[str]) -> list[str]:
+    return _find_reservoir_pathnames(catalog, {"outflow"})
+
+
+def find_hms_reservoir_elevation_pathnames(catalog: dict[str, Any] | list[str]) -> list[str]:
+    return _find_reservoir_pathnames(catalog, {"elevation"})
+
+
+def find_hms_reservoir_storage_pathnames(catalog: dict[str, Any] | list[str]) -> list[str]:
+    return _find_reservoir_pathnames(catalog, {"storage"})
+
+
+def read_hms_reservoir_timeseries(dss_path: str | Path, reservoir_name: str | None = None) -> dict[str, Any]:
+    """Read only identified Reservoir series; missing DSS remains unavailable."""
+    target = _resolve(dss_path)
+    if not target.is_file():
+        return {"status": "unavailable", "dss_path": str(target), "reason": "DSS output is missing; no values were fabricated.", "series": []}
+    catalog = load_hms_result_catalog(target)
+    wanted = sum((
+        find_hms_reservoir_inflow_pathnames(catalog),
+        find_hms_reservoir_outflow_pathnames(catalog),
+        find_hms_reservoir_elevation_pathnames(catalog),
+        find_hms_reservoir_storage_pathnames(catalog),
+    ), [])
+    if reservoir_name:
+        wanted = [path for path in wanted if reservoir_name.lower() in path.lower()]
+    if not wanted:
+        return {"status": "unavailable", "dss_path": str(target), "reason": "No identifiable Reservoir pathnames in DSS catalog.", "series": []}
+    return read_hms_dss_timeseries(target, wanted, target.parent / "reports")
+
+
+def validate_hms_reservoir_timeseries(result: dict[str, Any]) -> dict[str, Any]:
+    if result.get("status") not in {"success", "partial"}:
+        return {"status": "unavailable", "reason": result.get("reason", "Reservoir DSS time series are unavailable.")}
+    classes = {classify_hms_reservoir_pathname(item["pathname"])["reservoir_series"] for item in result.get("series", [])}
+    required = {"inflow", "outflow", "elevation", "storage"}
+    missing = sorted(required - classes)
+    return {"status": "passed" if not missing else "incomplete", "missing_series": missing}
+
+
+def calculate_hms_reservoir_water_balance(result: dict[str, Any]) -> dict[str, Any]:
+    validation = validate_hms_reservoir_timeseries(result)
+    if validation["status"] != "passed":
+        return {"status": "unavailable", "reason": "Reservoir flow/storage series are incomplete; quantitative balance is blocked.", **validation}
+    return {"status": "unavailable", "reason": "Unit-normalized Reservoir DSS values are not available in this run."}
+
+
+def write_hms_reservoir_result_report(output_dir: str | Path, result: dict[str, Any]) -> dict[str, Path]:
+    output = _resolve(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    report = output / "hms_reservoir_timeseries_report.md"
+    workbook = output / "hms_reservoir_timeseries.xlsx"
+    rows = [{"pathname": item.get("pathname", ""), "series_type": classify_hms_reservoir_pathname(item.get("pathname", "/ / / / / /")).get("reservoir_series", "other"), "read_status": item.get("read_status", "unavailable")} for item in result.get("series", [])]
+    pd.DataFrame(rows).to_excel(workbook, index=False)
+    report.write_text(f"# HEC-HMS Reservoir results\n\nStatus: `{result.get('status', 'unavailable')}`.\n\n{result.get('reason', 'Values are retained only when DSS reading succeeds.')}\n", encoding="utf-8")
+    return {"workbook": workbook, "report": report}
+
+
 def load_hms_result_catalog(dss_path: str | Path) -> dict[str, Any]:
     catalog = catalog_dss_file(dss_path)
     classified = classify_hms_result_catalog(catalog)

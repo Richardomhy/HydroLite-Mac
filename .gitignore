@@ -11,6 +11,11 @@ output/reservoir/
 output/hec_hms_reservoir_project/
 output/reservoir_comparison/
 output/sediment_delivery/
+output/water_balance_audit/
+output/conservation_audit_v2/
+output/hec_hms_reservoir_reference/
+output/hec_hms_reservoir_verified/
+output/reservoir_comparison_verified/
 *.dss
 hs_err_pid*.log
 outputs/

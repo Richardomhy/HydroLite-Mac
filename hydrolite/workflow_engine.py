@@ -128,6 +128,13 @@ _STAGES: tuple[WorkflowStage, ...] = (
         "核心轻量模型已实现，适合快速评估和演示。",
     ),
     WorkflowStage(
+        "hydrologic_balance_audit", "水量平衡审计", "Hydrologic balance audit",
+        "审计累计 SCS-CN、完整单位线尾部和河道路由蓄量。", "Audit cumulative SCS-CN, full unit-hydrograph tails, and reach storage.", PARTIAL,
+        ["hydrolite_simulation"], ["hydrologic_balance_ledger.xlsx", "water_balance_audit_report.md", "flood_forecast_gate.json"],
+        "python -m hydrolite balance audit <project>", "水量平衡审计",
+        ["数值诊断不是工程验收；洪水预测仍保持 planned。"], ["hydrolite_simulation"], "完整过程线用于平衡，比较窗口单独输出。",
+    ),
+    WorkflowStage(
         "hec_hms_project",
         "HEC-HMS 项目生成",
         "HEC-HMS project generation",

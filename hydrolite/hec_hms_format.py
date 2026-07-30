@@ -38,6 +38,39 @@ def format_reservoir_outflow_curve(curve: pd.DataFrame) -> str:
     return "\n".join(rows) + "\n"
 
 
+def discover_hms_paired_data_files(project_dir: str | Path) -> list[Path]:
+    root=Path(project_dir).expanduser().resolve();return [p for p in root.iterdir() if p.is_file() and p.suffix.lower() not in {'.hms','.basin','.run','.met','.control','.dss','.out','.log'} and 'pdata' in p.name.lower()]
+def parse_hms_paired_data_file(path: str | Path) -> dict[str, Any]:
+    lines=Path(path).read_text(encoding='utf-8',errors='replace').splitlines();blocks=[];current=None
+    for line in lines:
+        if line.startswith('Table:'):
+            if current: blocks.append(current)
+            current={'header':line,'name':line.split(':',1)[1].strip(),'lines':[line],'properties':{},'raw_sections':[],'unknown_lines':[]}
+        elif current and line.strip()=='End:': current['lines'].append(line);blocks.append(current);current=None
+        elif current:
+            current['lines'].append(line)
+            if ':' in line and line.startswith('     '): key,value=line.strip().split(':',1);current['properties'][key.strip()]=value.strip()
+            elif line.strip(): current['unknown_lines'].append(line)
+    if current: blocks.append(current)
+    return {'path':str(path),'blocks':blocks,'raw_sections':lines}
+def _function(path_or_block: str | Path | dict[str,Any], expected:str)->dict[str,Any]:
+    parsed=parse_hms_paired_data_file(path_or_block) if not isinstance(path_or_block,dict) else path_or_block
+    blocks=parsed.get('blocks',[parsed]);return {'status':'found' if any(expected.lower() in str(b.get('properties',{}).get('Table Type','')).lower() for b in blocks) else 'missing','blocks':[b for b in blocks if expected.lower() in str(b.get('properties',{}).get('Table Type','')).lower()]}
+def parse_storage_discharge_function(path_or_block): return _function(path_or_block,'storage')
+def parse_elevation_storage_function(path_or_block): return _function(path_or_block,'elevation-storage')
+def parse_elevation_area_function(path_or_block): return _function(path_or_block,'elevation-area')
+def parse_reservoir_basin_block(path_or_block: str | Path)->dict[str,Any]:
+    text=Path(path_or_block).read_text(encoding='utf-8',errors='replace') if isinstance(path_or_block,(str,Path)) else str(path_or_block);start=text.find('Reservoir:');end=text.find('\nEnd:',start);raw=text[start:end+5] if start>=0 else '';return {'status':'found' if raw else 'missing','raw_section':raw,'properties':{line.strip().split(':',1)[0]:line.strip().split(':',1)[1].strip() for line in raw.splitlines() if ':' in line and not line.startswith('Reservoir:')}}
+def resolve_hms_paired_data_references(project_dir: str | Path)->dict[str,Any]:
+    root=Path(project_dir).expanduser().resolve();files=discover_hms_paired_data_files(root);basins=list(root.glob('*.basin'));return {'paired_files':[str(x) for x in files],'parsed':[parse_hms_paired_data_file(x) for x in files],'reservoir_blocks':[parse_reservoir_basin_block(x) for x in basins]}
+def compare_reservoir_generated_to_reference(reference_dir,generated_dir)->dict[str,Any]:
+    return {'reference':resolve_hms_paired_data_references(reference_dir),'generated':resolve_hms_paired_data_references(generated_dir),'status':'review_required'}
+def validate_hms_413_reservoir_semantics(project_dir)->dict[str,Any]:
+    found=resolve_hms_paired_data_references(project_dir);has_res=any(x['status']=='found' for x in found['reservoir_blocks']);return {'status':'passed' if has_res and found['paired_files'] else 'failed','reservoir_element_discovered':has_res,'paired_data_registered':bool(found['paired_files']),'details':found}
+def write_hms_reservoir_format_comparison(output_dir,result)->dict[str,Path]:
+    root=Path(output_dir).expanduser().resolve();root.mkdir(parents=True,exist_ok=True);j=root/'reservoir_format_comparison.json';m=root/'reservoir_format_comparison.md';j.write_text(json.dumps(result,indent=2,default=str));m.write_text('# HEC-HMS 4.13 Reservoir format comparison\n\nStatus: `%s`. Unknown lines are retained in JSON.\n'%result.get('status','review_required'));return {'json':j,'markdown':m}
+
+
 def _parse_component(path: str | Path, expected_type: str) -> dict[str, Any]:
     file_path = Path(path).expanduser().resolve()
     lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines()

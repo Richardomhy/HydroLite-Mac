@@ -30,3 +30,5 @@ HydroLite 提供快速情景模拟；HEC-HMS 后续可作为专业模型对照�
 # Flood Forecast Plan
 
 Flood forecasting remains planned. Single-event sensitivity or cross-model alignment does not create a flood forecast.
+
+进入预测 MVP 前，必须确认 SCS-CN 的累计产流已转换为时段增量、单位线和 Muskingum 退水尾部完整、且 HEC-HMS Reservoir compute 能读回可确认单位的结果。

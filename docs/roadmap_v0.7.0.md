@@ -74,3 +74,5 @@ v0.6.0-beta.1 是当前稳定 beta，已经包含项目工作流、数据模板�
 The reservoir and SDR MVPs are constrained diagnostic/demo tools, not a release of complex reservoir operation, two-dimensional hydraulics, or sediment morphodynamics.
 
 The lightweight calibration milestone is now partial: observed calibration is supported only when real observations exist; HMS alignment is available for small completed events.
+
+洪水预测仍未启动。其前置条件是水量平衡审计和 HEC-HMS Reservoir compute 门禁均通过；当前仅前者已达到数值优秀等级。

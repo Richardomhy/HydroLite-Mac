@@ -8,6 +8,7 @@ import yaml
 from hydrolite.calibration import _project_case
 from hydrolite.config import load_case
 from hydrolite.project import run_project_case
+ROOT=Path(__file__).resolve().parents[1]
 
 def _path(v:str|Path)->Path:return Path(v).expanduser().resolve()
 def load_conservation_scenario(config_path:str|Path)->dict[str,Any]:
@@ -75,3 +76,14 @@ def write_conservation_realism_report(output_dir:str|Path,result:dict[str,Any])-
 def run_conservation_audit(project_dir:str|Path,scenario_dir:str|Path)->dict[str,Any]:
     summary_file=_path(scenario_dir)/"conservation_summary.xlsx";summary=pd.read_excel(summary_file)
     result={"project_dir":_path(project_dir),"summary":summary};paths=write_conservation_realism_report(Path.cwd()/"output/conservation_audit",result);return {"status":classify_conservation_scenario_realism(result),"paths":paths,"summary":summary}
+
+def run_conservation_audit_v2(project_dir:str|Path,scenario_dir:str|Path)->dict[str,Any]:
+    """Recalculate using the corrected cumulative-SCS/full-tail calculation path."""
+    previous_file=_path(scenario_dir)/"conservation_summary.xlsx";previous=pd.read_excel(previous_file) if previous_file.exists() else pd.DataFrame()
+    corrected=run_hydrolite_conservation_scenario(project_dir,load_conservation_scenario(ROOT/"configs/conservation_demo.yaml"),_path(scenario_dir))
+    root=ROOT/"output/conservation_audit_v2";root.mkdir(parents=True,exist_ok=True);current=corrected['summary'].copy();current['calculation_version']='cumulative_scs_cn_full_tail';current['change_reason']='SCS-CN cumulative increment and full routing tail water-balance correction'
+    previous=previous.assign(calculation_version='previous_incremental_scs_cn') if not previous.empty else previous
+    with pd.ExcelWriter(root/'corrected_conservation_metrics.xlsx') as w:current.to_excel(w,index=False)
+    with pd.ExcelWriter(root/'previous_vs_corrected.xlsx') as w:
+        previous.to_excel(w,sheet_name='previous_result',index=False);current.to_excel(w,sheet_name='corrected_result',index=False)
+    result={'project_dir':_path(project_dir),'summary':current};paths=write_conservation_realism_report(root,result);return {'status':'calculation_error_corrected','summary':current,'paths':paths}

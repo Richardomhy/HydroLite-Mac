@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from hydrolite.hydrology import scs_cn_runoff_depth_mm
+from hydrolite.hydrology import scs_cn_excess_rainfall_increments_mm
 
 
 def _balance_error_percent(error_m3: float, reference_m3: float) -> float:
@@ -27,10 +27,9 @@ def build_water_balance(
     for row in subcatchments.itertuples(index=False):
         subbasin_id = str(row.id)
         area_km2 = float(row.area_km2)
-        effective_rainfall_mm = sum(
-            scs_cn_runoff_depth_mm(float(rain), float(row.curve_number))
-            for rain in rainfall["rain_mm"]
-        )
+        ia_ratio = float(getattr(row, "initial_abstraction_ratio", 0.2))
+        excess_increments = scs_cn_excess_rainfall_increments_mm(rainfall["rain_mm"], float(row.curve_number), ia_ratio)
+        effective_rainfall_mm = float(excess_increments.sum())
         runoff_volume_m3 = effective_rainfall_mm / 1000.0 * area_km2 * 1_000_000.0
         routed_column = f"subcatchment_{subbasin_id}_flow_cms"
         routed_volume_m3 = float(result[routed_column].sum() * dt_hours * 3600.0)
@@ -98,4 +97,3 @@ def balance_warning_messages(
     if abs(outlet_error) > threshold_percent:
         messages.append(f"Outlet water balance error is {outlet_error:.3f}%")
     return messages
-

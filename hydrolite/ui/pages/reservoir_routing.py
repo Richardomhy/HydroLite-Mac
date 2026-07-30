@@ -15,3 +15,4 @@ def render(context: WorkbenchContext)->None:
         if p.exists():
             st.subheader(name);st.dataframe(safe_read_excel(p) if p.suffix==".xlsx" else safe_read_csv(p),use_container_width=True);show_download("下载 "+name,p,"application/octet-stream")
     st.caption("HEC-HMS Reservoir 仅在项目 open 和 paired-data 门禁通过后才可计算；当前 demo 会安全跳过未验证计算。")
+    st.info("本机 4.13 官方 river_bend 示例已用于 paired-data 结构诊断；其 DSS 工作副本不可访问时，compute 保持禁用。洪水预测仍为 planned。")

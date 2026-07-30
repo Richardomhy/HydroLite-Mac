@@ -73,3 +73,5 @@ python -m hydrolite hms run output/hec_hms_project --dry-run
 Reservoir routing and sediment delivery are partial stages: routing requires independent storage and discharge curves; RUSLE-SDR remains hillslope-delivery-only when gully, bank, and channel processes are missing.
 
 After a completed-event HydroLite/HMS comparison, optional bounded sensitivity and cross-model alignment can create a new generated case without replacing original inputs.
+
+洪水预测前需同时通过 HydroLite 子流域、河段和出口的完整过程线水量平衡门禁，以及 HEC-HMS Reservoir paired-data/compute 门禁；本阶段后者未通过，因此 flood_forecast 继续为 `planned`。
