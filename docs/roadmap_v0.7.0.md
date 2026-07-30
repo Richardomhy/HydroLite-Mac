@@ -1,5 +1,7 @@
 # HydroLite Studio v0.7.0 Roadmap
 
+多事件历史回放与数据同化 MVP 已进入 `partial`：软件链路可用，真实项目等级仍由合格观测事件和独立验证决定，不等于业务预报发布能力。
+
 The macOS desktop packaging MVP now covers an isolated build environment, native SwiftUI/WKWebView shell, ad-hoc App/ZIP/DMG, diagnostics, signing/notarization gates, and secure-update metadata. Developer ID, notarization, a production Sparkle feed, Universal 2, and broad macOS compatibility remain future release work.
 
 生产运行中心 MVP 已进入 `partial`：项目注册、Run/Task、失败恢复、资产索引和运行模式已形成轻量闭环。分布式调度、多用户权限、桌面安装包仍不在本阶段。

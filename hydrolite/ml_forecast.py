@@ -22,6 +22,23 @@ def detect_ml_dependencies() -> dict[str, Any]:
 def assess_ml_data_readiness(project_dir: str | Path, target: str | None = None) -> dict[str, Any]:
     project = Path(project_dir).expanduser().resolve()
     observed = list(project.glob("data/*observed*flow*.csv"))
+    event_source = project if (project / "events.csv").exists() else project / "data" / "hindcast_validation"
+    if (event_source / "events.csv").exists():
+        from hydrolite.validation_readiness import assess_ml_validation_readiness
+        readiness = assess_ml_validation_readiness(event_source)
+        return {
+            "status": "ready" if readiness["real_training_ready"] else "insufficient_multi_event_data",
+            "real_training_ready": readiness["real_training_ready"],
+            "continuous_steps_required": 500,
+            "independent_events_required": 5,
+            "independent_test_events_required": 1,
+            "observed_files": [path.name for path in observed],
+            "target": target or "outlet_flow_cms",
+            "valid_time_steps": readiness["valid_time_steps"],
+            "qualified_real_events": readiness["real_qualified_event_count"],
+            "feature_leakage_check": readiness["feature_leakage_check"],
+            "note": "Software gate only; it is not a scientific sufficiency standard.",
+        }
     return {
         "status": "insufficient_multi_event_data",
         "real_training_ready": False,

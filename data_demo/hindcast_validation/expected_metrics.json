@@ -1,0 +1,9 @@
+{
+  "synthetic_demo": true,
+  "event_count": 6,
+  "calibration_events": 3,
+  "validation_events": 2,
+  "test_events": 1,
+  "real_validation_level": "framework_ready_real_data_missing",
+  "operational_candidate": false
+}

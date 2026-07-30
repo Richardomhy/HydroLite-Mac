@@ -1,5 +1,7 @@
 # User Manual Export Plan
 
+历史洪水章节需覆盖事件独立性、时间泄漏、观测/模型误差、初始状态、率定/验证/测试、Nudging、EnKF、不同提前期、最差事件和模型适用范围。中文与英文用户指南已分别提供。
+
 桌面手册已覆盖 Finder 启动、数据/日志目录、安全退出、外部后端、ad-hoc 与 Developer ID、DMG、异常恢复和 dev 限制，见 `desktop_user_guide_zh.md` 与 `desktop_user_guide_en.md`。
 
 新增运维手册入口：`operations_user_guide_zh.md` 与 `operations_user_guide_en.md`，覆盖项目、运行、任务、失败恢复、日志、成果和本地/云端差异。

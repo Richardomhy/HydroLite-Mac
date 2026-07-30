@@ -138,3 +138,65 @@ def write_uncertainty_report(output_dir: str | Path, result: dict[str, pd.DataFr
     report.write_text("# Forecast uncertainty\n\nThis output is a scenario ensemble. Member fractions are not formal probabilities.\n", encoding="utf-8")
     paths["report"] = report
     return paths
+
+
+def calculate_prior_posterior_spread(prior, posterior) -> dict[str, float]:
+    return {
+        "prior_spread": float(np.nanstd(np.asarray(prior, dtype=float), ddof=1)),
+        "posterior_spread": float(np.nanstd(np.asarray(posterior, dtype=float), ddof=1)),
+    }
+
+
+def calculate_innovation_statistics(innovation) -> dict[str, float]:
+    values = pd.to_numeric(pd.Series(innovation), errors="coerce").dropna()
+    return {
+        "count": int(len(values)), "mean": float(values.mean()) if len(values) else np.nan,
+        "std": float(values.std(ddof=1)) if len(values) > 1 else np.nan,
+        "rmse": float(np.sqrt(np.mean(values**2))) if len(values) else np.nan,
+    }
+
+
+def calculate_rank_histogram(observed, ensemble: np.ndarray) -> pd.DataFrame:
+    observations = np.asarray(observed, dtype=float)
+    members = np.asarray(ensemble, dtype=float)
+    if members.ndim != 2 or members.shape[0] != len(observations):
+        raise ValueError("ensemble must have shape (time, member)")
+    counts = pd.Series(np.sum(members < observations[:, None], axis=1)).value_counts()
+    return pd.DataFrame({"rank": range(members.shape[1] + 1)}).assign(count=lambda frame: frame["rank"].map(counts).fillna(0).astype(int))
+
+
+def calculate_reliability_by_threshold(observed, ensemble: np.ndarray, thresholds: list[float]) -> pd.DataFrame:
+    observations, members = np.asarray(observed, dtype=float), np.asarray(ensemble, dtype=float)
+    return pd.DataFrame([{
+        "threshold": threshold, "mean_probability": float(np.mean(members >= threshold)),
+        "observed_frequency": float(np.mean(observations >= threshold)), "sample_count": len(observations),
+        "status": "exploratory" if len(observations) < 100 else "diagnostic",
+    } for threshold in thresholds])
+
+
+def calculate_ensemble_coverage(observed, lower, upper) -> float:
+    obs, low, high = (np.asarray(item, dtype=float) for item in (observed, lower, upper))
+    valid = np.isfinite(obs) & np.isfinite(low) & np.isfinite(high)
+    return float(np.mean((obs[valid] >= low[valid]) & (obs[valid] <= high[valid]))) if valid.any() else np.nan
+
+
+def compare_assimilation_uncertainty(prior: np.ndarray, posterior: np.ndarray, observed=None) -> dict[str, Any]:
+    result = calculate_prior_posterior_spread(prior, posterior)
+    result.update({"spread_reduction": result["prior_spread"] - result["posterior_spread"], "status": "exploratory"})
+    if observed is not None and np.asarray(posterior).ndim == 2:
+        values = np.asarray(posterior, dtype=float)
+        result["posterior_90pct_coverage"] = calculate_ensemble_coverage(observed, np.quantile(values, .05, axis=1), np.quantile(values, .95, axis=1))
+    return result
+
+
+def write_assimilation_uncertainty_report(output_dir: str | Path, result: dict[str, Any]) -> Path:
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    path = output / "assimilation_uncertainty_report.md"
+    path.write_text(
+        "# Assimilation Uncertainty Report\n\n"
+        f"- Prior spread: `{result.get('prior_spread')}`\n- Posterior spread: `{result.get('posterior_spread')}`\n"
+        "- Status: `exploratory`; intervals are not claimed as strictly calibrated without independent real events.\n",
+        encoding="utf-8",
+    )
+    return path

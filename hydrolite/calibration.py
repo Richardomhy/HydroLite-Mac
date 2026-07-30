@@ -668,3 +668,127 @@ def write_parameter_outputs(project_dir: str | Path, output_dir: str | Path = DE
     parameters.to_excel(output / "baseline_parameters.xlsx", index=False); _write_json(output / "baseline_parameters.json", parameters.to_dict(orient="records")); bounds.to_excel(output / "parameter_bounds.xlsx", index=False)
     (output / "parameter_bounds.md").write_text("# Parameter Bounds\n\n" + _frame_text(bounds) + "\n", encoding="utf-8")
     return parameters, bounds
+
+
+def create_multi_event_calibration_objective(events: Any, weights: str | dict[str, float] = "equal") -> dict[str, Any]:
+    ids = events["event_id"].astype(str).tolist() if isinstance(events, pd.DataFrame) else [str(item["event_id"] if isinstance(item, dict) else item) for item in events]
+    values = {event_id: float(weights.get(event_id, 0)) for event_id in ids} if isinstance(weights, dict) else {event_id: 1.0 for event_id in ids}
+    total = sum(values.values()) or 1.0
+    return {"event_weights": {key: value / total for key, value in values.items()}, "weighting": weights if isinstance(weights, str) else "user_defined", "metrics": ["NSE", "KGE", "PBIAS"], "single_event_dominance_guard": True}
+
+
+def evaluate_parameter_set_across_events(parameters: dict[str, float], events: Any, project_dir: str | Path | None = None) -> dict[str, Any]:
+    from hydrolite.event_dataset import build_event_dataset
+    from hydrolite.hindcast import DEFAULT_OUTPUT as HINDCAST_OUTPUT, _source_for_project, run_hydrolite_hindcast_event
+    project = Path(project_dir or Path(__file__).resolve().parents[1] / "projects" / "qgis_workflow_project")
+    source = _source_for_project(project)
+    rows = []
+    records = events.to_dict("records") if isinstance(events, pd.DataFrame) else list(events)
+    for event in records:
+        dataset = build_event_dataset(event, source)
+        rows.append(run_hydrolite_hindcast_event(project, dataset, parameters, HINDCAST_OUTPUT / "calibration" / "_scratch", write_outputs=False))
+    frame = pd.DataFrame(rows)
+    success = frame[frame.get("run_status", pd.Series(dtype=str)).eq("success")]
+    return {
+        "parameters": dict(parameters), "events": frame, "success_count": len(success),
+        "median_NSE": float(pd.to_numeric(success.get("NSE"), errors="coerce").median()) if len(success) else np.nan,
+        "median_KGE": float(pd.to_numeric(success.get("KGE"), errors="coerce").median()) if len(success) else np.nan,
+        "median_abs_PBIAS": float(pd.to_numeric(success.get("PBIAS"), errors="coerce").abs().median()) if len(success) else np.nan,
+        "worst_NSE": float(pd.to_numeric(success.get("NSE"), errors="coerce").min()) if len(success) else np.nan,
+    }
+
+
+def rank_parameter_sets_multi_event(results: pd.DataFrame) -> pd.DataFrame:
+    frame = results.copy()
+    frame["robust_score"] = (
+        pd.to_numeric(frame["median_NSE"], errors="coerce").fillna(-1) * .35
+        + pd.to_numeric(frame["median_KGE"], errors="coerce").fillna(-1) * .30
+        + pd.to_numeric(frame["worst_NSE"], errors="coerce").fillna(-1) * .20
+        + (1 - pd.to_numeric(frame["median_abs_PBIAS"], errors="coerce").fillna(100).clip(0, 100) / 100) * .15
+    )
+    return frame.sort_values(["robust_score", "worst_NSE"], ascending=False).reset_index(drop=True)
+
+
+def detect_event_specific_overfitting(results: pd.DataFrame) -> dict[str, Any]:
+    if results.empty or not {"median_NSE", "worst_NSE"}.issubset(results):
+        return {"status": "insufficient_data", "detected": False}
+    best = results.sort_values("median_NSE", ascending=False).iloc[0]
+    gap = float(best["median_NSE"] - best["worst_NSE"])
+    return {"status": "warning" if gap > .5 else "passed", "detected": gap > .5, "median_worst_gap": gap}
+
+
+def calculate_parameter_stability(results: pd.DataFrame) -> dict[str, Any]:
+    ranked = rank_parameter_sets_multi_event(results)
+    top = ranked.head(min(5, len(ranked)))
+    limits = {"cn_delta": 8, "lag_multiplier": .5, "k_multiplier": .5, "x_delta": .1}
+    rows = []
+    for name, limit in limits.items():
+        if name not in top:
+            continue
+        values = pd.to_numeric(top[name], errors="coerce")
+        rows.append({"parameter": name, "mean": values.mean(), "std": values.std(ddof=0), "range": values.max() - values.min(), "stability_limit": limit})
+    frame = pd.DataFrame(rows)
+    stable = bool(len(frame) and (frame["range"].fillna(0) <= frame["stability_limit"]).all())
+    return {"status": "stable" if stable else "variable", "parameters": frame}
+
+
+def select_robust_parameter_set(results: pd.DataFrame) -> dict[str, Any]:
+    ranked = rank_parameter_sets_multi_event(results)
+    if ranked.empty:
+        return {}
+    row = ranked.iloc[0]
+    return {name: float(row[name]) for name in ("cn_delta", "lag_multiplier", "k_multiplier", "x_delta") if name in row}
+
+
+def validate_robust_parameter_set(parameters: dict[str, float], validation_events: Any, project_dir: str | Path | None = None) -> dict[str, Any]:
+    result = evaluate_parameter_set_across_events(parameters, validation_events, project_dir)
+    return {**result, "status": "passed" if result["success_count"] == len(validation_events) else "failed", "events_used_for_fitting": False}
+
+
+def run_multi_event_parameter_search(project_dir: str | Path, calibration_events: Any, config: dict[str, Any] | None = None) -> dict[str, Any]:
+    from hydrolite.hindcast import DEFAULT_OUTPUT as HINDCAST_OUTPUT
+    settings = config or {}
+    maximum = int(settings.get("max_candidates", 30))
+    if not 1 <= maximum <= 60:
+        raise ValueError("multi-event calibration candidates must be in [1, 60]")
+    rng = np.random.default_rng(int(settings.get("random_seed", 42)))
+    candidates = [{"cn_delta": 0.0, "lag_multiplier": 1.0, "k_multiplier": 1.0, "x_delta": 0.0}]
+    for _ in range(maximum - 1):
+        candidates.append({
+            "cn_delta": float(rng.uniform(-6, 6)), "lag_multiplier": float(rng.uniform(.75, 1.35)),
+            "k_multiplier": float(rng.uniform(.75, 1.35)), "x_delta": float(rng.uniform(-.08, .08)),
+        })
+    rows = []
+    for index, parameters in enumerate(candidates):
+        evaluation = evaluate_parameter_set_across_events(parameters, calibration_events, project_dir)
+        rows.append({"candidate_id": f"multi_{index:03d}", **parameters, **{key: evaluation[key] for key in ("success_count", "median_NSE", "median_KGE", "median_abs_PBIAS", "worst_NSE")}})
+    frame = pd.DataFrame(rows)
+    result = {
+        "candidates": frame, "ranked": rank_parameter_sets_multi_event(frame),
+        "best": select_robust_parameter_set(frame), "stability": calculate_parameter_stability(frame),
+        "overfitting": detect_event_specific_overfitting(frame),
+    }
+    write_multi_event_calibration_report(settings.get("output_dir", HINDCAST_OUTPUT / "calibration"), result)
+    return result
+
+
+def write_multi_event_calibration_report(output_dir: str | Path, result: dict[str, Any]) -> dict[str, Path]:
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    candidates, ranked = result["candidates"], result["ranked"]
+    candidates.to_excel(output / "candidates.xlsx", index=False)
+    ranked.to_excel(output / "multi_event_objectives.xlsx", index=False)
+    result["stability"]["parameters"].to_excel(output / "parameter_stability.xlsx", index=False)
+    (output / "robust_parameters.yaml").write_text(yaml.safe_dump(result["best"], sort_keys=False), encoding="utf-8")
+    paths = {}
+    for language, title in (("zh", "HydroLite 多事件率定报告"), ("en", "HydroLite Multi-event Calibration Report")):
+        path = output / f"calibration_report_{language}.md"
+        path.write_text(
+            f"# {title}\n\n- Candidates: `{len(candidates)}`\n- Successful: `{int((candidates['success_count'] > 0).sum())}`\n"
+            f"- Robust parameters: `{result['best']}`\n- Stability: `{result['stability']['status']}`\n"
+            f"- Event-specific overfitting detected: `{result['overfitting']['detected']}`\n"
+            "- Validation and test events are not used to fit parameters.\n",
+            encoding="utf-8",
+        )
+        paths[language] = path
+    return paths

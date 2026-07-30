@@ -1,5 +1,7 @@
 # HydroLite Studio macOS 桌面版用户指南
 
+侧栏“历史洪水验证”用于查看事件目录、QC、回放、同化、提前期和报告。桌面能力矩阵中的 Historical Flood Validation 与 Data Assimilation 均为 partial；本地版可运行有界批处理，云端主要查看预生成结果。
+
 1. 从 DMG 将 App 拖入 Applications。
 2. 从 Finder 启动，等待本地后端健康检查完成。
 3. 使用项目中心创建/打开项目，在数据中心校验输入，在运行中心执行轻量任务。

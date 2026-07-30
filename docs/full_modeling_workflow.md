@@ -1,5 +1,7 @@
 # HydroLite Studio v0.7.x Full Modeling Workflow
 
+新增链路：`event_catalog -> observation_quality_control -> observation_mapping -> event_split -> multi_event_hindcast -> multi_event_calibration -> data_assimilation -> lead_time_validation -> model_validation`。九个阶段当前均为 `partial`。
+
 macOS 桌面壳只改变发行和生命周期管理，不改变模型算法或结果。`desktop_build`、`desktop_signing`、`desktop_packaging`、`desktop_notarization`、`desktop_update_readiness` 均保持 `partial`。
 
 生产运行顺序：`application_runtime -> project_operations -> data_center -> data_standardization -> model_input_build -> run_orchestration -> model stages -> artifact_management -> reporting -> deployment_readiness`。新增运行阶段均为 `partial`。

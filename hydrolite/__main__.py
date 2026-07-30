@@ -680,6 +680,33 @@ def build_parser() -> argparse.ArgumentParser:
     desktop_appcast = desktop_sub.add_parser("appcast")
     desktop_appcast.add_argument("mode", nargs="?", default="dry-run", choices=["dry-run"])
 
+    hindcast_parser = subparsers.add_parser("hindcast", help="Multi-event hindcast validation.")
+    hindcast_sub = hindcast_parser.add_subparsers(dest="hindcast_command", required=True)
+    for command in ("readiness", "detect-events", "event-catalog", "observation-qc", "map-stations", "build-events", "split-events"):
+        child = hindcast_sub.add_parser(command)
+        child.add_argument("workspace")
+    for command in ("run-batch", "hms-batch", "calibrate-multi", "validate-parameters", "lead-time"):
+        child = hindcast_sub.add_parser(command)
+        child.add_argument("project")
+    for command in ("run-event", "hms-event"):
+        child = hindcast_sub.add_parser(command)
+        child.add_argument("project")
+        child.add_argument("event_id")
+    for command in ("summarize", "parameter-stability", "report", "bundle", "validate"):
+        child = hindcast_sub.add_parser(command)
+        child.add_argument("output_dir")
+
+    assimilation_parser = subparsers.add_parser("assimilation", help="Observed-flow data assimilation.")
+    assimilation_sub = assimilation_parser.add_subparsers(dest="assimilation_command", required=True)
+    assimilation_ready = assimilation_sub.add_parser("readiness")
+    assimilation_ready.add_argument("workspace")
+    assimilation_batch = assimilation_sub.add_parser("batch")
+    assimilation_batch.add_argument("project")
+    for command in ("nudging", "enkf", "compare"):
+        child = assimilation_sub.add_parser(command)
+        child.add_argument("project")
+        child.add_argument("event_id")
+
     return parser
 
 
@@ -1326,6 +1353,110 @@ def main(argv: list[str] | None = None) -> int:
         if command == "report": print(Path(args.output_dir)/"reports/flood_forecast_report_zh.md");return 0
         if command == "bundle": print(export_flood_forecast_bundle(args.output_dir));return 0 if validate_flood_forecast_bundle(args.output_dir)["status"]=="passed" else 1
         if command == "validate": result=validate_flood_forecast_outputs(args.output_dir);print(result);return 0 if result["status"]=="passed" else 1
+    if args.command == "hindcast":
+        from hydrolite.calibration import (
+            calculate_parameter_stability,
+            run_multi_event_parameter_search,
+            validate_robust_parameter_set,
+        )
+        from hydrolite.event_dataset import build_event_dataset
+        from hydrolite.event_split import split_events_chronologically
+        from hydrolite.hec_hms_hindcast import run_hms_hindcast_batch, run_hms_hindcast_event, write_hms_hindcast_report
+        from hydrolite.hindcast import (
+            DEFAULT_OUTPUT as HINDCAST_OUTPUT,
+            DEMO_SOURCE as HINDCAST_DEMO,
+            _catalog as hindcast_catalog,
+            export_hindcast_validation_bundle,
+            prepare_hindcast_workspace,
+            run_hydrolite_hindcast_batch,
+            run_hydrolite_hindcast_event,
+            summarize_hindcast_validation,
+            validate_hindcast_outputs,
+        )
+        from hydrolite.lead_time_validation import run_lead_time_validation
+        from hydrolite.validation_readiness import assess_hindcast_readiness, write_validation_readiness_report
+
+        command = args.hindcast_command
+        if command in {"readiness", "detect-events", "event-catalog", "observation-qc", "map-stations", "build-events", "split-events"}:
+            readiness = assess_hindcast_readiness(args.workspace)
+            if readiness["status"] == "missing_data":
+                write_validation_readiness_report(HINDCAST_OUTPUT / "readiness", readiness)
+                print(json.dumps(readiness, indent=2, default=str))
+                return 0
+            result = prepare_hindcast_workspace(args.workspace, HINDCAST_OUTPUT)
+            if command == "readiness":
+                write_validation_readiness_report(HINDCAST_OUTPUT / "readiness", readiness)
+                print(json.dumps(readiness, indent=2, default=str))
+            else:
+                print(json.dumps({"status": "passed", "command": command, **result}, indent=2, default=str))
+            return 0
+        project = Path(getattr(args, "project", ROOT / "projects/qgis_workflow_project"))
+        prepare_hindcast_workspace(HINDCAST_DEMO, HINDCAST_OUTPUT)
+        catalog = hindcast_catalog(HINDCAST_DEMO, HINDCAST_OUTPUT)
+        if command == "run-event":
+            rows = catalog[catalog["event_id"].astype(str) == args.event_id]
+            if rows.empty:
+                print(f"Unknown event_id: {args.event_id}"); return 1
+            event = build_event_dataset(rows.iloc[0].to_dict(), HINDCAST_DEMO)
+            result = run_hydrolite_hindcast_event(project, event, None, HINDCAST_OUTPUT / "hydrolite" / args.event_id)
+            print(json.dumps(result, indent=2, default=str)); return 0 if result["run_status"] == "success" else 1
+        if command == "run-batch":
+            result = run_hydrolite_hindcast_batch(project, catalog, output_dir=HINDCAST_OUTPUT / "hydrolite")
+            print(json.dumps(result, indent=2, default=str)); return 0
+        if command in {"hms-event", "hms-batch"}:
+            if command == "hms-event":
+                rows = catalog[catalog["event_id"].astype(str) == args.event_id]
+                result = run_hms_hindcast_event(rows.iloc[0].to_dict(), project, timeout=120) if not rows.empty else {"status": "failed", "error_message": "unknown event"}
+            else:
+                result = run_hms_hindcast_batch(catalog, {"project_dir": project, "timeout": 120})
+            write_hms_hindcast_report(HINDCAST_OUTPUT / "hec_hms", result)
+            print(json.dumps(result, indent=2, default=str)); return 0
+        split = split_events_chronologically(catalog)
+        if command == "calibrate-multi":
+            calibration_events = catalog[catalog["event_id"].isin(split["calibration"])]
+            result = run_multi_event_parameter_search(project, calibration_events, {"max_candidates": 30, "output_dir": HINDCAST_OUTPUT / "calibration"})
+            run_hydrolite_hindcast_batch(project, catalog, result["best"], HINDCAST_OUTPUT / "hydrolite")
+            print(json.dumps({k: v for k, v in result.items() if k != "results"}, indent=2, default=str)); return 0
+        if command == "validate-parameters":
+            parameter_file = HINDCAST_OUTPUT / "calibration" / "robust_parameters.yaml"
+            parameters = yaml.safe_load(parameter_file.read_text(encoding="utf-8")) if parameter_file.exists() else {}
+            events = catalog[catalog["event_id"].isin(split["validation"])]
+            result = validate_robust_parameter_set(parameters, events, project)
+            print(json.dumps(result, indent=2, default=str)); return 0
+        if command == "parameter-stability":
+            path = Path(args.output_dir) / "calibration" / "candidates.xlsx"
+            result = calculate_parameter_stability(pd.read_excel(path)) if path.exists() else {"status": "missing_data"}
+            print(json.dumps(result, indent=2, default=str)); return 0
+        if command == "lead-time":
+            from hydrolite.data_assimilation import run_assimilation_batch
+            run_assimilation_batch(project, HINDCAST_OUTPUT / "assimilation")
+            result = run_lead_time_validation(HINDCAST_OUTPUT / "assimilation", HINDCAST_OUTPUT / "lead_time", [1, 3, 6, 12])
+            print(json.dumps({k: v for k, v in result.items() if not isinstance(v, pd.DataFrame)}, indent=2, default=str)); return 0
+        result = summarize_hindcast_validation(args.output_dir)
+        if command == "bundle":
+            print(export_hindcast_validation_bundle(args.output_dir)); return 0
+        if command == "validate":
+            validation = validate_hindcast_outputs(args.output_dir); print(validation); return 0 if validation["status"] == "passed" else 1
+        print(json.dumps(result, indent=2, default=str)); return 0
+    if args.command == "assimilation":
+        from hydrolite.data_assimilation import build_assimilation_config, run_assimilation_batch, run_event_data_assimilation
+        from hydrolite.hindcast import DEFAULT_OUTPUT as HINDCAST_OUTPUT, DEMO_SOURCE as HINDCAST_DEMO, _catalog as hindcast_catalog, prepare_hindcast_workspace, run_hydrolite_hindcast_batch
+        from hydrolite.validation_readiness import assess_assimilation_readiness
+        if args.assimilation_command == "readiness":
+            print(json.dumps(assess_assimilation_readiness(args.workspace), indent=2, default=str)); return 0
+        project = Path(args.project)
+        prepare_hindcast_workspace(HINDCAST_DEMO, HINDCAST_OUTPUT)
+        if not list((HINDCAST_OUTPUT / "hydrolite").glob("*/aligned.csv")):
+            run_hydrolite_hindcast_batch(project, hindcast_catalog(HINDCAST_DEMO, HINDCAST_OUTPUT))
+        if args.assimilation_command == "batch":
+            result = run_assimilation_batch(project, HINDCAST_OUTPUT / "assimilation")
+            print(json.dumps({k: v for k, v in result.items() if not isinstance(v, pd.DataFrame)}, indent=2, default=str)); return 0
+        aligned = HINDCAST_OUTPUT / "hydrolite" / args.event_id / "aligned.csv"
+        if not aligned.exists():
+            print(f"Missing event result: {aligned}"); return 1
+        result = run_event_data_assimilation(aligned, build_assimilation_config(project), HINDCAST_OUTPUT / "assimilation" / args.event_id)
+        metric = {"nudging": "nudging_metrics", "enkf": "enkf_metrics", "compare": "open_loop_metrics"}[args.assimilation_command]
+        print(json.dumps({"status": result["status"], metric: result[metric]}, indent=2, default=str)); return 0
     if args.command == "data":
         output = ROOT / "output" / "data_center"
         output.mkdir(parents=True, exist_ok=True)

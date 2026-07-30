@@ -1,0 +1,7 @@
+synthetic_demo: true
+gain: 0.45
+correction_decay: 0.8
+ensemble_size: 20
+observation_error: 0.8
+model_error: 0.15
+random_seed: 42

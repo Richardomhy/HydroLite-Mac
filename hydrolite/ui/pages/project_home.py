@@ -45,6 +45,7 @@ def render(context: WorkbenchContext) -> None:
     st.info("v0.7.0-dev 新增 `全流程工作流` 页面，用于查看阶段状态和 dry-run 计划；planned 阶段不代表已实现。")
     st.info("真实项目建议先进入 `数据中心`：创建工作区、上传并校验数据、生成需求与模型输入，再进入项目向导。原始上传保持只读。")
     st.info("洪水预测 MVP 已进入 `partial`：可运行情景降雨、HydroLite 物理集合、synthetic-demo 水库联算和可选 ML/LSTM smoke test；它不是业务化洪水预警系统。")
+    st.info("历史洪水验证与数据同化已进入 `partial`：可执行事件目录、质量控制、多事件回放、Nudging/EnKF 和提前期验证；synthetic demo 不代表真实项目验证。")
     st.subheader("平台能力矩阵")
     st.dataframe(pd.DataFrame(list_capabilities()), use_container_width=True, hide_index=True)
     if not context.project_loaded:

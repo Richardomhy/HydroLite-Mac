@@ -26,8 +26,14 @@ def detect_mps_support() -> bool:
 def assess_lstm_data_readiness(data: pd.DataFrame | str | Path, config: dict[str, Any] | None = None) -> dict[str, Any]:
     frame = pd.read_csv(data) if isinstance(data, (str, Path)) else data
     event_count = frame["event_id"].nunique() if "event_id" in frame else 1
-    ready = len(frame) >= 500 and event_count >= 5
-    return {"status": "ready_synthetic_demo" if ready else "insufficient_data", "ready": ready, "steps": len(frame), "events": int(event_count), "real_training_ready": False}
+    synthetic = frame.get("synthetic_demo", pd.Series(False, index=frame.index)).astype(str).str.lower().isin(["true", "1"]).any()
+    test_events = int((config or {}).get("independent_test_events", 0))
+    ready = len(frame) >= 1000 and event_count >= 8 and test_events >= 2 and not synthetic
+    return {
+        "status": "ready" if ready else "insufficient_data", "ready": ready, "steps": len(frame),
+        "events": int(event_count), "real_training_ready": ready, "minimum_steps": 1000,
+        "minimum_events": 8, "minimum_test_events": 2, "event_split_required": True,
+    }
 
 
 def build_lstm_sequences(data: pd.DataFrame | np.ndarray, lookback: int, horizon: int, features: list[str] | None, target: str | int) -> tuple[np.ndarray, np.ndarray]:

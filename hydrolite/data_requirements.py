@@ -14,6 +14,7 @@ _MODEL_REQUIREMENTS = {
     "swmm": [("swmm_inp", True), ("rainfall_observed", False)],
     "watershed_delineation": [("dem", True), ("outlet_points", True), ("watershed_boundary", False)],
     "flood_forecast": [("rainfall_forecast", True), ("rainfall_observed", False), ("streamflow_observed", False), ("reservoir_level", False)],
+    "multi_event_hindcast": [("rainfall_observed", True), ("streamflow_observed", True), ("flood_event_catalog", True), ("subbasins", True), ("reaches", True), ("water_level_observed", False), ("data_assimilation_observations", False)],
     "drought_forecast": [("rainfall_observed", True), ("temperature", False), ("streamflow_observed", False)],
     "icesat2": [("waterbody_boundary", True), ("ICESat2_ATL13", False)],
     "rusle": [("dem", True), ("RUSLE_R", True), ("RUSLE_K", True), ("RUSLE_C", True), ("RUSLE_P", True)],

@@ -9,6 +9,17 @@ import pandas as pd
 from hydrolite.ml_forecast import evaluate_ml_forecast, predict_ml_model, train_linear_model, train_ridge_model
 
 
+def assess_hybrid_real_data_readiness(workspace_dir: str | Path) -> dict[str, Any]:
+    from hydrolite.validation_readiness import assess_ml_validation_readiness
+    result = assess_ml_validation_readiness(workspace_dir)
+    return {
+        "status": "ready" if result["real_training_ready"] else "blocked",
+        "real_training_ready": result["real_training_ready"],
+        "physics_water_balance_required": True,
+        "reason": "Requires five real qualified events, 500 valid steps, independent validation, and no future leakage.",
+    }
+
+
 def build_physics_residual_target(observed, physics) -> np.ndarray:
     return np.asarray(observed, float) - np.asarray(physics, float)
 

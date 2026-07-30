@@ -1,0 +1,3 @@
+station_id,variable,element_id,longitude,latitude,timezone,source,synthetic_demo
+RG_DEMO,rainfall,S1,114.0,22.6,Asia/Shanghai,synthetic_demo,True
+OUTLET_DEMO,flow,R1,114.01,22.59,Asia/Shanghai,synthetic_demo,True

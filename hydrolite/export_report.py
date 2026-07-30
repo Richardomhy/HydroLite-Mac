@@ -224,6 +224,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     conservation_audit_root = repo_root / "output" / "conservation_audit"
     balance_audit_root = repo_root / "output" / "water_balance_audit"
     forecast_root = repo_root / "output" / "flood_forecast"
+    hindcast_root = repo_root / "output" / "hindcast_validation"
     data_center_root = repo_root / "output" / "data_center"
     runtime_project = None
     runtime_runs = pd.DataFrame()
@@ -325,6 +326,11 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "forecast_reservoir_distribution": _safe_read_excel(forecast_root / "ensemble" / "reservoir_stage_distribution.xlsx"),
         "forecast_thresholds": _safe_read_excel(forecast_root / "ensemble" / "threshold_exceedance.xlsx"),
         "forecast_report_text": _read_text(forecast_root / "reports" / "flood_forecast_report_zh.md"),
+        "hindcast_event_metrics": _safe_read_excel(hindcast_root / "summary" / "event_metrics.xlsx"),
+        "hindcast_model_summary": _safe_read_excel(hindcast_root / "summary" / "model_validation_summary.xlsx"),
+        "hindcast_assimilation": _safe_read_excel(hindcast_root / "assimilation" / "assimilation_metrics.xlsx"),
+        "hindcast_lead_time": _safe_read_excel(hindcast_root / "lead_time" / "lead_time_summary.xlsx"),
+        "hindcast_report_text": _read_text(hindcast_root / "summary" / "model_validation_report_zh.md"),
         "data_center_report_text": _read_text(data_center_root / "data_center_report_zh.md"),
         "data_quality_summary": _safe_read_excel(data_center_root / "data_quality_summary.xlsx", "datasets"),
         "data_readiness_summary": _safe_read_excel(data_center_root / "model_data_readiness.xlsx"),
@@ -525,6 +531,18 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         _df_to_markdown(data["forecast_thresholds"]),
         "",
         data["forecast_report_text"] or "unavailable",
+        "",
+        "## Historical Flood Validation and Data Assimilation",
+        "",
+        _df_to_markdown(data["hindcast_event_metrics"]),
+        "",
+        _df_to_markdown(data["hindcast_model_summary"]),
+        "",
+        _df_to_markdown(data["hindcast_assimilation"]),
+        "",
+        _df_to_markdown(data["hindcast_lead_time"]),
+        "",
+        data["hindcast_report_text"] or "unavailable",
         "",
         "## Charts",
         "",

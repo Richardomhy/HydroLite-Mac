@@ -1,5 +1,9 @@
 # HydroLite Studio v0.7.0-dev
 
+## Historical flood validation
+
+v0.7.0-dev includes a partial multi-event hindcast and data-assimilation workflow: event catalog, observation QC, chronological calibration/validation/test splitting, HydroLite hindcasts, bounded calibration, Nudging/EnKF, lead-time validation, and bilingual reports. Start with [the Chinese guide](docs/hindcast_user_guide_zh.md). Synthetic demo results are not real-project validation.
+
 [![Release](https://img.shields.io/badge/release-v0.6.0--beta.1-blue)](https://github.com/Richardomhy/HydroLite-Mac/releases/tag/v0.6.0-beta.1)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Cloud%20demo-ff4b4b)](https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app)
 

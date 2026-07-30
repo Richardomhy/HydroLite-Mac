@@ -1,0 +1,2 @@
+dataset_id,station_id,variable,timestamp,value,unit,quality_flag,source,measurement_method,datum,timezone,uncertainty,original_value,standardized_value,processing_status
+EXAMPLE_DATASET,EXAMPLE_STATION,outlet_flow,2024-01-01T00:00:00+08:00,,m3/s,needs_manual_review,replace_with_source,replace_with_method,,Asia/Shanghai,,,,unchanged

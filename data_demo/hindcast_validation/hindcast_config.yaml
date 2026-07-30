@@ -1,0 +1,18 @@
+synthetic_demo: true
+event_detection:
+  method: user_defined
+  inter_event_time_hr: 12
+split:
+  strategy: chronological
+  calibration:
+  - E001
+  - E002
+  - E003
+  validation:
+  - E004
+  - E005
+  test:
+  - E006
+calibration:
+  max_candidates: 30
+  event_weighting: equal

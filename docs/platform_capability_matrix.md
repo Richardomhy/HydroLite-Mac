@@ -1,5 +1,7 @@
 # 平台能力矩阵
 
+Historical Flood Validation 与 Data Assimilation 当前为 `partial`。它们支持合成链路验证和真实观测导入框架，但未达到 operational；`flood_forecast` 保持 `partial`，干旱与水质保持 `planned`。
+
 | macOS desktop 0.7.0-dev | 状态 |
 |---|---|
 | SwiftUI/WKWebView arm64 壳 | local ad-hoc MVP |

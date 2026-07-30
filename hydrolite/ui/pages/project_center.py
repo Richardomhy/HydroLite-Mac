@@ -9,6 +9,18 @@ from hydrolite.runtime_paths import get_project_runtime_dir
 def render(context) -> None:
     st.header("项目中心")
     st.caption("注册和归档只影响运行中心记录，不删除原始工作区。")
+    try:
+        import json
+        from hydrolite.hindcast import DEFAULT_OUTPUT
+
+        readiness_path = DEFAULT_OUTPUT / "readiness" / "hindcast_readiness.json"
+        readiness = json.loads(readiness_path.read_text(encoding="utf-8")) if readiness_path.exists() else {}
+        metrics = st.columns(3)
+        metrics[0].metric("历史事件数", readiness.get("event_count", 0))
+        metrics[1].metric("验证等级", readiness.get("validation_level", "missing_data"))
+        metrics[2].metric("同化状态", "available" if (DEFAULT_OUTPUT / "assimilation/assimilation_metrics.xlsx").exists() else "not_run")
+    except Exception:
+        pass
     path = st.text_input("工作区或项目路径", value=str(context.project_dir))
     left, right = st.columns(2)
     if left.button("注册工作区"):

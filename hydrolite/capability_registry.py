@@ -10,6 +10,8 @@ _CAPABILITIES = {
     "watershed_delineation": "partial",
     "hydrology": "available",
     "flood_forecast": "partial",
+    "historical_flood_validation": "partial",
+    "data_assimilation": "partial",
     "drought_forecast": "planned",
     "reservoir_routing": "partial",
     "hec_hms": "partial",

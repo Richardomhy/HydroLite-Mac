@@ -1,0 +1,2 @@
+event_id,dataset_id,station_id,variable,timestamp,quality_flag,reason,method,original_value,corrected_value,confidence,manual_confirmation,processing_status
+EXAMPLE_EVENT,EXAMPLE_DATASET,EXAMPLE_STATION,flow,2024-01-01T00:00:00+08:00,needs_manual_review,replace_with_reason,none,,,,false,unchanged

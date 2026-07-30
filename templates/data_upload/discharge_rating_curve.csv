@@ -1,0 +1,2 @@
+station_id,effective_from,effective_to,stage_m,flow_cms,datum,measurement_method,uncertainty,quality_flag,source
+EXAMPLE_STATION,2024-01-01,,1.0,2.5,LOCAL_DATUM,replace_with_method,,needs_manual_review,replace_with_source

@@ -1,0 +1,2 @@
+event_id,event_name,rainfall_start,rainfall_end,runoff_start,peak_time,runoff_end,warmup_start,analysis_end,quality_status,observed_is_synthetic
+EXAMPLE_EVENT,Replace with project event,2024-01-01T00:00:00+08:00,2024-01-01T06:00:00+08:00,2024-01-01T00:00:00+08:00,2024-01-01T08:00:00+08:00,2024-01-02T00:00:00+08:00,2023-12-31T00:00:00+08:00,2024-01-02T12:00:00+08:00,needs_manual_review,false
