@@ -22,6 +22,15 @@ def render(context) -> None:
     except Exception:
         pass
     try:
+        from pathlib import Path
+        validation = json.loads((Path(__file__).resolve().parents[3] / "output/continuous_validation/summary/continuous_validation_manifest.json").read_text(encoding="utf-8"))
+        metrics = st.columns(3)
+        metrics[0].metric("连续验证", validation.get("continuous_model_validation", "not_run"))
+        metrics[1].metric("PET", validation.get("pet_status", "not_run"))
+        metrics[2].metric("水环境门禁", validation.get("water_quality_hydrology_gate", "blocked"))
+    except Exception:
+        pass
+    try:
         import json
         from hydrolite.drought_workflow import DEFAULT_ROOT as DROUGHT_OUTPUT
         manifest = json.loads((DROUGHT_OUTPUT / "continuous/continuous_model_manifest.json").read_text(encoding="utf-8")) if (DROUGHT_OUTPUT / "continuous/continuous_model_manifest.json").exists() else {}

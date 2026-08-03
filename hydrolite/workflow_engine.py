@@ -438,6 +438,22 @@ _STAGES: tuple[WorkflowStage, ...] = (
         ["docs", "report export planned"],
         "已有中文文档，后续整理成可交付手册。",
     ),
+    *tuple(
+        WorkflowStage(stage_id, title, title, "连续模型验证门禁。", "Continuous-model validation gate.", PARTIAL, ["continuous outputs"], [artifact], command, "连续模型验证", ["水量守恒不等于过程验证。"], ["continuous_hydrology"], "诊断 MVP；不启用水质模型。")
+        for stage_id, title, artifact, command in (
+            ("continuous_input_audit", "连续输入审计", "forcing_summary.xlsx", "python -m hydrolite continuous audit-inputs data_demo/drought"),
+            ("pet_validation", "PET 验证", "pet_audit_report_zh.md", "python -m hydrolite continuous audit-pet data_demo/drought"),
+            ("continuous_balance_audit", "连续水量账本", "daily_complete_ledger.csv", "python -m hydrolite continuous audit-balance output/drought_model/continuous"),
+            ("synthetic_truth_recovery", "合成真值恢复", "parameter_recovery.xlsx", "python -m hydrolite continuous truth-recover data_demo/continuous_validation"),
+            ("parameter_application_audit", "参数应用审计", "parameter_trace.xlsx", "python -m hydrolite continuous audit-parameters data_demo/drought"),
+            ("continuous_sensitivity", "连续灵敏度", "sensitivity_metrics.xlsx", "python -m hydrolite continuous sensitivity data_demo/drought"),
+            ("continuous_benchmarking", "连续基准模型", "benchmark_metrics.xlsx", "python -m hydrolite continuous benchmarks data_demo/drought"),
+            ("staged_continuous_calibration", "分阶段连续率定", "candidates.xlsx", "python -m hydrolite continuous calibrate-staged data_demo/drought"),
+            ("continuous_structure_diagnostic", "连续结构诊断", "structure_diagnostic.xlsx", "python -m hydrolite continuous diagnose-structure data_demo/drought"),
+            ("drought_consistency_audit", "干旱一致性审计", "component_availability.xlsx", "python -m hydrolite drought audit-consistency output/drought_model"),
+            ("water_quality_hydrology_gate", "水环境水文门禁", "water_quality_hydrology_gate.json", "python -m hydrolite water-quality hydrology-gate output/continuous_validation"),
+        )
+    ),
 )
 
 

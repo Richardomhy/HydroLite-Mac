@@ -11,3 +11,6 @@ python -m hydrolite continuous validate output/drought_model/continuous
 ```
 
 当前为透明的日尺度半分布式概念模型 MVP，不含完整雪过程、二维地下水、作物生长、水资源优化或业务预警。
+# Validation note
+
+The continuous water balance is an accounting gate, not a hydrograph-skill claim. Use the continuous validation workflow before using outputs as a basis for downstream transport analysis.

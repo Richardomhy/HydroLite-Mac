@@ -1,0 +1,40 @@
+model:
+  name: HydroLite synthetic truth
+  time_step: daily
+  synthetic_demo: true
+input:
+  daily_meteorology_csv: truth_forcing.csv
+output:
+  folder: output/continuous_validation/truth_recovery
+pet:
+  method: Hargreaves_Samani
+  latitude: 22.6
+routing:
+  method: linear_reservoir
+  k_days: 2.5
+  x: 0.2
+parameters:
+  interception_capacity_mm: 2.0
+  surface_storage_capacity_mm: 8.0
+  upper_soil_capacity_mm: 120.0
+  lower_soil_capacity_mm: 260.0
+  infiltration_capacity_mm_day: 45.0
+  infiltration_coefficient: 1.0
+  upper_field_capacity_fraction: 0.65
+  lower_field_capacity_fraction: 0.7
+  percolation_coefficient: 0.04
+  groundwater_recharge_coefficient: 0.025
+  interflow_coefficient: 0.025
+  baseflow_coefficient: 0.012
+  deep_loss_coefficient: 0.001
+  et_coefficient: 1.0
+  initial_upper_soil_fraction: 0.6
+  initial_lower_soil_fraction: 0.7
+  initial_groundwater_storage_mm: 80.0
+  initial_channel_storage_m3: 0.0
+subbasins:
+- subbasin_id: SB1
+  area_km2: 62.0
+- subbasin_id: SB2
+  area_km2: 48.0
+synthetic_demo: true

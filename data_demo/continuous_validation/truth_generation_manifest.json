@@ -1,0 +1,24 @@
+{
+  "synthetic_demo": true,
+  "truth_type": "same_structure_forward_model",
+  "records": 7305,
+  "parameter_visibility": "truth parameters are not read by recovery candidate generation",
+  "water_balance": {
+    "total_precipitation_mm": 29696.074999999997,
+    "total_potential_et_mm": 132237.83939110668,
+    "total_interception_evaporation_mm": 6043.4554934324315,
+    "total_actual_et_mm": 23561.547814947848,
+    "total_surface_runoff_mm": 70.26735198462222,
+    "total_interflow_mm": 402.15412148502077,
+    "total_baseflow_mm": 147.8287650138589,
+    "total_deep_loss_mm": 12.171234986141048,
+    "total_storage_change_mm": -541.3497818499195,
+    "cumulative_water_balance_residual_mm": -8.66504350910402e-13,
+    "maximum_daily_residual_mm": 6.084022174945858e-14,
+    "initial_total_storage_mm": 668.0,
+    "final_total_storage_mm": 126.65021815008055,
+    "channel_initial_storage_m3": 0.0,
+    "channel_final_storage_m3": 1383.5901259968596,
+    "channel_cumulative_residual_m3": 1.120189984596725e-10
+  }
+}

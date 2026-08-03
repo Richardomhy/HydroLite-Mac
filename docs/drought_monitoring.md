@@ -5,3 +5,6 @@
 每次结果记录 `analysis_date`、`data_as_of`、`latest_observation_date`、latency、missing_sources 和 confidence。超过配置时效的输入标记 `stale_data`，不得称实时状态。
 
 这是诊断与项目分析功能，不是法定干旱预警发布系统。
+# Component availability
+
+Model-generated groundwater and unavailable reservoir states are displayed with explicit source/availability labels and are not observational or statutory drought determinations.

@@ -226,6 +226,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     forecast_root = repo_root / "output" / "flood_forecast"
     hindcast_root = repo_root / "output" / "hindcast_validation"
     drought_root = repo_root / "output" / "drought_model"
+    continuous_validation_root = repo_root / "output" / "continuous_validation"
     data_center_root = repo_root / "output" / "data_center"
     runtime_project = None
     runtime_runs = pd.DataFrame()
@@ -267,6 +268,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         *sorted((drought_root / "indices").glob("*.png")),
         *sorted((drought_root / "forecast").glob("*.png")),
         *sorted((drought_root / "assimilation").glob("*.png")),
+        *sorted(continuous_validation_root.rglob("*.png")),
     ]
     existing_charts = [path for path in charts if path.exists()]
     expected = {
@@ -338,6 +340,9 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "hindcast_report_text": _read_text(hindcast_root / "summary" / "model_validation_report_zh.md"),
         "continuous_balance": _safe_read_csv(drought_root / "continuous" / "daily_water_balance.csv"),
         "continuous_manifest": _read_text(drought_root / "continuous" / "continuous_model_manifest.json"),
+        "continuous_validation_summary": _safe_read_excel(continuous_validation_root / "summary" / "continuous_validation_summary.xlsx"),
+        "continuous_validation_report_text": _read_text(continuous_validation_root / "summary" / "continuous_validation_report_zh.md"),
+        "water_quality_hydrology_gate": _read_text(continuous_validation_root / "summary" / "water_quality_hydrology_gate.json"),
         "drought_indices": _safe_read_csv(drought_root / "indices" / "drought_indices_monthly.csv"),
         "drought_events": _safe_read_excel(drought_root / "indices" / "drought_event_catalog.xlsx"),
         "drought_monitoring": _safe_read_excel(drought_root / "monitoring" / "current_drought_status.xlsx", "overview"),

@@ -89,17 +89,17 @@ def assess_drought_readiness(workspace: str | Path) -> dict[str, Any]:
     return {"status":"framework_ready" if not missing else "missing_data","missing":missing,"synthetic_demo":synthetic,"capability_level":"synthetic_demo" if synthetic and not missing else "framework_ready_real_data_missing"}
 
 
-def _continuous(project: Path = DEMO_PROJECT):
-    manifest=CONTINUOUS_OUTPUT/"continuous_model_manifest.json"
-    if not manifest.exists(): return run_continuous_config(project/"continuous_model_config.yaml")
+def _continuous(project: Path = DEMO_PROJECT, continuous_dir: str | Path = CONTINUOUS_OUTPUT):
+    manifest=Path(continuous_dir)/"continuous_model_manifest.json"
+    if not manifest.exists(): return run_continuous_config(project/"continuous_model_config.yaml", Path(continuous_dir))
     return None
 
 
-def run_drought_indices_workflow(project_dir: str | Path, output_dir: str | Path = DEFAULT_ROOT / "indices") -> dict[str, Any]:
-    project=Path(project_dir);_continuous(project)
-    flux=pd.read_csv(CONTINUOUS_OUTPUT/"daily_fluxes.csv",parse_dates=["date"])
-    states=pd.read_csv(CONTINUOUS_OUTPUT/"daily_states.csv",parse_dates=["date"])
-    routing=pd.read_csv(CONTINUOUS_OUTPUT/"daily_routing.csv",parse_dates=["date"])
+def run_drought_indices_workflow(project_dir: str | Path, output_dir: str | Path = DEFAULT_ROOT / "indices", continuous_dir: str | Path = CONTINUOUS_OUTPUT) -> dict[str, Any]:
+    project=Path(project_dir);continuous_dir=Path(continuous_dir);_continuous(project, continuous_dir)
+    flux=pd.read_csv(continuous_dir/"daily_fluxes.csv",parse_dates=["date"])
+    states=pd.read_csv(continuous_dir/"daily_states.csv",parse_dates=["date"])
+    routing=pd.read_csv(continuous_dir/"daily_routing.csv",parse_dates=["date"])
     daily=flux.merge(states[["date","subbasin_id","upper_soil_storage_mm","lower_soil_storage_mm","groundwater_storage_mm","reservoir_storage_m3"]],on=["date","subbasin_id"])
     daily["soil_moisture_mm"]=daily["upper_soil_storage_mm"]+daily["lower_soil_storage_mm"]
     aggregate=daily.groupby("date",as_index=False).mean(numeric_only=True).merge(routing[["date","outflow_m3"]],on="date")
@@ -139,9 +139,9 @@ def run_drought_events_workflow(project_dir: str | Path, output_dir: str | Path 
     return {"status":"completed","catalog":catalog,"paths":paths}
 
 
-def run_drought_monitoring_workflow(project_dir: str | Path, output_dir: str | Path = DEFAULT_ROOT / "monitoring") -> dict[str, Any]:
-    source=DEFAULT_ROOT/"indices"/"drought_indices_monthly.csv"
-    if not source.exists(): run_drought_indices_workflow(project_dir)
+def run_drought_monitoring_workflow(project_dir: str | Path, output_dir: str | Path = DEFAULT_ROOT / "monitoring", indices_dir: str | Path = DEFAULT_ROOT / "indices") -> dict[str, Any]:
+    source=Path(indices_dir)/"drought_indices_monthly.csv"
+    if not source.exists(): run_drought_indices_workflow(project_dir, Path(indices_dir))
     data=pd.read_csv(source,parse_dates=["date"])
     components=[
         assess_current_meteorological_drought(data["SPEI_12"]),

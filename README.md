@@ -4,6 +4,8 @@
 
 v0.7.0-dev now includes a partial daily continuous water-cycle and drought workflow: PET selection, two-layer soil water, conceptual groundwater/baseflow, persistent channel storage, SPI/SPEI/SSI and percentiles, historical events, freshness-aware monitoring, bounded scenario ensembles, 1/3/6/12-month outputs, explicit assimilation adjustments, and optional ML/LSTM readiness gates.
 
+Continuous-model validation is also available through `python -m hydrolite continuous audit-pet data_demo/drought`, `python -m hydrolite continuous truth-recover data_demo/continuous_validation`, and the Streamlit **连续模型验证** page. Water-balance closure is not flow-performance validation; the legacy drought demo is retained as a different-structure synthetic stress test, while same-structure synthetic truth recovery is a software-consistency gate only. See [continuous validation](docs/continuous_model_validation.md).
+
 ```bash
 bash scripts/create_hydrolite_science_env.sh
 conda run -n hydrolite-science python -m hydrolite continuous run data_demo/drought/continuous_model_config.yaml

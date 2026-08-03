@@ -709,6 +709,10 @@ def build_parser() -> argparse.ArgumentParser:
         child.add_argument("event_id")
 
     register_drought_cli(subparsers)
+    water_quality = subparsers.add_parser("water-quality", help="Hydrology readiness gate for future water-quality work.")
+    water_quality_sub = water_quality.add_subparsers(dest="water_quality_command", required=True)
+    item = water_quality_sub.add_parser("hydrology-gate", help="Evaluate the continuous hydrology gate without running a water-quality model.")
+    item.add_argument("output")
     return parser
 
 
@@ -772,6 +776,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command in {"continuous", "drought"}:
         return run_drought_cli(args)
+    if args.command == "water-quality":
+        from hydrolite.continuous_validation import evaluate_water_quality_hydrology_gate
+        manifest = Path(args.output) / "summary" / "continuous_validation_manifest.json"
+        if not manifest.exists():
+            result = {"status": "blocked", "reason": "continuous validation manifest is missing"}
+        else:
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            result = payload.get("gate") or evaluate_water_quality_hydrology_gate(payload)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
     if args.command == "desktop":
         from hydrolite.desktop.commands import run_desktop_command
 

@@ -160,3 +160,11 @@ hydrolite-science/
 *continuous_calibration_workspace*
 *drought_model_bundle.zip
 *drought_forecast_bundle.zip
+output/continuous_validation/
+output/drought_model_v2/
+*truth_recovery_runtime*
+*continuous_sensitivity_runtime*
+*staged_continuous_calibration_runtime*
+*continuous_benchmark_runtime*
+*continuous_state_runtime*
+*continuous_validation_bundle.zip

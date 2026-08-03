@@ -12,6 +12,7 @@ from hydrolite.runtime_paths import get_run_dir
 def render(context) -> None:
     st.header("成果中心")
     drought_root = Path(__file__).resolve().parents[3] / "output" / "drought_model"
+    validation_root = Path(__file__).resolve().parents[3] / "output" / "continuous_validation"
     drought_assets = [
         path for relative in (
             "continuous/daily_water_balance.csv", "continuous/daily_states.csv",
@@ -23,6 +24,10 @@ def render(context) -> None:
     if drought_assets:
         with st.expander("连续水文与干旱成果", expanded=False):
             st.dataframe([{"artifact": path.name, "path": str(path), "size_bytes": path.stat().st_size} for path in drought_assets], use_container_width=True)
+    validation_assets = [path for path in validation_root.rglob("*") if path.is_file() and path.suffix in {".csv", ".xlsx", ".md", ".json", ".png"}]
+    if validation_assets:
+        with st.expander("连续模型验证成果", expanded=False):
+            st.dataframe([{"artifact": path.name, "path": str(path), "size_bytes": path.stat().st_size} for path in validation_assets], use_container_width=True)
     runs = list_run_records()
     project_filter = st.text_input("项目 ID 筛选")
     run_filter = st.selectbox("Run", [""] + [row["run_id"] for row in runs])

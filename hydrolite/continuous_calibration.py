@@ -12,6 +12,32 @@ from hydrolite.continuous_hydrology import DEFAULT_PARAMETERS, initialize_contin
 from hydrolite.metrics import kge, nse, pbias
 
 
+DEFAULT_MULTI_OBJECTIVE_WEIGHTS = {"NSE": .15, "log_NSE": .10, "KGE": .15, "absolute_PBIAS": .15, "monthly_volume_error_percent": .10, "peak_flow_error_percent": .10, "low_flow_RMSE": .10, "flow_duration_curve_error": .10, "water_balance_penalty": .05}
+
+
+def normalize_objective_weights(weights: dict[str, float] | None, available: set[str]) -> dict[str, float]:
+    chosen={name:float(value) for name,value in (weights or DEFAULT_MULTI_OBJECTIVE_WEIGHTS).items() if name in available}
+    total=sum(chosen.values()); return {name:value/total for name,value in chosen.items()} if total else {}
+
+
+def calculate_multiobjective_score(metrics: dict[str, float], weights: dict[str, float] | None = None) -> float:
+    available={name for name,value in metrics.items() if value is not None and np.isfinite(value)};normalized=normalize_objective_weights(weights,available);score=0.0
+    for name,weight in normalized.items():
+        value=float(metrics[name]); score += weight*(value if name in {"NSE","log_NSE","KGE"} else -abs(value))
+    return score
+
+
+def build_staged_calibration_plan(parameters: dict[str, float]) -> dict[str, Any]:
+    return {"stages":[{"name":"water_balance","parameters":["et_coefficient","upper_soil_capacity_mm","lower_soil_capacity_mm","deep_loss_coefficient"],"max_candidates":30},{"name":"low_flow","parameters":["baseflow_coefficient","percolation_coefficient","groundwater_recharge_coefficient"],"max_candidates":30},{"name":"high_flow","parameters":["infiltration_coefficient","interflow_coefficient"],"max_candidates":30},{"name":"joint_refinement","parameters":list(build_continuous_parameter_bounds(parameters)),"max_candidates":10}],"total_candidate_cap":100}
+
+
+def run_water_balance_stage(*args, **kwargs): return {"status":"planned_lightweight_stage"}
+def run_low_flow_stage(*args, **kwargs): return {"status":"planned_lightweight_stage"}
+def run_high_flow_stage(*args, **kwargs): return {"status":"planned_lightweight_stage"}
+def run_joint_refinement_stage(*args, **kwargs): return {"status":"planned_lightweight_stage"}
+def validate_staged_calibration(result: dict[str, Any]) -> dict[str, Any]: return {"status":"passed" if result.get("candidate_count",0)<=100 else "failed"}
+
+
 def split_continuous_periods_chronologically(data: pd.DataFrame, config: dict[str, Any]) -> dict[str, pd.DataFrame]:
     ordered = data.sort_values("date").reset_index(drop=True)
     calibration_fraction = float(config.get("calibration_fraction", 0.6))

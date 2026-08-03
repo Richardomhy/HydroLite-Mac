@@ -9,6 +9,7 @@ import yaml
 from hydrolite.continuous_calibration import run_continuous_parameter_search, write_continuous_calibration_report
 from hydrolite.continuous_hydrology import (
     DEFAULT_OUTPUT as CONTINUOUS_OUTPUT,
+    DEFAULT_PARAMETERS,
     create_continuous_model_config,
     load_continuous_model_config,
     run_continuous_config,
@@ -47,6 +48,26 @@ from hydrolite.model_warmup import (
     validate_warmup_result,
     write_warmup_report,
 )
+from hydrolite.continuous_validation import (
+    DEFAULT_OUTPUT as VALIDATION_OUTPUT,
+    ROOT,
+    evaluate_water_quality_hydrology_gate,
+    rebuild_drought_v2,
+    run_balance_audit,
+    run_flow_audit,
+    run_full_continuous_validation,
+    run_input_audit,
+    run_parameter_audit,
+    run_pet_audit,
+    run_routing_audit,
+    validate_drought_v2,
+)
+from hydrolite.continuous_benchmarks import run_continuous_benchmarks, write_benchmark_report
+from hydrolite.continuous_sensitivity import run_continuous_sensitivity, write_continuous_sensitivity_report
+from hydrolite.continuous_structure_diagnostic import diagnose_structural_mismatch, write_structure_diagnostic_report
+from hydrolite.drought_consistency import calculate_composite_weight_audit, classify_component_availability, validate_drought_component_consistency, write_drought_consistency_report
+from hydrolite.drought_distribution_audit import audit_baseline_period, audit_monthwise_fitting, write_distribution_audit_report
+from hydrolite.synthetic_truth_validation import generate_synthetic_truth, run_parameter_recovery, run_truth_forward_validation, write_truth_recovery_report
 
 
 def register_drought_cli(subparsers) -> None:
@@ -59,6 +80,12 @@ def register_drought_cli(subparsers) -> None:
     item = child.add_parser("balance"); item.add_argument("output")
     item = child.add_parser("calibrate"); item.add_argument("project")
     item = child.add_parser("validate"); item.add_argument("output")
+    for name in ("audit-inputs", "audit-pet", "audit-flow", "audit-parameters", "sensitivity", "benchmarks", "calibrate-staged", "diagnose-structure"):
+        item=child.add_parser(name);item.add_argument("project")
+    for name in ("audit-balance", "audit-routing", "validate-v2"):
+        item=child.add_parser(name);item.add_argument("output")
+    for name in ("truth-generate", "truth-forward", "truth-recover"):
+        item=child.add_parser(name);item.add_argument("data_dir")
 
     drought = subparsers.add_parser("drought", help="Drought monitoring and scenario forecast MVP.")
     child = drought.add_subparsers(dest="drought_command", required=True)
@@ -71,6 +98,9 @@ def register_drought_cli(subparsers) -> None:
     item = child.add_parser("uncertainty"); item.add_argument("output")
     for name in ("report", "bundle", "validate"):
         item = child.add_parser(name); item.add_argument("output")
+    for name in ("audit-consistency", "audit-distributions", "validate-v2"):
+        item=child.add_parser(name);item.add_argument("output")
+    item=child.add_parser("rebuild-v2");item.add_argument("project")
 
 
 def _load_continuous_output(output: str | Path) -> dict:
@@ -85,6 +115,35 @@ def _load_continuous_output(output: str | Path) -> dict:
 def run_drought_cli(args) -> int:
     if args.command == "continuous":
         command = args.continuous_command
+        if command == "audit-inputs":
+            print(json.dumps(run_input_audit(args.project)["result"],indent=2,default=str));return 0
+        if command == "audit-pet":
+            print(json.dumps(run_pet_audit(args.project)["statistics"],indent=2,default=str));return 0
+        if command == "audit-flow":
+            print(json.dumps(run_flow_audit(args.project),indent=2,default=str));return 0
+        if command == "audit-balance":
+            result=run_balance_audit(args.output);print(json.dumps(result["reconciliation"],indent=2));return 0 if result["status"]=="passed" else 1
+        if command == "audit-parameters":
+            result=run_parameter_audit(args.project);print(json.dumps(result["validation"],indent=2));return 0
+        if command == "audit-routing":
+            result=run_routing_audit(args.output,DEMO_PROJECT);print(json.dumps(result,indent=2));return 0 if result["mass_balance"]["status"]=="passed" else 1
+        if command == "truth-generate":
+            print(json.dumps({key:str(value) for key,value in generate_synthetic_truth(args.data_dir).items() if key!="result"},indent=2));return 0
+        if command == "truth-forward":
+            result=run_truth_forward_validation(args.data_dir);print(json.dumps({key:value for key,value in result.items() if key not in {"simulated","observed","dates"}},indent=2));return 0 if result["status"]=="passed" else 1
+        if command == "truth-recover":
+            result=run_parameter_recovery(args.data_dir);write_truth_recovery_report(VALIDATION_OUTPUT/"truth_recovery",result);print(json.dumps({key:value for key,value in result.items() if key not in {"candidates","forward"}},indent=2,default=str));return 0 if result["status"]=="passed" else 1
+        if command in {"sensitivity","benchmarks","calibrate-staged","diagnose-structure"}:
+            config, base = load_continuous_model_config(Path(args.project)/"continuous_model_config.yaml"), Path(args.project); forcing=pd.read_csv(base/config["input"]["daily_meteorology_csv"]); observed=pd.read_csv(base/"observed_streamflow.csv"); result=run_continuous_config(base/"continuous_model_config.yaml", VALIDATION_OUTPUT/"corrected_continuous")
+            if command=="sensitivity":
+                value=run_continuous_sensitivity(forcing,config,{**DEFAULT_PARAMETERS,**config.get("parameters",{})},observed);write_continuous_sensitivity_report(VALIDATION_OUTPUT/"sensitivity",value);print(json.dumps({"status":"completed"},indent=2));return 0
+            if command=="benchmarks":
+                value=run_continuous_benchmarks(forcing,observed,result["routing"].outflow_m3/86400,sum(x["area_km2"] for x in config["subbasins"]));write_benchmark_report(VALIDATION_OUTPUT/"benchmarks",value);print(json.dumps({"status":"completed"},indent=2));return 0
+            if command=="calibrate-staged":
+                value=run_continuous_parameter_search(base,{"max_candidates":30});write_continuous_calibration_report(VALIDATION_OUTPUT/"calibration",value);print(json.dumps({"status":value["status"]},indent=2));return 0
+            flow=run_flow_audit(args.project,VALIDATION_OUTPUT,VALIDATION_OUTPUT/"corrected_continuous");truth=run_parameter_recovery(ROOT/"data_demo/continuous_validation");value=diagnose_structural_mismatch(flow,truth["status"]);write_structure_diagnostic_report(VALIDATION_OUTPUT/"structure",value);print(json.dumps(value,indent=2));return 0
+        if command == "validate-v2":
+            root=Path(args.output); manifest=root/"summary/continuous_validation_manifest.json"; result=json.loads(manifest.read_text()) if manifest.exists() else run_full_continuous_validation();print(json.dumps({"status":result.get("continuous_model_validation",result.get("status","failed"))},indent=2));return 0
         if command == "create-config":
             print(create_continuous_model_config(args.project)); return 0
         if command == "validate-config":
@@ -109,6 +168,14 @@ def run_drought_cli(args) -> int:
             write_continuous_calibration_report(DEFAULT_ROOT/"calibration",result)
             print(json.dumps({key:value for key,value in result.items() if key!="results"},indent=2,default=str));return 0 if result["status"] in {"completed","framework_ready_real_data_missing","insufficient_data"} else 1
     command=args.drought_command
+    if command == "audit-consistency":
+        availability=classify_component_availability(args.output);weights=calculate_composite_weight_audit(availability);distribution=audit_monthwise_fitting(pd.read_csv(Path(args.output)/"indices/drought_indices_monthly.csv"));result={"availability":availability,"weights":weights,"distribution":distribution,"validation":validate_drought_component_consistency(availability,weights)};write_drought_consistency_report(VALIDATION_OUTPUT/"drought_consistency",result);print(json.dumps(result["validation"],indent=2));return 0
+    if command == "audit-distributions":
+        data=pd.read_csv(Path(args.output)/"indices/drought_indices_monthly.csv");result={"baseline":audit_baseline_period(data),"months":audit_monthwise_fitting(data)};write_distribution_audit_report(VALIDATION_OUTPUT/"drought_consistency",result);print(json.dumps(result["baseline"],indent=2,default=str));return 0
+    if command == "rebuild-v2":
+        result=rebuild_drought_v2(args.project);print(json.dumps({"status":result["status"],"root":str(result["root"])},indent=2));return 0
+    if command == "validate-v2":
+        result=validate_drought_v2(args.output);print(json.dumps(result,indent=2));return 0 if result["status"]=="passed" else 1
     if command in {"diagnose","dependencies"}:
         print(json.dumps(diagnose_drought_dependencies(),indent=2,default=str));return 0
     if command=="readiness":

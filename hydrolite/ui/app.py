@@ -19,6 +19,7 @@ from hydrolite.ui.components import (
 from hydrolite.ui.pages import (
     beta_feedback,
     calibration,
+    continuous_model_validation,
     flood_forecast,
     icesat2_water_depth,
     reservoir_routing,
@@ -86,6 +87,7 @@ PAGES = {
     "全流程工作流": workflow_engine.render,
     "数据与校验": data_validation.render,
     "参数率定与敏感性": calibration.render,
+    "连续模型验证": continuous_model_validation.render,
     "ICESat-2 水深": icesat2_water_depth.render,
     "水库调蓄": reservoir_routing.render,
     "RUSLE 土壤侵蚀": rusle_erosion.render,

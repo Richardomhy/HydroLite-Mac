@@ -18,6 +18,7 @@ from hydrolite.drought_workflow import (
 )
 from hydrolite.ui.components import show_download
 from hydrolite.ui.state import is_streamlit_cloud
+from hydrolite.drought_consistency import classify_component_availability, calculate_composite_weight_audit
 
 
 def read_drought_outputs(output_root: str | Path = DEFAULT_ROOT) -> dict[str, object]:
@@ -93,7 +94,7 @@ def render(context) -> None:
         _chart(root, "continuous/charts/runoff_baseflow_timeseries.png")
         st.caption("模型地下水储量是概念状态，不等于实测地下水位。")
     with tabs[5]:
-        st.write("Demo 连续配置为 `no_reservoir`；真实水库需用户提供 release/曲线/规则，不自动推断调度。")
+        st.warning("Demo 连续配置为 `no_reservoir`；水库干旱状态为 unavailable，不显示为 normal。真实水库需用户提供 release/曲线/规则，不自动推断调度。")
         if "reservoir_storage_m3" in outputs["states"]:
             st.dataframe(outputs["states"][["date", "subbasin_id", "reservoir_storage_m3"]].head(200), use_container_width=True)
     with tabs[6]:
@@ -112,6 +113,9 @@ def render(context) -> None:
         if st.button("评估当前状态"):
             run_drought_monitoring_workflow(project); st.success("当前状态已更新。")
         st.json(outputs["monitoring"] or {"status":"not_run"})
+        availability = classify_component_availability(root)
+        st.dataframe(calculate_composite_weight_audit(availability), use_container_width=True)
+        st.caption("缺失分量不参与综合指数；模型地下水状态是 model_generated，不是实测地下水。")
     with tabs[9]:
         if st.button("生成情景集合"):
             scenarios=create_drought_demo_scenarios(project); st.success(f"已生成 {scenarios.member_id.nunique()} 个成员。")

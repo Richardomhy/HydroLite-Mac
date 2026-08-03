@@ -22,3 +22,6 @@ Historical Flood Validation 与 Data Assimilation 当前为 `partial`。它们�
 | Local/cloud deployment gates | partial | Cloud blocks local QGIS/HEC-HMS and large downloads |
 
 能力矩阵同时在 Streamlit 首页和 `output/flood_forecast/platform_capability_matrix.xlsx` 显示。partial 表示已有受限 MVP，不代表工程适用或业务验证完成。
+# Continuous validation gate
+
+Continuous model validation is partial: it provides input, PET, flux, truth-recovery and structure diagnostics. It does not make water-quality transport available.
