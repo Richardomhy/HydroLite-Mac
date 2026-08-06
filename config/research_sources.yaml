@@ -1,0 +1,23 @@
+policy:
+  clean_room_required: true
+  required_notice: "Independent HydroLite implementation; not a paper-model reproduction."
+  prohibited_assets:
+    - third_party_skill_source
+    - third_party_skill_readme
+    - third_party_skill_catalog
+    - paper_full_text
+    - paper_figures
+    - user_data
+    - credentials
+    - model_weights
+    - dss_or_hdf5
+    - external_checkout
+  prohibited_runtime_dependencies:
+    - ruiduobao/gee-dataset-intelligence-skill
+third_party_sources:
+  - source_id: ruiduobao/gee-dataset-intelligence-skill
+    license_status: license_file_missing
+    integration_mode: method_inspired_clean_room
+    copy_allowed: false
+    runtime_dependency_allowed: false
+    assets_allowed: []
