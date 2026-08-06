@@ -1,0 +1,2 @@
+issue_time,station_id,rainfall_mm,temperature_c,flow_cms,upstream_station_id,source_load
+2020-01-01,S1,8.0,25.0,2.1,,0.0

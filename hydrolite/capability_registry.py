@@ -25,6 +25,10 @@ _CAPABILITIES = {
     "conservation": "partial",
     "watershed_accounting": "partial",
     "water_quality": "planned",
+    "water_quality_method_lab": "partial",
+    "gee_catalog_intelligence": "partial",
+    "method_inspiration_lab": "partial",
+    "flood_susceptibility": "partial",
     "machine_learning": "partial",
     "deep_learning": "unavailable_optional",
 }

@@ -1,0 +1,2 @@
+upstream_id,downstream_id,edge_type,distance_km
+S1,R1,upstream_downstream,2.0

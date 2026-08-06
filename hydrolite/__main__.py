@@ -214,6 +214,21 @@ from hydrolite.workflow_engine import (
     validate_workflow_config,
 )
 from hydrolite.drought_cli import register_drought_cli, run_drought_cli
+from hydrolite.research_registry import built_in_sources, write_research_outputs
+from hydrolite.source_licensing import audit_source_licenses
+from hydrolite.research_method_card import method_cards
+from hydrolite.gee_catalog import catalog_status, compare_assets, generate_ee_code, recommend_datasets, refresh_catalog, search_catalog, validate_catalog
+from hydrolite.gamma_lag_features import write_gamma_feature_report
+from hydrolite.river_graph import write_graph_manifest
+from hydrolite.graph_hydrology_features import build_node_feature_matrix, write_graph_feature_summary
+from hydrolite.trend_aware_features import write_trend_feature_report
+from hydrolite.hierarchical_multihorizon import write_multihorizon_report
+from hydrolite.graph_temporal_residual import run_graph_temporal_residual
+from hydrolite.water_quality_experiment import assess_water_quality_experiment, write_water_quality_method_demo
+from hydrolite.method_benchmark import write_method_benchmark
+from hydrolite.flood_susceptibility import readiness as susceptibility_readiness, train_adaptive as susceptibility_train_adaptive, train_baselines as susceptibility_train_baselines, validate_outputs as susceptibility_validate_outputs, write_report as susceptibility_write_report
+from hydrolite.flood_susceptibility_features import build_conditioning_features
+from hydrolite.flood_susceptibility_validation import spatial_block_cv
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -713,6 +728,34 @@ def build_parser() -> argparse.ArgumentParser:
     water_quality_sub = water_quality.add_subparsers(dest="water_quality_command", required=True)
     item = water_quality_sub.add_parser("hydrology-gate", help="Evaluate the continuous hydrology gate without running a water-quality model.")
     item.add_argument("output")
+
+    research = subparsers.add_parser("research", help="Clean-room research source and method records.")
+    research_sub = research.add_subparsers(dest="research_command", required=True)
+    for command in ("sources", "registry", "licenses", "method-cards", "report"):
+        research_sub.add_parser(command)
+
+    gee_catalog = subparsers.add_parser("gee-catalog", help="Offline-first Google Earth Engine dataset metadata catalog.")
+    gee_catalog_sub = gee_catalog.add_subparsers(dest="gee_catalog_command", required=True)
+    gee_catalog_sub.add_parser("status")
+    refresh = gee_catalog_sub.add_parser("refresh"); refresh.add_argument("mode", choices=["dry-run", "execute"])
+    gee_catalog_sub.add_parser("validate")
+    search = gee_catalog_sub.add_parser("search"); search.add_argument("query")
+    compare_catalog = gee_catalog_sub.add_parser("compare"); compare_catalog.add_argument("asset_ids", nargs="+")
+    recommend_catalog = gee_catalog_sub.add_parser("recommend"); recommend_catalog.add_argument("model_id"); recommend_catalog.add_argument("config")
+    codegen_catalog = gee_catalog_sub.add_parser("codegen"); codegen_catalog.add_argument("asset_id"); codegen_catalog.add_argument("config")
+    gee_catalog_sub.add_parser("report")
+
+    method = subparsers.add_parser("method", help="Clean-room hydrologic and environmental method experiments.")
+    method_sub = method.add_subparsers(dest="method_command", required=True)
+    for command in ("gamma-demo", "graph-demo", "trend-demo", "multihorizon-demo", "graph-residual-demo", "water-quality-demo", "benchmark", "validate", "report"):
+        method_sub.add_parser(command)
+
+    susceptibility = subparsers.add_parser("susceptibility", help="Spatial flood-susceptibility method experiments.")
+    susceptibility_sub = susceptibility.add_subparsers(dest="susceptibility_command", required=True)
+    for command in ("readiness", "build-features", "split-spatial", "train-baselines", "train-adaptive"):
+        child = susceptibility_sub.add_parser(command); child.add_argument("workspace")
+    for command in ("explain", "validate", "report"):
+        child = susceptibility_sub.add_parser(command); child.add_argument("output")
     return parser
 
 
@@ -776,6 +819,53 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command in {"continuous", "drought"}:
         return run_drought_cli(args)
+    if args.command == "research":
+        output = ROOT / "output" / "research_methods"
+        if args.research_command == "sources": result = {"sources": built_in_sources()}
+        elif args.research_command == "licenses": result = {"licenses": audit_source_licenses()}
+        elif args.research_command == "method-cards": result = {"method_cards": method_cards()}
+        else:
+            paths = write_research_outputs(output); result = {"status": "passed", "outputs": {key: str(value) for key, value in paths.items()}}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "gee-catalog":
+        output = ROOT / "output" / "gee_catalog_intelligence"; output.mkdir(parents=True, exist_ok=True)
+        if args.gee_catalog_command == "status": result = catalog_status()
+        elif args.gee_catalog_command == "refresh": result = refresh_catalog(args.mode)
+        elif args.gee_catalog_command == "validate": result = validate_catalog()
+        elif args.gee_catalog_command == "search": result = search_catalog(args.query)
+        elif args.gee_catalog_command == "compare": result = {"status": "passed", "records": compare_assets(args.asset_ids)}
+        elif args.gee_catalog_command == "recommend": result = recommend_datasets(args.model_id, args.config)
+        elif args.gee_catalog_command == "codegen": result = generate_ee_code(args.asset_id, args.config)
+        else:
+            rows = __import__("hydrolite.gee_catalog.loader", fromlist=["load_catalog"]).load_catalog(); (output / "gee_catalog_manifest.json").write_text(json.dumps({"status": catalog_status(), "records": rows}, ensure_ascii=False, indent=2), encoding="utf-8"); table = pd.DataFrame(rows); table.to_excel(output / "gee_catalog.xlsx", index=False); text = "# HydroLite GEE dataset intelligence\n\nOffline metadata remains queryable; Earth Engine calculations require authentication.\n"; (output / "gee_catalog_report_en.md").write_text(text, encoding="utf-8"); (output / "gee_catalog_report_zh.md").write_text(text, encoding="utf-8"); result = {"status": "passed", "output": str(output)}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "method":
+        output = ROOT / "output" / "method_inspiration"; output.mkdir(parents=True, exist_ok=True)
+        if args.method_command == "gamma-demo": result = write_gamma_feature_report(output)
+        elif args.method_command == "graph-demo":
+            graph = {"nodes": [f"S{i}" for i in range(1, 9)], "edges": [(f"S{i}", f"S{i+1}") for i in range(1, 8)]}; result = write_graph_manifest(graph, output); rows = [{"timestamp": "2020-01-01", "node_id": node, "precipitation": float(index), "pet": 2.0, "soil_moisture": .4, "surface_runoff": .1, "interflow": .05, "baseflow": .02, "total_water_yield": .17, "reach_flow": .17, "reservoir_storage": 0.0, "aet": 1.0} for index, node in enumerate(graph["nodes"], 1)]; result["features"] = str(write_graph_feature_summary(build_node_feature_matrix(rows), output))
+        elif args.method_command == "trend-demo": result = write_trend_feature_report(output)
+        elif args.method_command == "multihorizon-demo": result = write_multihorizon_report(output)
+        elif args.method_command == "graph-residual-demo": result = run_graph_temporal_residual([1, 2, 3, 2], [1.1, 1.8, 3.2, 2.1])
+        elif args.method_command == "water-quality-demo": result = {**assess_water_quality_experiment(), **write_water_quality_method_demo(output)}
+        elif args.method_command == "benchmark": result = write_method_benchmark(output)
+        elif args.method_command == "validate": result = {"status": "passed", "water_quality": "planned", "bidirectional_forecast": run_graph_temporal_residual([1, 2], [1, 2], mode="graph_bidirectional_hindcast_only", purpose="forecast")}
+        else:
+            paths = {"gamma": write_gamma_feature_report(output), "trend": write_trend_feature_report(output), "multihorizon": write_multihorizon_report(output), "benchmark": write_method_benchmark(output)}; (output / "method_inspiration_report.md").write_text("# Method inspiration experiments\n\nClean-room features and baselines only; no paper-model reproduction.\n", encoding="utf-8"); result = {"status": "passed", "outputs": {key: str(value) for key, value in paths.items()}}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "susceptibility":
+        output = ROOT / "output" / "flood_susceptibility"
+        if args.susceptibility_command == "readiness": result = susceptibility_readiness(args.workspace)
+        elif args.susceptibility_command == "build-features": result = build_conditioning_features(args.workspace)
+        elif args.susceptibility_command == "split-spatial":
+            from hydrolite.flood_susceptibility_features import build_synthetic_flood_features
+            result = {"status": "passed", "folds": spatial_block_cv(build_synthetic_flood_features())}
+        elif args.susceptibility_command == "train-baselines": result = susceptibility_train_baselines(args.workspace, output)
+        elif args.susceptibility_command == "train-adaptive": result = susceptibility_train_adaptive(args.workspace, output)
+        elif args.susceptibility_command == "explain": result = {"status": "passed" if (Path(args.output) / "feature_importance.xlsx").exists() else "missing_baseline", "fallback": "permutation_importance"}
+        elif args.susceptibility_command == "validate": result = susceptibility_validate_outputs(args.output)
+        else: result = susceptibility_write_report(args.output)
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result.get("status") not in {"failed", "missing_baseline"} else 1
     if args.command == "water-quality":
         from hydrolite.continuous_validation import evaluate_water_quality_hydrology_gate
         manifest = Path(args.output) / "summary" / "continuous_validation_manifest.json"

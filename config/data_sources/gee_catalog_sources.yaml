@@ -1,0 +1,5 @@
+catalog:
+  official_stac_root: gs://earthengine-stac/catalog.json
+  refresh_default: dry-run
+  offline_fixture: data_demo/method_inspiration/gee_catalog/official_metadata_fixture.json
+  note: "Metadata only. Actual GEE computation requires local authentication."

@@ -1,0 +1,5 @@
+synthetic_demo: true
+forecast_mode: causal
+spatial_validation: spatial_block_cv
+allow_bidirectional_hindcast_only: true
+water_quality_validation_level: synthetic_method_demo

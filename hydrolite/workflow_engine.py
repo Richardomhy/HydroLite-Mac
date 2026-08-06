@@ -454,6 +454,24 @@ _STAGES: tuple[WorkflowStage, ...] = (
             ("water_quality_hydrology_gate", "水环境水文门禁", "water_quality_hydrology_gate.json", "python -m hydrolite water-quality hydrology-gate output/continuous_validation"),
         )
     ),
+    *tuple(
+        WorkflowStage(stage_id, title, title, "方法实验与明确的运行边界。", "Method experiment with explicit runtime boundaries.", PARTIAL, ["metadata or synthetic demo"], [artifact], command, page, ["不复制第三方代码或论文资产；不替代 HydroLite 水量账本。"], ["data_center"], "Clean-room experimental MVP.")
+        for stage_id, title, artifact, command, page in (
+            ("gee_catalog_intelligence", "GEE 数据集智能目录", "gee_catalog_manifest.json", "python -m hydrolite gee-catalog report", "GEE 数据集智能"),
+            ("gee_catalog_refresh", "GEE 目录刷新", "catalog.json", "python -m hydrolite gee-catalog refresh dry-run", "GEE 数据集智能"),
+            ("research_source_intake", "研究来源登记", "research_registry.xlsx", "python -m hydrolite research registry", "水文研究方法实验室"),
+            ("research_license_review", "来源许可审查", "source_licensing_report.xlsx", "python -m hydrolite research licenses", "水文研究方法实验室"),
+            ("method_inspiration_lab", "方法借鉴实验室", "method_inspiration_report_zh.md", "python -m hydrolite research report", "水文研究方法实验室"),
+            ("gamma_lag_features", "Gamma 因果滞后", "gamma_kernels.xlsx", "python -m hydrolite method gamma-demo", "水文研究方法实验室"),
+            ("river_graph_features", "河网图特征", "graph_manifest.json", "python -m hydrolite method graph-demo", "水文研究方法实验室"),
+            ("graph_temporal_residual", "图时序残差", "graph_feature_summary.xlsx", "python -m hydrolite method graph-residual-demo", "水文研究方法实验室"),
+            ("trend_aware_features", "趋势感知特征", "trend_features.csv", "python -m hydrolite method trend-demo", "水文研究方法实验室"),
+            ("hierarchical_multihorizon", "分层多提前期", "horizon_metrics.xlsx", "python -m hydrolite method multihorizon-demo", "水文研究方法实验室"),
+            ("water_quality_method_lab", "水质方法实验", "water_quality_method_report.md", "python -m hydrolite method water-quality-demo", "水文研究方法实验室"),
+            ("flood_susceptibility", "洪水易发性", "baseline_metrics.xlsx", "python -m hydrolite susceptibility train-baselines data_demo/method_inspiration/flood_susceptibility", "洪水易发性"),
+            ("flood_susceptibility_xai", "洪水易发性 XAI", "feature_importance.xlsx", "python -m hydrolite susceptibility explain output/flood_susceptibility", "洪水易发性"),
+        )
+    ),
 )
 
 

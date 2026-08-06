@@ -24,7 +24,7 @@ def _model(model_id: str, zh: str, en: str, family: str, status: str, **extra: A
         "calibration_required": extra.pop("calibration_required", False),
         "uncertainty_support": extra.pop("uncertainty_support", True),
         "reservoir_support": extra.pop("reservoir_support", False),
-        "forecast_support": True,
+        "forecast_support": extra.pop("forecast_support", True),
         "limitations": extra.pop("limitations", ""),
         "documentation": extra.pop("documentation", "docs/flood_forecast_mvp.md"),
         "version": "0.7.0-dev",
@@ -48,6 +48,13 @@ _MODELS = {
         _model("lstm_residual_correction", "LSTM 残差订正", "LSTM residual correction", "deep_learning", "optional", training_required=True),
         _model("hybrid_physics_ml", "物理-机器学习混合", "Physics-ML hybrid", "hybrid", "synthetic_demo", training_required=True),
         _model("hybrid_physics_lstm", "物理-LSTM 混合", "Physics-LSTM hybrid", "hybrid", "optional", training_required=True),
+        _model("gamma_lag_feature_model", "Gamma 滞后特征", "Gamma lag feature model", "feature_engineering", "experimental", forecast_support=False, limitations="Causal feature engineering only; not a paper-model reproduction."),
+        _model("physics_graph_residual_model", "物理图残差", "Physics graph residual", "hybrid_residual", "experimental", training_required=True, limitations="Physical water balance remains authoritative."),
+        _model("causal_graph_temporal_model", "因果图时序", "Causal graph temporal", "graph_hydrology", "experimental", training_required=True, limitations="Bidirectional modes are blocked for future forecasts."),
+        _model("trend_graph_water_quality_experiment", "趋势图水质实验", "Trend graph water-quality experiment", "graph_hydrology", "experimental", training_required=True, limitations="Water-quality production capability remains planned."),
+        _model("hierarchical_multihorizon_model", "分层多提前期", "Hierarchical multihorizon", "multihorizon", "experimental", training_required=True),
+        _model("flood_susceptibility_baseline", "洪水易发性基线", "Flood susceptibility baseline", "susceptibility", "experimental", training_required=True, forecast_support=False),
+        _model("adaptive_flood_susceptibility_experiment", "自适应洪水易发性实验", "Adaptive flood susceptibility experiment", "experimental_rl", "experimental", training_required=True, forecast_support=False, limitations="Optional RL is not recommended without independent value added."),
     ]
 }
 

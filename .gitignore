@@ -168,3 +168,12 @@ output/drought_model_v2/
 *continuous_benchmark_runtime*
 *continuous_state_runtime*
 *continuous_validation_bundle.zip
+output/gee_catalog_intelligence/
+output/research_methods/
+output/method_inspiration/
+output/flood_susceptibility/
+.hydrolite/gee_catalog/
+*catalog_refresh_cache*
+research_runtime/
+*.pdf
+wechat_exports/

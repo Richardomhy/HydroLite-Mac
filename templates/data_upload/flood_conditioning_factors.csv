@@ -1,0 +1,2 @@
+point_id,dem,slope,flow_accumulation,distance_to_stream,rainfall_extreme,land_use,hydrolite_runoff,flood
+P1,120,8,30,120,80,1,12,1

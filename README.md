@@ -1,5 +1,9 @@
 # HydroLite Studio v0.7.0-dev
 
+## GEE Catalog and Method Inspiration Lab
+
+v0.7.0-dev includes an offline-first GEE metadata catalog and clean-room method experiment lab. It offers causal Gamma lag features, directed river-graph features, causal trend context, multi-horizon baselines, water-quality method interfaces, and spatially validated flood-susceptibility baselines. These are independent HydroLite designs, not reproductions of third-party skills or papers. See [GEE catalog](docs/gee_dataset_intelligence.md) and [method lab](docs/method_inspiration_lab.md).
+
 ## Continuous Hydrology and Drought MVP
 
 v0.7.0-dev now includes a partial daily continuous water-cycle and drought workflow: PET selection, two-layer soil water, conceptual groundwater/baseflow, persistent channel storage, SPI/SPEI/SSI and percentiles, historical events, freshness-aware monitoring, bounded scenario ensembles, 1/3/6/12-month outputs, explicit assimilation adjustments, and optional ML/LSTM readiness gates.

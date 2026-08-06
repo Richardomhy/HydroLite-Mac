@@ -1,0 +1,3 @@
+node_id,node_type,subbasin_id,reach_id,station_id,reservoir_id
+S1,subbasin,S1,,,
+R1,reach,,R1,,
