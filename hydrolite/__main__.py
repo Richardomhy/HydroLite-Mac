@@ -217,7 +217,13 @@ from hydrolite.drought_cli import register_drought_cli, run_drought_cli
 from hydrolite.research_registry import built_in_sources, write_research_outputs
 from hydrolite.source_licensing import audit_source_licenses
 from hydrolite.research_method_card import method_cards
-from hydrolite.gee_catalog import catalog_status, compare_assets, generate_ee_code, recommend_datasets, refresh_catalog, search_catalog, validate_catalog
+from hydrolite.gee_catalog import (
+    catalog_status, compare_datasets, generate_ee_code, get_catalog_dataset,
+    recommend_datasets, refresh_catalog, search_catalog, validate_catalog,
+    write_catalog_report,
+)
+from hydrolite.gee_catalog.reporting import build_catalog_statistics
+from hydrolite.gee_catalog.loader import load_catalog_records
 from hydrolite.gamma_lag_features import write_gamma_feature_report
 from hydrolite.river_graph import write_graph_manifest
 from hydrolite.graph_hydrology_features import build_node_feature_matrix, write_graph_feature_summary
@@ -737,12 +743,14 @@ def build_parser() -> argparse.ArgumentParser:
     gee_catalog = subparsers.add_parser("gee-catalog", help="Offline-first Google Earth Engine dataset metadata catalog.")
     gee_catalog_sub = gee_catalog.add_subparsers(dest="gee_catalog_command", required=True)
     gee_catalog_sub.add_parser("status")
+    gee_catalog_sub.add_parser("stats")
     refresh = gee_catalog_sub.add_parser("refresh"); refresh.add_argument("mode", choices=["dry-run", "execute"])
     gee_catalog_sub.add_parser("validate")
     search = gee_catalog_sub.add_parser("search"); search.add_argument("query")
+    dataset = gee_catalog_sub.add_parser("dataset"); dataset.add_argument("asset_id")
     compare_catalog = gee_catalog_sub.add_parser("compare"); compare_catalog.add_argument("asset_ids", nargs="+")
-    recommend_catalog = gee_catalog_sub.add_parser("recommend"); recommend_catalog.add_argument("model_id"); recommend_catalog.add_argument("config")
-    codegen_catalog = gee_catalog_sub.add_parser("codegen"); codegen_catalog.add_argument("asset_id"); codegen_catalog.add_argument("config")
+    recommend_catalog = gee_catalog_sub.add_parser("recommend"); recommend_catalog.add_argument("model_id"); recommend_catalog.add_argument("config", nargs="?", default=None)
+    codegen_catalog = gee_catalog_sub.add_parser("codegen"); codegen_catalog.add_argument("asset_id"); codegen_catalog.add_argument("config", nargs="?", default=None); codegen_catalog.add_argument("--band", default=None); codegen_catalog.add_argument("--language", choices=["python", "javascript"], default="python")
     gee_catalog_sub.add_parser("report")
 
     method = subparsers.add_parser("method", help="Clean-room hydrologic and environmental method experiments.")
@@ -832,12 +840,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.gee_catalog_command == "status": result = catalog_status()
         elif args.gee_catalog_command == "refresh": result = refresh_catalog(args.mode)
         elif args.gee_catalog_command == "validate": result = validate_catalog()
+        elif args.gee_catalog_command == "stats": result = build_catalog_statistics(load_catalog_records())
         elif args.gee_catalog_command == "search": result = search_catalog(args.query)
-        elif args.gee_catalog_command == "compare": result = {"status": "passed", "records": compare_assets(args.asset_ids)}
+        elif args.gee_catalog_command == "dataset": result = {"status": "passed", "record": get_catalog_dataset(args.asset_id)} if get_catalog_dataset(args.asset_id) else {"status": "not_found", "asset_id": args.asset_id}
+        elif args.gee_catalog_command == "compare": result = compare_datasets(args.asset_ids)
         elif args.gee_catalog_command == "recommend": result = recommend_datasets(args.model_id, args.config)
-        elif args.gee_catalog_command == "codegen": result = generate_ee_code(args.asset_id, args.config)
+        elif args.gee_catalog_command == "codegen": result = generate_ee_code(args.asset_id, args.config, args.band, args.language)
         else:
-            rows = __import__("hydrolite.gee_catalog.loader", fromlist=["load_catalog"]).load_catalog(); (output / "gee_catalog_manifest.json").write_text(json.dumps({"status": catalog_status(), "records": rows}, ensure_ascii=False, indent=2), encoding="utf-8"); table = pd.DataFrame(rows); table.to_excel(output / "gee_catalog.xlsx", index=False); text = "# HydroLite GEE dataset intelligence\n\nOffline metadata remains queryable; Earth Engine calculations require authentication.\n"; (output / "gee_catalog_report_en.md").write_text(text, encoding="utf-8"); (output / "gee_catalog_report_zh.md").write_text(text, encoding="utf-8"); result = {"status": "passed", "output": str(output)}
+            result = {"status": "passed", "outputs": {key: str(value) for key, value in write_catalog_report(output).items()}}
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
     if args.command == "method":
         output = ROOT / "output" / "method_inspiration"; output.mkdir(parents=True, exist_ok=True)

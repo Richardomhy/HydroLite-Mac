@@ -1,5 +1,18 @@
-catalog:
-  official_stac_root: gs://earthengine-stac/catalog.json
-  refresh_default: dry-run
-  offline_fixture: data_demo/method_inspiration/gee_catalog/official_metadata_fixture.json
-  note: "Metadata only. Actual GEE computation requires local authentication."
+canonical_uri: gs://earthengine-stac/catalog.json
+public_https_uri: https://storage.googleapis.com/earthengine-stac/catalog.json
+allowed_hosts:
+  - storage.googleapis.com
+  - developers.google.com
+refresh_default: dry-run
+parser_version: "1"
+limits:
+  connect_timeout_seconds: 10
+  read_timeout_seconds: 30
+  max_concurrency: 4
+  max_retries_per_url: 2
+  max_depth: 20
+  max_documents: 20000
+  max_records: 10000
+  max_metadata_bytes: 5242880
+  required_field_pass_rate: 0.95
+  max_failure_rate: 0.05

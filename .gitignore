@@ -175,5 +175,9 @@ output/flood_susceptibility/
 .hydrolite/gee_catalog/
 *catalog_refresh_cache*
 research_runtime/
+catalog_staging/
+catalog_backups/
+catalog.jsonl.gz
+catalog_index.parquet
 *.pdf
 wechat_exports/

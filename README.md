@@ -2,6 +2,8 @@
 
 ## GEE Catalog and Method Inspiration Lab
 
+`python -m hydrolite gee-catalog status` provides an offline-first official-source metadata catalog. It does not download imagery or execute Earth Engine; see [GEE catalog](docs/gee_dataset_intelligence.md).
+
 v0.7.0-dev includes an offline-first GEE metadata catalog and clean-room method experiment lab. It offers causal Gamma lag features, directed river-graph features, causal trend context, multi-horizon baselines, water-quality method interfaces, and spatially validated flood-susceptibility baselines. These are independent HydroLite designs, not reproductions of third-party skills or papers. See [GEE catalog](docs/gee_dataset_intelligence.md) and [method lab](docs/method_inspiration_lab.md).
 
 ## Continuous Hydrology and Drought MVP

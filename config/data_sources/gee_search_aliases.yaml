@@ -1,0 +1,13 @@
+aliases:
+  precipitation: ["降雨", "precipitation", "rainfall"]
+  soil_moisture: ["土壤水", "soil moisture", "soil-moisture"]
+  evapotranspiration: ["蒸散", "evapotranspiration", "et"]
+  temperature: ["温度", "temperature"]
+  surface_water: ["地表水", "surface water"]
+  land_cover: ["土地利用", "land cover"]
+  vegetation: ["植被", "ndvi", "vegetation"]
+  elevation: ["高程", "dem", "elevation"]
+  water_quality: ["水质", "water quality"]
+  air_quality: ["空气质量", "air quality"]
+  drought: ["干旱", "drought"]
+  flood: ["洪水", "flood"]

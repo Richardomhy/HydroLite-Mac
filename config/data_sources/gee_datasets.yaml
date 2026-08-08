@@ -1,5 +1,12 @@
-datasets:
-  dem: {dataset_id: USGS/SRTMGL1_003, provider: USGS, variables: [elevation], scale: 30, temporal_resolution: static, valid_time_range: static, units: m, license: public, quality_notes: reproject before area calculations, model_uses: [watershed_delineation], fallback_datasets: [COPERNICUS/DEM/GLO30]}
-  precipitation: {dataset_id: UCSB-CHG/CHIRPS/DAILY, provider: CHG, variables: [precipitation], scale: 5566, temporal_resolution: daily, valid_time_range: 1981-present, units: mm/day, license: public, quality_notes: gauge-satellite blended, model_uses: [hydrology, drought_forecast], fallback_datasets: [NASA/GPM_L3/IMERG_V07]}
-  temperature: {dataset_id: ECMWF/ERA5_LAND/DAILY_AGGR, provider: ECMWF, variables: [temperature_2m], scale: 11132, temporal_resolution: daily, valid_time_range: 1950-present, units: K, license: Copernicus, quality_notes: reanalysis, model_uses: [drought_forecast], fallback_datasets: []}
-  surface_water: {dataset_id: JRC/GSW1_4/GlobalSurfaceWater, provider: JRC, variables: [occurrence], scale: 30, temporal_resolution: static-summary, valid_time_range: 1984-2021, units: percent, license: Copernicus, quality_notes: historical occurrence, model_uses: [waterbody_boundary], fallback_datasets: []}
+use_case_rules:
+  watershed_delineation: {preferred_characteristics: [dem, elevation], fallback_characteristics: [global_dem], preprocessing_notes: ["check projection and sinks"]}
+  event_hydrology: {preferred_characteristics: [precipitation], fallback_characteristics: [daily_precipitation], preprocessing_notes: ["align rainfall interval"]}
+  continuous_hydrology: {preferred_characteristics: [precipitation, soil moisture], fallback_characteristics: [daily_forcing], preprocessing_notes: ["check temporal coverage"]}
+  flood_forecast: {preferred_characteristics: [precipitation, dem], fallback_characteristics: [rainfall], preprocessing_notes: ["catalog metadata is not a forecast feed"]}
+  drought_forecast: {preferred_characteristics: [precipitation, soil moisture], fallback_characteristics: [surface water], preprocessing_notes: ["check historical coverage"]}
+  evapotranspiration: {preferred_characteristics: [evapotranspiration, temperature], fallback_characteristics: [temperature], preprocessing_notes: ["confirm units"]}
+  soil_moisture: {preferred_characteristics: [soil moisture], fallback_characteristics: [precipitation], preprocessing_notes: ["confirm depth"]}
+  reservoir_waterbody: {preferred_characteristics: [surface water], fallback_characteristics: [dem], preprocessing_notes: ["validate footprint"]}
+  rusle: {preferred_characteristics: [dem, vegetation, land cover], fallback_characteristics: [precipitation], preprocessing_notes: ["not an outlet sediment estimate"]}
+  vegetation: {preferred_characteristics: [vegetation], fallback_characteristics: [land cover], preprocessing_notes: ["check cloud and compositing"]}
+  future_water_quality_inputs: {preferred_characteristics: [surface water, precipitation], fallback_characteristics: [temperature], preprocessing_notes: ["water_quality remains planned"]}

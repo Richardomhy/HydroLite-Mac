@@ -1,0 +1,11 @@
+{
+  "fixture_notice": "Minimal hand-curated official-STAC-shaped metadata for tests only; not a catalog mirror.",
+  "source_url": "https://storage.googleapis.com/earthengine-stac/catalog.json",
+  "retrieved_at": "2026-08-08",
+  "records": [
+    {"id": "TEST/IMAGE_COLLECTION", "title": "Test rainfall", "type": "ImageCollection", "provider": "Google test", "bbox": [-180, -80, 180, 80], "start_date": "2001-01-01", "bands": [{"name": "rain", "unit": "mm"}], "official_url": "https://developers.google.com/earth-engine/datasets/catalog/TEST_IMAGE_COLLECTION", "stac_url": "https://storage.googleapis.com/earthengine-stac/catalog.json"},
+    {"id": "TEST/IMAGE", "title": "Test elevation", "type": "Image", "provider": "USGS", "bbox": [-180, -80, 180, 80], "start_date": "2000-01-01", "end_date": "2000-12-31", "bands": [{"name": "elevation", "unit": "m"}], "official_url": "https://developers.google.com/earth-engine/datasets/catalog/TEST_IMAGE", "stac_url": "https://storage.googleapis.com/earthengine-stac/catalog.json"},
+    {"id": "TEST/TABLE", "title": "Test station table", "type": "FeatureCollection", "provider": "Google test", "bbox": [-10, -10, 10, 10], "start_date": "2000-01-01", "official_url": "https://developers.google.com/earth-engine/datasets/catalog/TEST_TABLE", "stac_url": "https://storage.googleapis.com/earthengine-stac/catalog.json"},
+    {"id": "TEST/DEPRECATED", "title": "Deprecated test", "type": "Image", "provider": "Google test", "deprecated": true, "replacement_ids": ["TEST/IMAGE"], "official_url": "https://developers.google.com/earth-engine/datasets/catalog/TEST_DEPRECATED", "stac_url": "https://storage.googleapis.com/earthengine-stac/catalog.json"}
+  ]
+}
