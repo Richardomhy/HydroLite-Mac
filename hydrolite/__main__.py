@@ -222,6 +222,7 @@ from hydrolite.gee_catalog import (
     recommend_datasets, refresh_catalog, search_catalog, validate_catalog,
     write_catalog_report,
 )
+from hydrolite.gee_catalog.transport import fetch_catalog_object, write_transport_diagnosis
 from hydrolite.gee_catalog.reporting import build_catalog_statistics
 from hydrolite.gee_catalog.loader import load_catalog_records
 from hydrolite.gamma_lag_features import write_gamma_feature_report
@@ -743,6 +744,8 @@ def build_parser() -> argparse.ArgumentParser:
     gee_catalog = subparsers.add_parser("gee-catalog", help="Offline-first Google Earth Engine dataset metadata catalog.")
     gee_catalog_sub = gee_catalog.add_subparsers(dest="gee_catalog_command", required=True)
     gee_catalog_sub.add_parser("status")
+    gee_catalog_sub.add_parser("transport-status")
+    gee_catalog_sub.add_parser("transport-test")
     gee_catalog_sub.add_parser("stats")
     refresh = gee_catalog_sub.add_parser("refresh"); refresh.add_argument("mode", choices=["dry-run", "execute"])
     gee_catalog_sub.add_parser("validate")
@@ -838,6 +841,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "gee-catalog":
         output = ROOT / "output" / "gee_catalog_intelligence"; output.mkdir(parents=True, exist_ok=True)
         if args.gee_catalog_command == "status": result = catalog_status()
+        elif args.gee_catalog_command == "transport-status":
+            result = {"status": "passed", "diagnosis": write_transport_diagnosis(str(output)), "catalog": catalog_status()}
+        elif args.gee_catalog_command == "transport-test":
+            config = yaml.safe_load((ROOT / "config" / "data_sources" / "gee_catalog_sources.yaml").read_text(encoding="utf-8"))
+            root, selected, attempts = fetch_catalog_object(config["canonical_uri"], transport_priority=config["transport_priority"])
+            result = {"status": "success" if root is not None else "failed", "canonical_uri": config["canonical_uri"], "selected_transport": selected.as_dict(), "attempts": [item.as_dict() for item in attempts], "root_json_type": root.get("type") if root else None, "root_link_count": len(root.get("links", [])) if root else 0}
         elif args.gee_catalog_command == "refresh": result = refresh_catalog(args.mode)
         elif args.gee_catalog_command == "validate": result = validate_catalog()
         elif args.gee_catalog_command == "stats": result = build_catalog_statistics(load_catalog_records())

@@ -8,6 +8,9 @@ def test_connectors_degrade_without_credentials_and_do_not_download():
     assert get_connector("cds").detect_authentication().get("credentials_redacted") is True
     assert "seasonal_forecast" in get_connector("cds").list_supported_datasets()
     assert {"GRACE", "GRACE-FO"} <= set(get_connector("earthdata").list_supported_datasets())
+    gee = get_connector("gee").healthcheck()
+    assert "gee_compute_authentication" in gee
+    assert "gee_catalog_metadata_transport" in gee
 
 
 def test_connector_bbox_date_and_stac_whitelist_gates():

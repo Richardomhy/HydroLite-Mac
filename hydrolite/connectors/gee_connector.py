@@ -28,7 +28,13 @@ class GeeConnector(DataConnector):
 
     def catalog_status(self):
         from hydrolite.gee_catalog import catalog_status
-        return catalog_status()
+        return {"compute_authentication": self.detect_authentication(), "catalog_transport": catalog_status()}
+
+    def healthcheck(self):
+        result = super().healthcheck()
+        result["gee_compute_authentication"] = self.detect_authentication()
+        result["gee_catalog_metadata_transport"] = self.catalog_status()["catalog_transport"]
+        return result
 
     def catalog_search(self, query: str):
         from hydrolite.gee_catalog import search_catalog

@@ -61,4 +61,5 @@ def get_catalog_dataset(asset_id: str, path: str | Path | None = None) -> dict |
 def inspect_catalog_availability(path: str | Path | None = None) -> dict:
     paths = get_catalog_paths(path) if path else get_catalog_paths()
     has_local = paths.records.exists() and paths.manifest.exists()
-    return {"status": "available" if has_local else "fixture_only", "catalog_root": str(paths.root), "records_path": str(paths.records), "manifest_path": str(paths.manifest), "fixture_path": str(FIXTURE), "record_count": len(load_catalog_records(paths.root)), "local_catalog": has_local}
+    manifest = load_catalog_manifest(paths.root)
+    return {"status": manifest.get("catalog_completeness", "available") if has_local else "fixture_only", "catalog_completeness": manifest.get("catalog_completeness", "fixture_only"), "catalog_root": str(paths.root), "records_path": str(paths.records), "manifest_path": str(paths.manifest), "fixture_path": str(FIXTURE), "record_count": len(load_catalog_records(paths.root)), "local_catalog": has_local}

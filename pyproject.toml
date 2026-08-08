@@ -55,6 +55,9 @@ connectors = [
   "fsspec>=2024",
   "pystac-client>=0.8",
 ]
+gee-catalog = [
+  "google-cloud-storage>=2.18",
+]
 nasa = [
   "earthaccess>=0.10",
   "h5py>=3.11",
