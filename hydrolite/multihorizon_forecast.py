@@ -104,13 +104,21 @@ def evaluate_all_horizons(observed: Mapping[int, Any], predictions: Mapping[int,
 
 
 def calculate_error_growth(metrics: Any) -> pd.DataFrame:
-    frame = pd.DataFrame(metrics).sort_values("horizon").copy(); base = frame.iloc[0]
-    frame["error_growth"] = frame.RMSE - float(base.RMSE); frame["bias_growth"] = frame.PBIAS.abs() - abs(float(base.PBIAS)); frame["variance_growth"] = frame.RMSE.pow(2) - float(base.RMSE) ** 2
+    frame = pd.DataFrame(metrics).sort_values([column for column in ("model", "horizon") if column in pd.DataFrame(metrics)]).copy()
+    groups = frame.groupby("model", sort=False) if "model" in frame else [(None, frame)]
+    for _, indexes in groups.groups.items() if hasattr(groups, "groups") else groups:
+        index = list(indexes) if not isinstance(indexes, pd.DataFrame) else list(indexes.index); base = frame.loc[index].sort_values("horizon").iloc[0]
+        frame.loc[index, "error_growth"] = frame.loc[index, "RMSE"] - float(base.RMSE); frame.loc[index, "bias_growth"] = frame.loc[index, "PBIAS"].abs() - abs(float(base.PBIAS)); frame.loc[index, "variance_growth"] = frame.loc[index, "RMSE"].pow(2) - float(base.RMSE) ** 2
     return frame[["model", "horizon", "RMSE", "error_growth", "bias_growth", "variance_growth"]] if "model" in frame else frame[["horizon", "RMSE", "error_growth", "bias_growth", "variance_growth"]]
 
 
 def calculate_horizon_skill_decay(metrics: Any) -> pd.DataFrame:
-    frame = pd.DataFrame(metrics).sort_values("horizon").copy(); reference = float(frame.iloc[0].NSE); frame["skill_decay"] = reference - frame.NSE; return frame[[column for column in ("model", "horizon", "NSE", "skill_decay") if column in frame]]
+    frame = pd.DataFrame(metrics).sort_values([column for column in ("model", "horizon") if column in pd.DataFrame(metrics)]).copy()
+    if "model" in frame:
+        frame["skill_decay"] = frame.groupby("model", sort=False)["NSE"].transform(lambda values: float(values.iloc[0]) - values)
+    else:
+        frame["skill_decay"] = float(frame.iloc[0].NSE) - frame.NSE
+    return frame[[column for column in ("model", "horizon", "NSE", "skill_decay") if column in frame]]
 
 
 def validate_multihorizon_result(result: Mapping[str, Any]) -> dict[str, Any]:

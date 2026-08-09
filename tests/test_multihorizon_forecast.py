@@ -1,6 +1,6 @@
 import numpy as np
 
-from hydrolite.multihorizon_forecast import build_direct_forecast, build_forecast_horizons, build_hybrid_forecast, build_recursive_forecast, fit_direct_models, fit_linear_model, select_hybrid_weights
+from hydrolite.multihorizon_forecast import build_direct_forecast, build_forecast_horizons, build_hybrid_forecast, build_recursive_forecast, calculate_error_growth, calculate_horizon_skill_decay, fit_direct_models, fit_linear_model, select_hybrid_weights
 
 
 def test_direct_models_cover_requested_horizons():
@@ -24,3 +24,15 @@ def test_hybrid_weights_are_nonnegative_and_sum_to_one():
     hybrid = build_hybrid_forecast({h: float(direct[h][0]) for h in values}, {h: float(recursive[h][0]) for h in values}, weights)
     assert set(hybrid) == set(values)
     assert all(abs(row["direct"] + row["recursive"] - 1) < 1e-12 and min(row["direct"], row["recursive"]) >= 0 for row in weights.values())
+
+
+def test_growth_metrics_use_each_models_own_shortest_horizon():
+    rows = [
+        {"model": "A", "horizon": 1, "NSE": .8, "RMSE": 1.0, "PBIAS": 2.0},
+        {"model": "A", "horizon": 3, "NSE": .5, "RMSE": 2.0, "PBIAS": 5.0},
+        {"model": "B", "horizon": 1, "NSE": .6, "RMSE": 3.0, "PBIAS": 4.0},
+        {"model": "B", "horizon": 3, "NSE": .1, "RMSE": 5.0, "PBIAS": 9.0},
+    ]
+    skill = calculate_horizon_skill_decay(rows); growth = calculate_error_growth(rows)
+    assert skill.query("horizon == 1").skill_decay.tolist() == [0.0, 0.0]
+    assert growth.query("horizon == 1").error_growth.tolist() == [0.0, 0.0]
