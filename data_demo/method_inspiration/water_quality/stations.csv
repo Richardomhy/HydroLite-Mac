@@ -1,0 +1,8 @@
+station_id,station_name,reach_id,longitude,latitude,synthetic_demo
+WQ1,Synthetic station 1,R1,113.8,22.5,True
+WQ2,Synthetic station 2,R2,113.85,22.55,True
+WQ3,Synthetic station 3,R3,113.89999999999999,22.6,True
+WQ4,Synthetic station 4,R4,113.94999999999999,22.65,True
+WQ5,Synthetic station 5,R5,114.0,22.7,True
+WQ6,Synthetic station 6,R6,114.05,22.75,True
+WQ7,Synthetic station 7,R7,114.1,22.8,True

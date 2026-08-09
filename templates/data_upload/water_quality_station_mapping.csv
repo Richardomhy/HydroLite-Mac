@@ -1,0 +1,6 @@
+field_name,description_zh,unit,required,example,data_quality_requirement
+station_id,水质站点唯一编号,identifier,true,WQ1,必须能在多站点水质表中找到
+reach_id,映射河段编号,identifier,true,R1,必须能在项目 RiverGraph 中找到
+mapping_method,映射方法,text,true,configured_exact,最近河段 fallback 必须显式标记
+mapping_confidence,映射置信度,text,true,high,high/medium/low/unresolved
+source,映射来源,text,true,user_verified,必须记录人工或算法来源

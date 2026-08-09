@@ -1,0 +1,8 @@
+station_id,reach_id,mapping_method,mapping_confidence
+WQ1,R1,configured_exact,high
+WQ2,R2,configured_exact,high
+WQ3,R3,configured_exact,high
+WQ4,R4,configured_exact,high
+WQ5,R5,configured_exact,high
+WQ6,R6,configured_exact,high
+WQ7,R7,configured_exact,high

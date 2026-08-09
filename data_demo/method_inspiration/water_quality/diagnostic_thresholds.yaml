@@ -1,0 +1,7 @@
+diagnostic_thresholds:
+  CODMn: 4.0
+  NH3-N: 0.3
+  TN: 1.5
+  TP: 0.12
+threshold_type: diagnostic_only
+synthetic_demo: true

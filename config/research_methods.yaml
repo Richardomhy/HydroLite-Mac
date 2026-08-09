@@ -51,7 +51,7 @@ methods:
     not_to_copy: [STTNN_name, paper_architecture, attention_equations, paper_dataset, paper_metrics]
     required_inputs: [timestamp, station_id, water_quality_variable, units, river_topology]
     optional_inputs: [flow, water_level, rainfall, temperature, upstream_values]
-    outputs: [method_readiness, horizon_contract]
+    outputs: [observation_qc, station_mapping, concentration_load_ledger, station_forecasts, horizon_metrics, method_report]
     temporal_scale: daily_to_multihorizon
     spatial_scale: monitoring_station
     causal_constraints: forecast_features_at_or_before_issue_time
@@ -69,11 +69,11 @@ methods:
     baseline_comparisons: [persistence, station_independent, upstream_weighted, linear_regression]
     value_added_gate: not_tested
     current_status: experimental
-    implementation_status: trend_feature_foundation_and_multihorizon_foundation_implemented
+    implementation_status: multistation_interface_implemented_graph_gamma_reused_trend_optional_no_neural_model
     validation_required: true
     real_data_value_added: not_tested
-    next_milestone: M5
-    limitations: Trend and multihorizon foundations are implemented independently; the water-quality model is not implemented and production capability remains planned.
+    next_milestone: real_multistation_validation_required
+    limitations: Synthetic method demo only; the water-quality model is not implemented. Trend is optional and not forced; no neural or reaction-process model is implemented; production water_quality remains planned.
   - method_id: adaptive_flood_susceptibility_xai
     display_name: Adaptive flood susceptibility XAI method
     display_name_zh: 自适应洪水易发性与解释方法

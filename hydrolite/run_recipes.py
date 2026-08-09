@@ -43,7 +43,13 @@ _RECIPES = {
     "research_method_intake": {"stages": ["research_source_intake", "research_license_review", "method_inspiration_lab"], "expected_outputs": ["research_sources.xlsx", "research_methods.xlsx"]},
     "gamma_lag_experiment": {"stages": ["gamma_lag_features"], "expected_outputs": ["kernels/single_kernel.csv", "features/gamma_features.csv", "reports/gamma_lag_manifest.json"]},
     "graph_hydrology_experiment": {"stages": ["river_graph_features", "trend_aware_features", "multihorizon_forecast"], "expected_outputs": ["graph/graph_manifest.json", "forecast/horizon_metrics.xlsx", "reports/graph_trend_manifest.json"]},
-    "water_quality_multihorizon_experiment": {"stages": ["water_quality_method_lab", "hierarchical_multihorizon"], "expected_outputs": ["multihorizon_metrics.xlsx"]},
+    "water_quality_multistation_experiment": {
+        "stages": ["water_quality_qc", "station_mapping", "concentration_load", "causal_features", "multihorizon_forecast", "feature_ablation", "validation", "report"],
+        "expected_outputs": ["forecast/station_predictions.csv", "forecast/horizon_metrics.xlsx", "reports/water_quality_method_report_zh.md"],
+        "command": "python -m hydrolite water-quality-lab demo",
+        "validation_level": "synthetic_method_demo",
+    },
+    "water_quality_multihorizon_experiment": {"stages": ["water_quality_method_lab", "hierarchical_multihorizon"], "expected_outputs": ["multihorizon_metrics.xlsx"], "deprecated_by": "water_quality_multistation_experiment"},
     "flood_susceptibility_mapping": {"stages": ["flood_susceptibility"], "expected_outputs": ["baseline_metrics.xlsx"]},
     "flood_susceptibility_xai": {"stages": ["flood_susceptibility", "flood_susceptibility_xai"], "expected_outputs": ["feature_importance.xlsx"]},
 }

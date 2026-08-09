@@ -1,0 +1,11 @@
+{
+  "expected_status": "passed",
+  "expected_horizons": [
+    1,
+    3,
+    7,
+    14
+  ],
+  "value_added_may_be_mixed": true,
+  "real_data_value_added": "not_tested"
+}

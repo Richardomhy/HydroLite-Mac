@@ -1,0 +1,6 @@
+field_name,description_zh,unit,required,example,data_quality_requirement
+variable_id,水质指标编号,identifier,true,TN,必须与观测变量一致
+diagnostic_threshold,软件方法诊断阈值,与变量相同,true,1.5,仅用于诊断演示不得称法规阈值
+unit,阈值单位,text,true,mg/L,必须与变量 canonical_unit 一致
+source,阈值来源,text,true,user_configured,必须注明 synthetic_demo 或用户配置
+threshold_type,阈值类型,text,true,diagnostic_only,固定为 diagnostic_only

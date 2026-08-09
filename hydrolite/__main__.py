@@ -252,7 +252,15 @@ from hydrolite.graph_feature_benchmark import (
     validate_graph_trend_outputs,
 )
 from hydrolite.river_graph import validate_river_graph
-from hydrolite.water_quality_experiment import assess_water_quality_experiment, write_water_quality_method_demo
+from hydrolite.water_quality_experiment import (
+    DEFAULT_OUTPUT_DIR as WATER_QUALITY_LAB_OUTPUT,
+    assess_water_quality_experiment,
+    build_water_quality_bundle,
+    run_water_quality_method_lab,
+    validate_water_quality_method_lab,
+    write_water_quality_method_demo,
+    write_water_quality_method_report,
+)
 from hydrolite.method_benchmark import write_method_benchmark
 from hydrolite.flood_susceptibility import readiness as susceptibility_readiness, train_adaptive as susceptibility_train_adaptive, train_baselines as susceptibility_train_baselines, validate_outputs as susceptibility_validate_outputs, write_report as susceptibility_write_report
 from hydrolite.flood_susceptibility_features import build_conditioning_features
@@ -757,6 +765,11 @@ def build_parser() -> argparse.ArgumentParser:
     item = water_quality_sub.add_parser("hydrology-gate", help="Evaluate the continuous hydrology gate without running a water-quality model.")
     item.add_argument("output")
 
+    water_quality_lab = subparsers.add_parser("water-quality-lab", help="Experimental multi-station water-quality method lab.")
+    water_quality_lab_sub = water_quality_lab.add_subparsers(dest="water_quality_lab_command", required=True)
+    for command in ("status", "demo", "qc", "map-stations", "loads", "features", "forecast", "ablation", "validate", "report", "bundle"):
+        water_quality_lab_sub.add_parser(command)
+
     research = subparsers.add_parser("research", help="Clean-room research source and method records.")
     research_sub = research.add_subparsers(dest="research_command", required=True)
     for command in ("status", "sources", "registry", "licenses", "method-cards", "methods", "validate", "report"):
@@ -918,6 +931,30 @@ def main(argv: list[str] | None = None) -> int:
         else:
             paths = {"gamma": write_gamma_feature_report(output), "trend": write_trend_feature_report(output), "multihorizon": write_multihorizon_report(output), "benchmark": write_method_benchmark(output)}; (output / "method_inspiration_report.md").write_text("# Method inspiration experiments\n\nClean-room features and baselines only; no paper-model reproduction.\n", encoding="utf-8"); result = {"status": "passed", "outputs": {key: str(value) for key, value in paths.items()}}
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "water-quality-lab":
+        if args.water_quality_lab_command == "status":
+            result = assess_water_quality_experiment()
+        elif args.water_quality_lab_command == "demo":
+            result = run_water_quality_method_lab(output_dir=WATER_QUALITY_LAB_OUTPUT)
+            result = {"status": result["status"], "stage": "demo", "output_dir": result["output_dir"], "validation_level": result["validation_level"], "water_quality": result["water_quality"]}
+        elif args.water_quality_lab_command == "validate":
+            result = validate_water_quality_method_lab(WATER_QUALITY_LAB_OUTPUT)
+        elif args.water_quality_lab_command == "report":
+            report = Path(WATER_QUALITY_LAB_OUTPUT) / "reports" / "water_quality_method_report_zh.md"
+            result = {"status": "passed", "report_zh": str(report)} if report.exists() else write_water_quality_method_report(WATER_QUALITY_LAB_OUTPUT)
+        elif args.water_quality_lab_command == "bundle":
+            bundle = Path(WATER_QUALITY_LAB_OUTPUT) / "reports" / "water_quality_method_bundle.zip"
+            result = {"status": "passed", "bundle": str(bundle)} if bundle.exists() else build_water_quality_bundle(WATER_QUALITY_LAB_OUTPUT)
+        else:
+            stage_files = {
+                "qc": "data_quality/observation_qc.xlsx", "map-stations": "data_quality/station_mapping.xlsx", "loads": "loads/concentration_load_ledger.csv",
+                "features": "features/feature_manifest.xlsx", "forecast": "forecast/station_predictions.csv", "ablation": "features/feature_ablation.xlsx",
+            }
+            artifact = Path(WATER_QUALITY_LAB_OUTPUT) / stage_files[args.water_quality_lab_command]
+            if not artifact.exists(): run_water_quality_method_lab(output_dir=WATER_QUALITY_LAB_OUTPUT)
+            result = {"status": "passed" if artifact.exists() and artifact.stat().st_size else "failed", "stage": args.water_quality_lab_command, "artifact": str(artifact), "water_quality": "planned"}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+        return 0 if result.get("status") in {"passed", "partial"} else 1
     if args.command == "gamma":
         output = ROOT / "output" / "method_inspiration" / "gamma"
         if args.gamma_command == "status":

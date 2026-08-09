@@ -1,2 +1,10 @@
-timestamp,station_id,CODMn,NH3-N,TN,TP,DO,flow_cms
-2020-01-01,S1,3.2,0.12,1.1,0.08,7.5,2.1
+field_name,description_zh,unit,required,example,data_quality_requirement
+timestamp,观测时间,ISO-8601,true,2025-01-01,可解析且不得晚于预测签发时间
+station_id,水质站点唯一编号,identifier,true,WQ1,非空且项目内稳定
+variable_id,水质指标编号,identifier,true,TN,CODMn/NH3-N/TN/TP 或登记的扩展指标
+value,观测浓度,见 unit,true,1.25,不得为负；非检出值保留 qualifier
+unit,观测单位,text,true,mg/L,必须可转换为变量 canonical_unit
+qualifier,非检出或实验室限定符,text,false,below_detection_limit,不得静默替换为 LOD/2
+detection_limit,检出限,与 value 相同,false,0.01,必须非负
+source_dataset_id,来源数据集编号,identifier,true,user_lab_2025,必须可追溯
+qc_flag,用户提供质量标记,text,false,valid,valid/suspect/invalid 等枚举

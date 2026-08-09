@@ -1,0 +1,89 @@
+{
+  "synthetic_demo": true,
+  "seed": 20260809,
+  "date_range": [
+    "2023-01-01",
+    "2024-12-30"
+  ],
+  "days": 730,
+  "station_count": 7,
+  "station_topology": [
+    {
+      "edge_id": "E1",
+      "source_node": "R1",
+      "target_node": "R3",
+      "distance_km": 8.0,
+      "travel_time": 24.0
+    },
+    {
+      "edge_id": "E2",
+      "source_node": "R2",
+      "target_node": "R3",
+      "distance_km": 6.0,
+      "travel_time": 24.0
+    },
+    {
+      "edge_id": "E3",
+      "source_node": "R3",
+      "target_node": "R4",
+      "distance_km": 9.0,
+      "travel_time": 24.0
+    },
+    {
+      "edge_id": "E4",
+      "source_node": "R4",
+      "target_node": "R6",
+      "distance_km": 10.0,
+      "travel_time": 24.0
+    },
+    {
+      "edge_id": "E5",
+      "source_node": "R5",
+      "target_node": "R6",
+      "distance_km": 7.0,
+      "travel_time": 24.0
+    },
+    {
+      "edge_id": "E6",
+      "source_node": "R6",
+      "target_node": "R7",
+      "distance_km": 12.0,
+      "travel_time": 24.0
+    }
+  ],
+  "pollutants": [
+    "CODMn",
+    "NH3-N",
+    "TN",
+    "TP"
+  ],
+  "variable_generation_logic": "seasonal background + storm response + flow response + lagged upstream signal + measurement noise",
+  "true_travel_times_hours": {
+    "E1": 24.0,
+    "E2": 24.0,
+    "E3": 24.0,
+    "E4": 24.0,
+    "E5": 24.0,
+    "E6": 24.0
+  },
+  "noise": "seeded Gaussian variable-specific noise",
+  "synthetic_thresholds": {
+    "CODMn": 4.0,
+    "NH3-N": 0.3,
+    "TN": 1.5,
+    "TP": 0.12
+  },
+  "checksums": {
+    "station_reach_mapping.csv": "7e3b5f8a4c0cd45974d5a1436cb116becd7dd2d2a8d758ff5f9ac3b23ff7314a",
+    "daily_hydrology.csv": "d92093e840b570c437f9cff93e9567794457e5fb98d8d471a2ca0b0b12a23f79",
+    "water_quality_daily.csv": "ca52407a323f494a87d0a22d90e46920334af36f7a415b897a0c7adb52bfab17",
+    "daily_flow.csv": "0a738fbdf4e559abca26b90593934aa747cad887452e389ea764254fa05ab5a6",
+    "stations.csv": "7a1896102600a703b32bf49a2c2598c7858f6863941a21f7aca0ed08142ead26",
+    "reach_edges.csv": "7d7d3afa088c371fca92bcef7667545ddd6336ef9a1d87ac20d3e071022201bf",
+    "water_quality_config.yaml": "bccfb262c3e0afd50c89519bd612c7dbf40bd35cd36e1318d75cc674d3f7e18c",
+    "meteorology.csv": "b356a4dfb221c0f46f9e432e1d98e66814226ced0911278bfdf1e178a801caa0",
+    "diagnostic_thresholds.yaml": "6602f9d476031a93c1c21c51da57354adc8eac42af923a9f3cca9bd4c74d878a"
+  },
+  "generation_method": "independent HydroLite synthetic method demo",
+  "notice": "Synthetic method demo only; not real validation and not a regulatory assessment."
+}
