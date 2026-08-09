@@ -1,0 +1,37 @@
+synthetic_demo: true
+validation_mode: spatial_block_cv
+train_blocks:
+- B00
+- B01
+- B02
+- B03
+- B04
+- B05
+- B06
+- B07
+- B08
+- B09
+- B10
+- B11
+- B12
+- B13
+- B14
+- B15
+validation_blocks:
+- B16
+- B17
+- B18
+- B19
+test_blocks:
+- B20
+- B21
+- B22
+- B23
+minimum_neighbor_distance: 0.02
+correlation_threshold: 0.8
+class_weight: balanced
+calibration_methods:
+- uncalibrated
+- sigmoid
+- isotonic
+notice: 'SYNTHETIC DEMO: software-method validation only; not real-project validation.'

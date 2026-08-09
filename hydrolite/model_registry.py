@@ -53,8 +53,8 @@ _MODELS = {
         _model("causal_graph_temporal_model", "因果图时序", "Causal graph temporal", "graph_hydrology", "experimental", training_required=True, limitations="Bidirectional modes are blocked for future forecasts."),
         _model("trend_graph_water_quality_experiment", "趋势图水质实验", "Trend graph water-quality experiment", "graph_hydrology", "experimental", training_required=True, limitations="Water-quality production capability remains planned."),
         _model("hierarchical_multihorizon_model", "分层多提前期", "Hierarchical multihorizon", "multihorizon", "experimental", training_required=True),
-        _model("flood_susceptibility_baseline", "洪水易发性基线", "Flood susceptibility baseline", "susceptibility", "experimental", training_required=True, forecast_support=False),
-        _model("adaptive_flood_susceptibility_experiment", "自适应洪水易发性实验", "Adaptive flood susceptibility experiment", "experimental_rl", "experimental", training_required=True, forecast_support=False, limitations="Optional RL is not recommended without independent value added."),
+        _model("flood_susceptibility_baseline", "洪水易发性基线", "Flood susceptibility baseline", "susceptibility", "experimental", domain="flood_susceptibility", training_required=True, forecast_support=False),
+        _model("adaptive_flood_susceptibility_xai", "自适应洪水易发性与 XAI 实验", "Adaptive flood susceptibility and XAI experiment", "experimental_rl", "experimental", domain="flood_susceptibility", training_required=True, forecast_support=False, limitations="Supervised spatial validation and XAI are implemented on synthetic data. RL is not implemented; real validation is required."),
     ]
 }
 

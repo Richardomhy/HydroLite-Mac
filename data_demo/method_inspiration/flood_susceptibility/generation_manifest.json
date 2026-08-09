@@ -1,0 +1,27 @@
+{
+  "synthetic_demo": true,
+  "seed": 20260809,
+  "point_count": 2400,
+  "spatial_block_count": 24,
+  "factor_count": 18,
+  "spatial_pattern": "clustered blocks with gaps, nonlinear gradients, heterogeneity, and class imbalance",
+  "class_balance": {
+    "point_count": 2400,
+    "flood_count": 494,
+    "background_count": 1906,
+    "prevalence": 0.20583333333333334,
+    "imbalance_detected": true,
+    "pseudo_absence_count": 652,
+    "pseudo_absence_is_verified_non_flood": false
+  },
+  "label_logic": "seeded stochastic nonlinear synthetic probability",
+  "checksums": {
+    ".gitkeep": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "conditioning_factors.csv": "b5ba4d112fcdf0fd200eb67c2b5bcaa3ed747dad52c6fbb47a137a81afa77c91",
+    "flood_inventory.csv": "a93f55be4388d9e3e299ab830278eabc11acbe63f6453908756a56faf909180a",
+    "spatial_blocks.geojson": "80df24956a131c01049c72e493fe19ff46ea444dbebbd143caf1e3cbe2f85b03",
+    "susceptibility_config.yaml": "c5aaa72ebffa072aba54eca4f27d200d6306902d1d64b9154306b720f618bf56",
+    "factor_metadata.yaml": "bf31905c379966c16fde91c5bbe8bad00fe8daf77d9b3c510a2cffa0bbd9f891"
+  },
+  "notice": "SYNTHETIC DEMO: software-method validation only; not real-project validation."
+}

@@ -469,8 +469,8 @@ _STAGES: tuple[WorkflowStage, ...] = (
             ("multihorizon_forecast", "透明多提前期预报", "forecast/horizon_metrics.xlsx", "python -m hydrolite multihorizon demo", "水文研究方法实验室"),
             ("hierarchical_multihorizon", "分层多提前期", "horizon_metrics.xlsx", "python -m hydrolite method multihorizon-demo", "水文研究方法实验室"),
             ("water_quality_method_lab", "水质方法实验", "reports/water_quality_method_report_zh.md", "python -m hydrolite water-quality-lab demo", "水文研究方法实验室"),
-            ("flood_susceptibility", "洪水易发性", "baseline_metrics.xlsx", "python -m hydrolite susceptibility train-baselines data_demo/method_inspiration/flood_susceptibility", "洪水易发性"),
-            ("flood_susceptibility_xai", "洪水易发性 XAI", "feature_importance.xlsx", "python -m hydrolite susceptibility explain output/flood_susceptibility", "洪水易发性"),
+            ("flood_susceptibility", "洪水易发性", "models/model_metrics.xlsx", "python -m hydrolite susceptibility demo", "洪水易发性"),
+            ("flood_susceptibility_xai", "洪水易发性 XAI", "xai/global_importance.xlsx", "python -m hydrolite susceptibility explain", "洪水易发性"),
         )
     ),
 )

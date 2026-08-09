@@ -3,6 +3,7 @@ use_case_rules:
   event_hydrology: {preferred_characteristics: [precipitation], fallback_characteristics: [daily_precipitation], preprocessing_notes: ["align rainfall interval"]}
   continuous_hydrology: {preferred_characteristics: [precipitation, soil moisture], fallback_characteristics: [daily_forcing], preprocessing_notes: ["check temporal coverage"]}
   flood_forecast: {preferred_characteristics: [precipitation, dem], fallback_characteristics: [rainfall], preprocessing_notes: ["catalog metadata is not a forecast feed"]}
+  flood_susceptibility: {preferred_characteristics: [dem, land cover, vegetation, precipitation, soil moisture, surface water], fallback_characteristics: [elevation, rainfall], preprocessing_notes: ["catalog recommendation only; derive and validate project-scale factors before modeling"]}
   drought_forecast: {preferred_characteristics: [precipitation, soil moisture], fallback_characteristics: [surface water], preprocessing_notes: ["check historical coverage"]}
   evapotranspiration: {preferred_characteristics: [evapotranspiration, temperature], fallback_characteristics: [temperature], preprocessing_notes: ["confirm units"]}
   soil_moisture: {preferred_characteristics: [soil moisture], fallback_characteristics: [precipitation], preprocessing_notes: ["confirm depth"]}

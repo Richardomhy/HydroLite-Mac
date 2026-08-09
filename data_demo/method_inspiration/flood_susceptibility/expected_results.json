@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "selected_model_not_predefined": true,
+  "complex_model_may_not_add_value": true,
+  "rl_expected": "rl_not_justified",
+  "real_data_value_added": "not_tested"
+}

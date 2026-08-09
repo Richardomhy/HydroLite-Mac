@@ -262,7 +262,7 @@ from hydrolite.water_quality_experiment import (
     write_water_quality_method_report,
 )
 from hydrolite.method_benchmark import write_method_benchmark
-from hydrolite.flood_susceptibility import readiness as susceptibility_readiness, train_adaptive as susceptibility_train_adaptive, train_baselines as susceptibility_train_baselines, validate_outputs as susceptibility_validate_outputs, write_report as susceptibility_write_report
+from hydrolite.flood_susceptibility import DEFAULT_OUTPUT_DIR as SUSCEPTIBILITY_OUTPUT, readiness as susceptibility_readiness, run_susceptibility_command, train_adaptive as susceptibility_train_adaptive, train_baselines as susceptibility_train_baselines, validate_outputs as susceptibility_validate_outputs, write_report as susceptibility_write_report
 from hydrolite.flood_susceptibility_features import build_conditioning_features
 from hydrolite.flood_susceptibility_validation import spatial_block_cv
 
@@ -821,10 +821,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     susceptibility = subparsers.add_parser("susceptibility", help="Spatial flood-susceptibility method experiments.")
     susceptibility_sub = susceptibility.add_subparsers(dest="susceptibility_command", required=True)
+    for command in ("status", "demo", "qc", "factors", "split", "train", "calibrate", "evaluate", "map", "rl-readiness", "bundle"):
+        susceptibility_sub.add_parser(command)
     for command in ("readiness", "build-features", "split-spatial", "train-baselines", "train-adaptive"):
         child = susceptibility_sub.add_parser(command); child.add_argument("workspace")
     for command in ("explain", "validate", "report"):
-        child = susceptibility_sub.add_parser(command); child.add_argument("output")
+        child = susceptibility_sub.add_parser(command); child.add_argument("output", nargs="?", default=None)
     return parser
 
 
@@ -1006,7 +1008,12 @@ def main(argv: list[str] | None = None) -> int:
             else: result = {"status": run["status"], "horizons": run["horizons"], "validation": run["multihorizon_validation"], "output": str(GRAPH_TREND_OUTPUT / "forecast")}
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result.get("status") == "passed" else 1
     if args.command == "susceptibility":
-        output = ROOT / "output" / "flood_susceptibility"
+        output = SUSCEPTIBILITY_OUTPUT
+        modern = {"status", "demo", "qc", "factors", "split", "train", "calibrate", "evaluate", "map", "explain", "rl-readiness", "validate", "report", "bundle"}
+        if args.susceptibility_command in modern and not getattr(args, "output", None):
+            result = run_susceptibility_command(args.susceptibility_command, output)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 0 if result.get("status") not in {"failed", "missing_baseline"} else 1
         if args.susceptibility_command == "readiness": result = susceptibility_readiness(args.workspace)
         elif args.susceptibility_command == "build-features": result = build_conditioning_features(args.workspace)
         elif args.susceptibility_command == "split-spatial":
@@ -1014,7 +1021,7 @@ def main(argv: list[str] | None = None) -> int:
             result = {"status": "passed", "folds": spatial_block_cv(build_synthetic_flood_features())}
         elif args.susceptibility_command == "train-baselines": result = susceptibility_train_baselines(args.workspace, output)
         elif args.susceptibility_command == "train-adaptive": result = susceptibility_train_adaptive(args.workspace, output)
-        elif args.susceptibility_command == "explain": result = {"status": "passed" if (Path(args.output) / "feature_importance.xlsx").exists() else "missing_baseline", "fallback": "permutation_importance"}
+        elif args.susceptibility_command == "explain": result = run_susceptibility_command("explain", args.output)
         elif args.susceptibility_command == "validate": result = susceptibility_validate_outputs(args.output)
         else: result = susceptibility_write_report(args.output)
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result.get("status") not in {"failed", "missing_baseline"} else 1

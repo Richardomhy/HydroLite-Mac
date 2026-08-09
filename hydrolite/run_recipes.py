@@ -50,8 +50,14 @@ _RECIPES = {
         "validation_level": "synthetic_method_demo",
     },
     "water_quality_multihorizon_experiment": {"stages": ["water_quality_method_lab", "hierarchical_multihorizon"], "expected_outputs": ["multihorizon_metrics.xlsx"], "deprecated_by": "water_quality_multistation_experiment"},
-    "flood_susceptibility_mapping": {"stages": ["flood_susceptibility"], "expected_outputs": ["baseline_metrics.xlsx"]},
-    "flood_susceptibility_xai": {"stages": ["flood_susceptibility", "flood_susceptibility_xai"], "expected_outputs": ["feature_importance.xlsx"]},
+    "flood_susceptibility_mapping": {
+        "stages": ["flood_susceptibility", "flood_susceptibility_xai"],
+        "expected_outputs": ["models/model_metrics.xlsx", "mapping/susceptibility_map.geojson", "xai/global_importance.xlsx", "reports/flood_susceptibility_report_zh.md"],
+        "command": "python -m hydrolite susceptibility demo",
+        "validation_level": "synthetic_spatial_demo",
+        "limitations": ["易发性不等于风险；synthetic demo 不等于真实验证；RL 未实现。"],
+    },
+    "flood_susceptibility_xai": {"stages": ["flood_susceptibility", "flood_susceptibility_xai"], "expected_outputs": ["xai/global_importance.xlsx"], "deprecated_by": "flood_susceptibility_mapping"},
 }
 
 

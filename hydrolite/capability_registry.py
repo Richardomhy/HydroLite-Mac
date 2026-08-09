@@ -34,6 +34,7 @@ _CAPABILITIES = {
     "trend_aware_features": "partial",
     "multihorizon_forecast": "partial",
     "flood_susceptibility": "partial",
+    "flood_susceptibility_xai": "partial",
     "machine_learning": "partial",
     "deep_learning": "unavailable_optional",
 }

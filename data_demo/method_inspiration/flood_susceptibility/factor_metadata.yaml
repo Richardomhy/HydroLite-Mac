@@ -1,0 +1,183 @@
+synthetic_demo: true
+factor_specs:
+- factor_id: elevation
+  unit: m
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: slope
+  unit: degree
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: aspect
+  unit: degree
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: plan_curvature
+  unit: '1'
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: profile_curvature
+  unit: '1'
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: TWI
+  unit: '1'
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: flow_accumulation
+  unit: '1'
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: distance_to_stream
+  unit: m
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: distance_to_road
+  unit: m
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: distance_to_settlement
+  unit: m
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: land_cover
+  unit: '1'
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: true
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: NDVI
+  unit: '1'
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: soil
+  unit: '1'
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: true
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: imperviousness
+  unit: fraction
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: rainfall_extreme
+  unit: mm
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: antecedent_rainfall
+  unit: mm
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: soil_moisture
+  unit: fraction
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+- factor_id: surface_runoff
+  unit: mm
+  source: synthetic_demo_or_user
+  resolution: project_scale
+  temporal_reference: event_or_static
+  categorical: false
+  derivation_method: registered_factor_pipeline
+  quality: diagnostic
+  provenance:
+    clean_room: true
+high_correlation_threshold: 0.8
