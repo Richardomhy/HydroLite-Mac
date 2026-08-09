@@ -59,6 +59,7 @@ def test_workflow_engine_import_and_stage_schema():
     assert "HEC-DSS" in hms_project["implementation_notes"]
     assert next(stage for stage in stages if stage["stage_id"] == "flood_forecast")["status"] == "partial"
     assert all(next(stage for stage in stages if stage["stage_id"] == name)["status"] == "partial" for name in ("research_source_intake", "research_license_review", "method_inspiration_lab"))
+    assert all(next(stage for stage in stages if stage["stage_id"] == name)["status"] == "partial" for name in ("river_graph_features", "trend_aware_features", "multihorizon_forecast"))
     assert all(next(stage for stage in stages if stage["stage_id"] == name)["status"] == "partial" for name in ("desktop_build", "desktop_signing", "desktop_packaging", "desktop_notarization", "desktop_update_readiness"))
 
 

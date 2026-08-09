@@ -1,0 +1,48 @@
+{
+  "synthetic_demo": true,
+  "seed": 20260809,
+  "generator": "hydrolite.graph_feature_benchmark.generate_graph_demo",
+  "dates": [
+    "2020-01-01",
+    "2021-12-30"
+  ],
+  "topology": {
+    "synthetic_demo": true,
+    "directed": true,
+    "direction": "upstream_to_downstream",
+    "target_node": "OUTLET",
+    "target_variable": "outlet_flow"
+  },
+  "true_delays": {
+    "S1": 8,
+    "S2": 9,
+    "S3": 7,
+    "S4": 6,
+    "S5": 5,
+    "S6": 3,
+    "S7": 2,
+    "S8": 1
+  },
+  "known_rainfall_trend_per_day": 0.0001,
+  "known_seasonal_cycle_days": 365,
+  "known_gamma_response": true,
+  "feature_groups": [
+    "raw",
+    "gamma",
+    "trend",
+    "graph",
+    "gamma_graph",
+    "state",
+    "seasonal"
+  ],
+  "checksums": {
+    "nodes.csv": "971350ea519a99eef76c89c9f2203d61f277ea2ef192b6a87f8120fa3eb697c0",
+    "edges.csv": "ce2b60b74457d7f450942185467b4655daaa541015be3dfa199929c696cde00d",
+    "daily_node_hydrology.csv": "76a956339bceae25a59a92759dd21f24edd01f9699918b151b1f91545f9d03d4",
+    "outlet_observed.csv": "2b76bc6324698e0422b876ecc024cb2a3b4c8d711c889e81bbf7dd3a91a857ae",
+    "travel_time.csv": "5e2f6999828a4420816f36beb033d6c91a61d54f09a7d0633f8d42f033bdfc68",
+    "graph_config.yaml": "5f974a15e143d287380a530112cb48ab7b8beda3eaa3ead797cb2d27582af740",
+    "forecast_config.yaml": "8f09185e0ea6c0b1b06d7f39897cea1f2cb8ca705925ec194dc448a6b21ceba4",
+    "expected_results.json": "e67423d5c19d9f3d2a5a27b8008178a964414c3262cc29f6bf9ef9a4b095bcd7"
+  }
+}

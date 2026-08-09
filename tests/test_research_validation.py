@@ -12,7 +12,7 @@ def test_registry_passes_and_water_quality_stays_planned():
 
 def test_validator_blocks_future_context_and_unadmitted_status():
     card = get_method("physics_graph_temporal_residual")
-    invalid = replace(card, causal_constraints="bidirectional_allowed", current_status="experimental")
+    invalid = replace(card, causal_constraints="bidirectional_allowed", current_status="production")
     errors = validate_method_card(invalid, set(card.source_ids))
     assert "bidirectional_future_forecast_must_be_blocked" in errors
     assert "method_card_status_not_admitted" in errors

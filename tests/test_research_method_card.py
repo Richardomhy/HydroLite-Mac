@@ -14,3 +14,12 @@ def test_bidirectional_method_is_blocked_for_true_future_forecast():
     card = get_method("physics_graph_temporal_residual")
     assert "true_future_forecast_blocked" in card.causal_constraints
     assert "BiLSTM" in card.limitations
+
+
+def test_m4_method_cards_are_experimental_and_require_real_validation():
+    graph = get_method("physics_graph_temporal_residual")
+    trend = get_method("trend_graph_multihorizon_water_quality")
+    assert graph.current_status == trend.current_status == "experimental"
+    assert graph.validation_required is True and trend.validation_required is True
+    assert "deep graph model" in graph.limitations
+    assert "water-quality model is not implemented" in trend.limitations

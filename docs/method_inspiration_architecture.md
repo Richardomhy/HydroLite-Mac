@@ -32,3 +32,6 @@ M2 只建立“来源 -> 许可证 -> 方法卡 -> 集成边界 -> 准入状态�
 M3 仅在该登记层之上实现 `Gamma Lag Features`：纯数学因果核、合成真值、轻量参数恢复和独立基线。它不引入神经网络、河网图、水质或易发性功能，也不改变 HydroLite 水量账本。
 
 机器可读配置位于 `config/research_sources.yaml` 与 `config/research_methods.yaml`，报告由 `python -m hydrolite research report` 写入已忽略的 `output/research_methods/`。
+# M4 directed graph and forecast boundary
+
+M4 adds a directed upstream-to-downstream topology, causal trend features and dependency-light multi-horizon baselines. It is not a GCN implementation and does not add any bidirectional future-forecast model. HydroLite physical outputs and the water-balance ledger remain unchanged.

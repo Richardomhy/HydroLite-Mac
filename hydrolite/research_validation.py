@@ -52,8 +52,10 @@ def validate_method_card(card: ResearchMethodCard, source_ids: set[str]) -> list
         errors.append("method_id_and_source_links_required")
     if any(source_id not in source_ids for source_id in card.source_ids):
         errors.append("unknown_source_link")
-    if card.current_status not in METHOD_CARD_STATUSES or (card.current_status == "experimental" and card.method_id != "gamma_lag_hydrologic_prior"):
+    if card.current_status not in METHOD_CARD_STATUSES:
         errors.append("method_card_status_not_admitted")
+    if card.current_status == "experimental" and not card.implementation_status:
+        errors.append("experimental_method_requires_implementation_status")
     if card.value_added_gate not in VALUE_ADDED_GATES or card.value_added_gate != "not_tested":
         errors.append("value_added_not_tested_required")
     if card.recommended_integration_mode != "method_inspired_clean_room":

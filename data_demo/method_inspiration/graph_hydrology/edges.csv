@@ -1,0 +1,20 @@
+edge_id,source_node,target_node,edge_type,direction,distance_km,travel_time,weight,metadata
+S1_R1,S1,R1,subbasin_to_reach,upstream_to_downstream,1.0,0.25,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+S2_R2,S2,R2,subbasin_to_reach,upstream_to_downstream,1.0,0.25,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+S3_R3,S3,R3,subbasin_to_reach,upstream_to_downstream,1.0,0.25,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+S4_R4,S4,R4,subbasin_to_reach,upstream_to_downstream,1.0,0.25,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+S5_R5,S5,R5,subbasin_to_reach,upstream_to_downstream,1.0,0.25,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+S6_R6,S6,R6,subbasin_to_reach,upstream_to_downstream,1.0,0.25,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+S7_R7,S7,R7,subbasin_to_reach,upstream_to_downstream,1.0,0.25,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+S8_R8,S8,R8,subbasin_to_reach,upstream_to_downstream,1.0,0.25,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R1_R3,R1,R3,tributary,upstream_to_downstream,5.0,1.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R2_R3,R2,R3,tributary,upstream_to_downstream,10.0,2.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R3_R5,R3,R5,upstream_downstream,upstream_to_downstream,10.0,2.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R4_R5,R4,R5,tributary,upstream_to_downstream,5.0,1.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R5_RES1,R5,RES1,upstream_downstream,upstream_to_downstream,5.0,1.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+RES1_R6,RES1,R6,reservoir_release,upstream_to_downstream,10.0,2.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R6_R7,R6,R7,upstream_downstream,upstream_to_downstream,5.0,1.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R7_R8,R7,R8,upstream_downstream,upstream_to_downstream,5.0,1.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R8_OUTLET,R8,OUTLET,upstream_downstream,upstream_to_downstream,5.0,1.0,1.0,"{""travel_time_method"": ""configured"", ""source"": ""synthetic_truth""}"
+R5_ST1,R5,ST1,reach_to_station,upstream_to_downstream,,,1.0,{}
+R8_ST2,R8,ST2,reach_to_station,upstream_to_downstream,,,1.0,{}

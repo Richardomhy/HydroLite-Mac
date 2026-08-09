@@ -42,7 +42,7 @@ _RECIPES = {
     "gee_dataset_discovery": {"stages": ["gee_catalog_intelligence", "reporting"], "expected_outputs": ["gee_catalog_report_zh.md"]},
     "research_method_intake": {"stages": ["research_source_intake", "research_license_review", "method_inspiration_lab"], "expected_outputs": ["research_sources.xlsx", "research_methods.xlsx"]},
     "gamma_lag_experiment": {"stages": ["gamma_lag_features"], "expected_outputs": ["kernels/single_kernel.csv", "features/gamma_features.csv", "reports/gamma_lag_manifest.json"]},
-    "graph_hydrology_experiment": {"stages": ["river_graph_features", "graph_temporal_residual"], "expected_outputs": ["graph_manifest.json"]},
+    "graph_hydrology_experiment": {"stages": ["river_graph_features", "trend_aware_features", "multihorizon_forecast"], "expected_outputs": ["graph/graph_manifest.json", "forecast/horizon_metrics.xlsx", "reports/graph_trend_manifest.json"]},
     "water_quality_multihorizon_experiment": {"stages": ["water_quality_method_lab", "hierarchical_multihorizon"], "expected_outputs": ["multihorizon_metrics.xlsx"]},
     "flood_susceptibility_mapping": {"stages": ["flood_susceptibility"], "expected_outputs": ["baseline_metrics.xlsx"]},
     "flood_susceptibility_xai": {"stages": ["flood_susceptibility", "flood_susceptibility_xai"], "expected_outputs": ["feature_importance.xlsx"]},

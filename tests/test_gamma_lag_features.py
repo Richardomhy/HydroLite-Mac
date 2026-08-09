@@ -62,3 +62,14 @@ def test_gamma_cli_status_smoke():
     completed = subprocess.run([sys.executable, "-m", "hydrolite", "gamma", "status"], cwd=root, text=True, capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr
     assert '"sklearn_required": false' in completed.stdout
+
+
+def test_gamma_features_can_join_directed_graph_without_future_context():
+    from hydrolite.graph_feature_benchmark import build_demo_graph
+    from hydrolite.graph_hydrology_features import build_gamma_graph_features
+
+    dates = pd.date_range("2020-01-01", periods=35)
+    rows = [{"timestamp": date, "node_id": node, "effective_rainfall": float(index == 3)} for node in ("S1", "S2", "R3") for index, date in enumerate(dates)]
+    result = build_gamma_graph_features(rows, build_demo_graph())
+    assert result.attrs["feature_group"] == "gamma_graph"
+    assert result.timestamp.max() == dates.max()

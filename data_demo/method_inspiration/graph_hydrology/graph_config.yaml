@@ -1,0 +1,5 @@
+synthetic_demo: true
+directed: true
+direction: upstream_to_downstream
+target_node: OUTLET
+target_variable: outlet_flow

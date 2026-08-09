@@ -7,6 +7,7 @@ __pycache__/
 env/
 .env
 output/
+output/method_inspiration/graph_trend/
 output/conservation_audit/
 output/reservoir/
 output/hec_hms_reservoir_project/

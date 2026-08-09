@@ -68,9 +68,12 @@ methods:
     recommended_integration_mode: method_inspired_clean_room
     baseline_comparisons: [persistence, station_independent, upstream_weighted, linear_regression]
     value_added_gate: not_tested
-    current_status: method_card_complete
-    next_milestone: M4_M5
-    limitations: Water-quality production capability is planned, not implemented.
+    current_status: experimental
+    implementation_status: trend_feature_foundation_and_multihorizon_foundation_implemented
+    validation_required: true
+    real_data_value_added: not_tested
+    next_milestone: M5
+    limitations: Trend and multihorizon foundations are implemented independently; the water-quality model is not implemented and production capability remains planned.
   - method_id: adaptive_flood_susceptibility_xai
     display_name: Adaptive flood susceptibility XAI method
     display_name_zh: 自适应洪水易发性与解释方法
@@ -129,11 +132,14 @@ methods:
     known_weaknesses: [graph_structure_must_add_value]
     leakage_risks: [bidirectional_future_context, reverse_edge]
     computational_cost: medium
-    optional_dependencies: [torch_optional]
+    optional_dependencies: []
     HydroLite_target_components: [river_graph, trend_aware_features, graph_temporal_residual]
     recommended_integration_mode: method_inspired_clean_room
     baseline_comparisons: [basin_average, upstream_weighted, hydrolite_physical, simple_residual_regression]
     value_added_gate: not_tested
-    current_status: method_card_complete
-    next_milestone: M4
-    limitations: BiLSTM is limited to historical_analysis, hindcast, and reconstruction.
+    current_status: experimental
+    implementation_status: directed_graph_and_transparent_residual_foundation_implemented
+    validation_required: true
+    real_data_value_added: not_tested
+    next_milestone: M5
+    limitations: Directed graph foundations are implemented; no deep graph model is implemented. BiLSTM remains excluded from future forecast and real validation is required.

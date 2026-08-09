@@ -10,3 +10,6 @@
 `python -m hydrolite research validate` 会检查这些登记层门禁，不运行任何模型算法。
 
 Gamma 的 M3 准入还要求：无噪声前向一致性满足 NSE/KGE/PBIAS 门槛、未来输入扰动不改变历史特征、合成基准使用固定独立测试窗口，并将真实数据增益保留为 `not_tested`。
+# M4 admission gate
+
+Graph, trend and multi-horizon methods may be marked `experimental` only after DAG, provenance, future-leakage, validation-only weighting and fixed-test comparison gates pass. Synthetic value added never upgrades real-data validation, and an absent improvement is recorded as `not_demonstrated`.

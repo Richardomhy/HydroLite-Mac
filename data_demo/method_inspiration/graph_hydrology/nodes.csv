@@ -1,0 +1,21 @@
+node_id,node_type,name,geometry_reference,area_km2,reach_id,subbasin_id,station_id,reservoir_id,upstream_area_km2,metadata,provenance
+S1,subbasin,,,20.0,R1,S1,,,,{},"{""synthetic_demo"": true}"
+S2,subbasin,,,22.0,R2,S2,,,,{},"{""synthetic_demo"": true}"
+S3,subbasin,,,24.0,R3,S3,,,,{},"{""synthetic_demo"": true}"
+S4,subbasin,,,26.0,R4,S4,,,,{},"{""synthetic_demo"": true}"
+S5,subbasin,,,28.0,R5,S5,,,,{},"{""synthetic_demo"": true}"
+S6,subbasin,,,30.0,R6,S6,,,,{},"{""synthetic_demo"": true}"
+S7,subbasin,,,32.0,R7,S7,,,,{},"{""synthetic_demo"": true}"
+S8,subbasin,,,34.0,R8,S8,,,,{},"{""synthetic_demo"": true}"
+R1,reach,,,,R1,,,,,{},"{""synthetic_demo"": true}"
+R2,reach,,,,R2,,,,,{},"{""synthetic_demo"": true}"
+R3,reach,,,,R3,,,,,{},"{""synthetic_demo"": true}"
+R4,reach,,,,R4,,,,,{},"{""synthetic_demo"": true}"
+R5,reach,,,,R5,,,,,{},"{""synthetic_demo"": true}"
+R6,reach,,,,R6,,,,,{},"{""synthetic_demo"": true}"
+R7,reach,,,,R7,,,,,{},"{""synthetic_demo"": true}"
+R8,reach,,,,R8,,,,,{},"{""synthetic_demo"": true}"
+RES1,reservoir,,,,,,,RES1,,"{""routing_state"": true}",{}
+ST1,monitoring_station,,,,R5,,ST1,,,{},{}
+ST2,monitoring_station,,,,R8,,ST2,,,{},{}
+OUTLET,outlet,,,,,,,,,{},{}

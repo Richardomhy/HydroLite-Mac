@@ -244,6 +244,14 @@ from hydrolite.graph_hydrology_features import build_node_feature_matrix, write_
 from hydrolite.trend_aware_features import write_trend_feature_report
 from hydrolite.hierarchical_multihorizon import write_multihorizon_report
 from hydrolite.graph_temporal_residual import run_graph_temporal_residual
+from hydrolite.graph_feature_benchmark import (
+    DEFAULT_OUTPUT as GRAPH_TREND_OUTPUT,
+    graph_status,
+    load_graph_demo,
+    run_graph_trend_benchmark,
+    validate_graph_trend_outputs,
+)
+from hydrolite.river_graph import validate_river_graph
 from hydrolite.water_quality_experiment import assess_water_quality_experiment, write_water_quality_method_demo
 from hydrolite.method_benchmark import write_method_benchmark
 from hydrolite.flood_susceptibility import readiness as susceptibility_readiness, train_adaptive as susceptibility_train_adaptive, train_baselines as susceptibility_train_baselines, validate_outputs as susceptibility_validate_outputs, write_report as susceptibility_write_report
@@ -783,6 +791,21 @@ def build_parser() -> argparse.ArgumentParser:
     for command in ("status", "kernel-demo", "truth-single", "truth-multi", "recover", "benchmark", "sample-efficiency", "validate", "report", "bundle"):
         gamma_sub.add_parser(command)
 
+    graph = subparsers.add_parser("graph", help="Directed river graph and causal upstream features.")
+    graph_sub = graph.add_subparsers(dest="graph_command", required=True)
+    for command in ("status", "demo", "validate", "features", "report"):
+        graph_sub.add_parser(command)
+
+    trend = subparsers.add_parser("trend", help="Causal trend feature experiments.")
+    trend_sub = trend.add_subparsers(dest="trend_command", required=True)
+    for command in ("demo", "validate"):
+        trend_sub.add_parser(command)
+
+    multihorizon = subparsers.add_parser("multihorizon", help="Transparent multi-horizon forecast baselines.")
+    multihorizon_sub = multihorizon.add_subparsers(dest="multihorizon_command", required=True)
+    for command in ("demo", "compare", "validate", "report", "bundle"):
+        multihorizon_sub.add_parser(command)
+
     susceptibility = subparsers.add_parser("susceptibility", help="Spatial flood-susceptibility method experiments.")
     susceptibility_sub = susceptibility.add_subparsers(dest="susceptibility_command", required=True)
     for command in ("readiness", "build-features", "split-spatial", "train-baselines", "train-adaptive"):
@@ -887,10 +910,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "method":
         output = ROOT / "output" / "method_inspiration"; output.mkdir(parents=True, exist_ok=True)
         if args.method_command == "gamma-demo": result = write_gamma_feature_report(output)
-        elif args.method_command == "graph-demo":
-            graph = {"nodes": [f"S{i}" for i in range(1, 9)], "edges": [(f"S{i}", f"S{i+1}") for i in range(1, 8)]}; result = write_graph_manifest(graph, output); rows = [{"timestamp": "2020-01-01", "node_id": node, "precipitation": float(index), "pet": 2.0, "soil_moisture": .4, "surface_runoff": .1, "interflow": .05, "baseflow": .02, "total_water_yield": .17, "reach_flow": .17, "reservoir_storage": 0.0, "aet": 1.0} for index, node in enumerate(graph["nodes"], 1)]; result["features"] = str(write_graph_feature_summary(build_node_feature_matrix(rows), output))
-        elif args.method_command == "trend-demo": result = write_trend_feature_report(output)
-        elif args.method_command == "multihorizon-demo": result = write_multihorizon_report(output)
+        elif args.method_command in {"graph-demo", "trend-demo", "multihorizon-demo"}: result = run_graph_trend_benchmark()
         elif args.method_command == "graph-residual-demo": result = run_graph_temporal_residual([1, 2, 3, 2], [1.1, 1.8, 3.2, 2.1])
         elif args.method_command == "water-quality-demo": result = {**assess_water_quality_experiment(), **write_water_quality_method_demo(output)}
         elif args.method_command == "benchmark": result = write_method_benchmark(output)
@@ -921,6 +941,33 @@ def main(argv: list[str] | None = None) -> int:
         else:
             result = {"status": "passed", "bundle": str(build_gamma_bundle(output))}
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "graph":
+        if args.graph_command == "status":
+            result = graph_status()
+        elif args.graph_command == "validate":
+            demo = load_graph_demo(); result = validate_river_graph(demo["graph"]).as_dict()
+        else:
+            run = run_graph_trend_benchmark()
+            if args.graph_command == "features": result = {"status": run["status"], "feature_count": run["feature_count"], "gamma_graph_feature_count": run["gamma_graph_feature_count"], "output": str(GRAPH_TREND_OUTPUT / "features")}
+            elif args.graph_command == "report": result = {"status": run["status"], "report_zh": str(GRAPH_TREND_OUTPUT / "reports" / "graph_trend_report_zh.md"), "report_en": str(GRAPH_TREND_OUTPUT / "reports" / "graph_trend_report_en.md")}
+            else: result = {key: run[key] for key in ("status", "synthetic_demo", "graph", "value_added", "output_dir", "bundle")}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result.get("status") in {"passed", "available_synthetic_mvp"} else 1
+    if args.command == "trend":
+        if args.trend_command == "demo":
+            run = run_graph_trend_benchmark(); result = {"status": run["trend_validation"]["status"], "feature_count": run["trend_feature_count"], "seasonal_baseline_fit_period": run["seasonal_baseline_fit_period"], "output": str(GRAPH_TREND_OUTPUT / "features" / "trend_features.csv")}
+        else:
+            check = validate_graph_trend_outputs(); manifest_path = GRAPH_TREND_OUTPUT / "reports" / "graph_trend_manifest.json"; manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}; result = {"status": check["status"], "trend_validation": manifest.get("trend_validation", {})}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result.get("status") == "passed" else 1
+    if args.command == "multihorizon":
+        if args.multihorizon_command == "validate":
+            result = validate_graph_trend_outputs()
+        else:
+            run = run_graph_trend_benchmark()
+            if args.multihorizon_command == "compare": result = {"status": run["status"], "metrics": run["metrics"].to_dict(orient="records"), "value_added": run["value_added"]}
+            elif args.multihorizon_command == "bundle": result = {"status": run["status"], "bundle": run["bundle"]}
+            elif args.multihorizon_command == "report": result = {"status": run["status"], "report": str(GRAPH_TREND_OUTPUT / "reports" / "graph_trend_report_zh.md")}
+            else: result = {"status": run["status"], "horizons": run["horizons"], "validation": run["multihorizon_validation"], "output": str(GRAPH_TREND_OUTPUT / "forecast")}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result.get("status") == "passed" else 1
     if args.command == "susceptibility":
         output = ROOT / "output" / "flood_susceptibility"
         if args.susceptibility_command == "readiness": result = susceptibility_readiness(args.workspace)
