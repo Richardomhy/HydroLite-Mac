@@ -19,6 +19,7 @@ from hydrolite.runtime_db import (
     add_task_dependency,
     create_run_record,
     create_runtime_event,
+    get_project_version_record,
     get_run_record,
     get_task_record,
     list_run_records,
@@ -43,6 +44,12 @@ def _git_commit() -> str:
 
 def create_run(project_id: str, workflow_id: str, run_config: dict | None = None) -> dict:
     config = run_config or {}
+    project_version_id = str(config.get("project_version_id") or "")
+    version = get_project_version_record(project_version_id) if project_version_id else None
+    if project_version_id and not version:
+        raise ValueError(f"Unknown project_version_id: {project_version_id}")
+    if version and version.get("project_id") != project_id:
+        raise ValueError("Project version does not belong to the requested project")
     plan = build_run_plan(project_id, workflow_id, config)
     validation = validate_run_plan(plan)
     if validation["status"] != "passed":
@@ -54,6 +61,9 @@ def create_run(project_id: str, workflow_id: str, run_config: dict | None = None
     record = create_run_record(
         run_id=run_id,
         project_id=project_id,
+        project_version_id=project_version_id,
+        data_snapshot_id=(version or {}).get("data_snapshot_id", ""),
+        configuration_snapshot_id=(version or {}).get("configuration_snapshot_id", ""),
         workflow_id=workflow_id,
         run_name=config.get("run_name") or f"{workflow_id}-{run_id[-6:]}",
         run_mode=plan["run_mode"],
@@ -65,7 +75,8 @@ def create_run(project_id: str, workflow_id: str, run_config: dict | None = None
         git_commit=_git_commit(),
         hydrolite_version=__version__,
         python_version=sys.version,
-        warnings=[],
+        legacy_unversioned=not bool(version),
+        warnings=[] if version else ["LEGACY_UNVERSIONED_RUN"],
     )
     task_map = {}
     for planned in plan["tasks"]:
@@ -100,8 +111,18 @@ def prepare_run(run_id: str) -> dict:
             shutil.copy2(source, target)
             input_manifest[name] = {"checksum": hashlib.sha256(target.read_bytes()).hexdigest(), "source_name": source.name}
     (paths["configuration"] / "input_checksums.json").write_text(json.dumps(input_manifest, indent=2), encoding="utf-8")
-    environment = capture_environment()
-    write_environment_snapshot(paths["environments"] / environment["environment_id"], environment)
+    if record.get("project_version_id"):
+        from hydrolite.project_versioning import capture_delivery_environment
+
+        environment = capture_delivery_environment(record["project_version_id"])
+        environment_dir = paths["environments"] / environment["environment_id"]
+        environment_dir.mkdir(parents=True, exist_ok=True)
+        (environment_dir / "environment_snapshot.json").write_text(
+            json.dumps(environment, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+    else:
+        environment = capture_environment()
+        write_environment_snapshot(paths["environments"] / environment["environment_id"], environment)
     return update_run_record(run_id, status="ready", environment_id=environment["environment_id"])
 
 

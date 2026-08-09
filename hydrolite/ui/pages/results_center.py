@@ -5,6 +5,8 @@ from pathlib import Path
 import streamlit as st
 
 from hydrolite.artifact_store import search_artifacts
+from hydrolite.delivery_review import list_deliverables
+from hydrolite.integrity_verification import verify_deliverable
 from hydrolite.result_interpretation import interpret_result
 from hydrolite.ui.components.artifact_list import render_artifact_list
 from hydrolite.ui.components.warning_panel import render_warning_panel
@@ -29,7 +31,7 @@ def render(context) -> None:
     interpretation = interpret_result(metrics, validation_status="synthetic_demo" if metrics else "not_tested", readiness="ready" if metrics else "missing", limitations=("易发性不等于风险。",), result_type="flood_susceptibility")
     try: rows = search_artifacts(context.project_id if context.project_loaded else None, state.selected_run or None, None)
     except Exception: rows = []
-    tabs = st.tabs(["概览", "可信度", "不确定性", "成果文件", "报告"])
+    tabs = st.tabs(["概览", "可信度", "不确定性", "Working Results", "报告", "Frozen Deliverables"])
     with tabs[0]:
         st.subheader(interpretation.headline); st.write(interpretation.summary)
         findings, trust = st.columns(2)
@@ -59,6 +61,18 @@ def render(context) -> None:
     with tabs[4]:
         reports = [row for row in rows if str(row.get("artifact_type", "")).lower() == "report"]
         render_artifact_list(reports)
-        if not reports: st.info("暂无关联报告。M7A 复用现有报告引擎，不执行新的正式交付审核。")
+        if not reports: st.info("暂无关联报告。")
+    with tabs[5]:
+        frozen = [row for row in list_deliverables(context.project_id if context.project_loaded else None) if row.get("review_status") == "approved_for_delivery"]
+        if not frozen:
+            st.info("No frozen deliverables. 已批准交付物将在这里显示固定 manifest、hash、审核和警告。")
+        for item in frozen:
+            st.markdown(f"### Frozen: {item['deliverable_id']}")
+            scientific, delivery = st.columns(2)
+            scientific.write(f"Scientific Validation: `{item['scientific_validation_level']}`")
+            delivery.write(f"Delivery Review: `{item['review_status']}`")
+            st.write(f"Manifest hash: `{item.get('manifest_hash') or 'missing'}`")
+            st.write("Warnings:", item.get("warnings", [])); st.write("Limitations:", item.get("limitations", []))
+            st.json(verify_deliverable(item["deliverable_id"]))
     if state.ui_mode == "advanced":
         with st.expander("完整解释结构"): st.json(interpretation.as_dict())

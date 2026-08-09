@@ -9,6 +9,7 @@ WARNING_CATALOG = {
     "XAI_IMPORTANCE_UNSTABLE": ("XAI 重要性不稳定", "不同模型或空间块的重要性变化较大。", "不要把单次重要性作为业务因果结论。"),
     "LONG_HORIZON_LOW_SKILL": ("长提前期技巧较低", "累计误差可能随 horizon 增大。", "按 horizon 审阅独立指标。"),
     "DATA_MAPPING_LOW_CONFIDENCE": ("数据映射置信度低", "字段或站点关系可能影响结果。", "人工核验映射。"),
+    "LOW_CONFIDENCE_MAPPING": ("数据映射置信度低", "字段或站点关系可能影响结果。", "人工核验映射。"),
 }
 EXPERIMENTAL_NOTICE = "实验功能：当前能力已通过软件和合成数据验证，但尚未完成真实项目独立验证。结果不能直接用于正式工程或管理决策。"
 

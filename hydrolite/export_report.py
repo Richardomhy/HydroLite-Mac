@@ -232,8 +232,23 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
     runtime_runs = pd.DataFrame()
     runtime_tasks = pd.DataFrame()
     runtime_artifacts = pd.DataFrame()
+    delivery_metadata: dict[str, Any] = {
+        "project": config.get("project_name") or project.name,
+        "project_version": "not_versioned",
+        "scenario": "not_linked",
+        "run_id": "not_linked",
+        "report_version": 1,
+        "hydrolite_version": __version__,
+        "git_commit": "not_linked",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "review_status": "not_submitted",
+        "validation_level": "not_recorded",
+        "warnings": [],
+        "limitations": ["Delivery metadata is incomplete until a governed deliverable is created."],
+        "manifest_hash": "not_generated",
+    }
     try:
-        from hydrolite.runtime_db import list_artifact_records, list_project_records, list_run_records, list_task_records
+        from hydrolite.runtime_db import list_artifact_records, list_deliverable_records, list_project_records, list_project_version_records, list_run_records, list_task_records
         runtime_project = next((row for row in list_project_records() if Path(row["workspace_path"]).resolve() == project), None)
         if runtime_project:
             run_rows = list_run_records(project_id=runtime_project["project_id"])
@@ -241,6 +256,26 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
             run_ids = {row["run_id"] for row in run_rows}
             runtime_tasks = pd.DataFrame([row for row in list_task_records() if row["run_id"] in run_ids])
             runtime_artifacts = pd.DataFrame(list_artifact_records(project_id=runtime_project["project_id"]))
+            deliverables = list_deliverable_records(project_id=runtime_project["project_id"])
+            if deliverables:
+                delivery = deliverables[0]
+                version_rows = [row for row in list_project_version_records(project_id=runtime_project["project_id"]) if row["project_version_id"] == delivery["project_version_id"]]
+                version = version_rows[0] if version_rows else {}
+                delivery_metadata = {
+                    "project": config.get("project_name") or project.name,
+                    "project_version": version.get("version_number", delivery["project_version_id"]),
+                    "scenario": ", ".join(version.get("scenario_ids", [])) or "not_linked",
+                    "run_id": ", ".join(delivery.get("run_ids", [])) or "not_linked",
+                    "report_version": 1,
+                    "hydrolite_version": __version__,
+                    "git_commit": version.get("git_commit", "not_linked"),
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "review_status": delivery["review_status"],
+                    "validation_level": delivery["scientific_validation_level"],
+                    "warnings": delivery.get("warnings", []),
+                    "limitations": delivery.get("limitations", []),
+                    "manifest_hash": delivery.get("manifest_hash") or "not_generated",
+                }
     except Exception:
         pass
     calibration_candidates = calibration_root / "search" / "candidate_ranking.xlsx"
@@ -358,6 +393,7 @@ def collect_project_report_data(project_dir: str | Path) -> dict[str, Any]:
         "runtime_runs": runtime_runs,
         "runtime_tasks": runtime_tasks,
         "runtime_artifacts": runtime_artifacts,
+        "delivery_metadata": delivery_metadata,
         "charts": existing_charts,
         "assets": list_report_assets(project),
         "missing_assets": pd.DataFrame(missing),
@@ -412,7 +448,7 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "",
         f"- App: `{data['app_name']} {data['version']}`",
         f"- Generated at: `{data['generated_at']}`",
-        f"- Project path: `{data['project_dir']}`",
+        f"- Project path: `project/{data['project_dir'].name}`",
         "",
         "## Executive Summary",
         "",
@@ -422,6 +458,12 @@ def render_project_report_markdown(project_dir: str | Path, output_path: str | P
         "",
         f"- Project ID: `{data['project_id']}`",
         f"- Description: {data['project'].get('description', 'unavailable')}",
+        "",
+        "### Delivery Metadata",
+        "",
+        *[f"- {key}: `{value}`" for key, value in data["delivery_metadata"].items()],
+        "",
+        "Delivery approval is separate from scientific validation and production readiness.",
         "",
         "### Enabled Modules",
         "",
@@ -628,6 +670,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
     else:
         chart_html = "<p class=\"muted\">unavailable</p>"
     sections = [
+        ("Delivery Metadata", f"<pre>{escape(json.dumps(data['delivery_metadata'], indent=2, ensure_ascii=False, default=str))}</pre><p>Delivery approval is separate from scientific validation and production readiness.</p>"),
         ("Validation", _df_to_html(data["validation_overview"])),
         ("Scenario Runs", _df_to_html(data["batch_summary"])),
         ("Hydrology and Routing Comparison", _df_to_html(data["hydrology_metrics"])),
@@ -653,7 +696,7 @@ def render_project_report_html(project_dir: str | Path, output_path: str | Path 
         "body{font-family:Arial,Helvetica,sans-serif;margin:40px;color:#1f2933;line-height:1.45} h1{color:#0f4c5c} h2{margin-top:30px;color:#1d3557} .meta,.muted{color:#667085} .summary{background:#f2f7f5;border-left:4px solid #2a9d8f;padding:12px 16px} table.data-table{border-collapse:collapse;width:100%;font-size:12px;margin:12px 0 20px} .data-table th{background:#eef2f7;text-align:left} .data-table th,.data-table td{border:1px solid #d0d5dd;padding:6px 8px;vertical-align:top} figure{margin:18px 0} img{max-width:100%;height:auto;border:1px solid #e5e7eb}",
         "</style></head><body>",
         f"<h1>{escape(data['project_name'])} Project Report</h1>",
-        f"<p class=\"meta\">{escape(data['app_name'])} {escape(data['version'])} | Generated {escape(data['generated_at'])} | {escape(str(data['project_dir']))}</p>",
+        f"<p class=\"meta\">{escape(data['app_name'])} {escape(data['version'])} | Generated {escape(data['generated_at'])} | project/{escape(data['project_dir'].name)}</p>",
         "<h2>Executive Summary</h2><div class=\"summary\"><ul>",
         *[f"<li>{escape(line)}</li>" for line in _executive_summary(data)],
         "</ul></div>",
@@ -708,7 +751,11 @@ def render_project_report_docx(project_dir: str | Path, output_path: str | Path 
     document.add_heading(f"{data['project_name']} Project Report", level=0)
     document.add_paragraph(f"{data['app_name']} {data['version']}")
     document.add_paragraph(f"Generated at: {data['generated_at']}")
-    document.add_paragraph(f"Project path: {data['project_dir']}")
+    document.add_paragraph(f"Project path: project/{data['project_dir'].name}")
+    document.add_heading("Delivery Metadata", level=1)
+    for key, value in data["delivery_metadata"].items():
+        document.add_paragraph(f"{key}: {_stringify(value)}")
+    document.add_paragraph("Delivery approval is separate from scientific validation and production readiness.")
     document.add_heading("Executive Summary", level=1)
     for line in _executive_summary(data):
         document.add_paragraph(line, style="List Bullet")

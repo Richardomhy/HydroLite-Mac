@@ -41,6 +41,15 @@ def render(context) -> None:
     st.caption("能运行不等于已经真实验证。Validation Level 与 Real Data Tested 必须单独审阅。")
     rows = list_product_feature_statuses()
     st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.subheader("Delivery Governance Matrix")
+    st.dataframe([{
+        "feature_id": "project_delivery_governance",
+        "delivery_status": "available_local_mvp",
+        "scientific_validation_effect": "none",
+        "runtime_schema_version": get_database_version(),
+        "authentication": "local_logic_roles_only",
+        "digital_signature": "not_implemented",
+    }], use_container_width=True, hide_index=True)
     if load_app_state(st.session_state).ui_mode != "advanced":
         st.info("Simple Mode 只显示产品能力矩阵。环境快照、资源、桌面发行和缓存操作位于 Advanced Mode。")
         return

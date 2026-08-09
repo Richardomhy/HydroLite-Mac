@@ -40,7 +40,9 @@ def classify_artifact(path: str | Path) -> str:
     }.get(suffix, "unknown")
 
 
-def register_artifact(run_id: str, task_id: str | None, path: str | Path) -> dict:
+def register_artifact(
+    run_id: str, task_id: str | None, path: str | Path, *, supersedes_artifact_id: str | None = None
+) -> dict:
     source = Path(path).resolve()
     if not source.is_file(): raise FileNotFoundError(source)
     run = get_run_record(run_id)
@@ -48,24 +50,32 @@ def register_artifact(run_id: str, task_id: str | None, path: str | Path) -> dic
     checksum = calculate_artifact_checksum(source)
     existing = [row for row in list_artifact_records(run_id=run_id) if row.get("path") == str(source)]
     if existing:
+        if existing[0].get("checksum") != checksum and existing[0].get("frozen"):
+            raise ValueError("Registered artifact content changed in place; write a new artifact version to a new path.")
         return update_artifact_record(
             existing[0]["artifact_id"],
             size=source.stat().st_size,
             checksum=checksum,
-            quality_status="unchecked",
+            quality_status=existing[0].get("quality_status") or "unchecked",
         )
     kind = classify_artifact(source)
     artifact_id = f"art_{uuid.uuid4().hex[:12]}"
     try: relative = str(source.relative_to(get_run_dir(run_id)))
     except ValueError: relative = source.name
-    return create_artifact_record(
+    previous = next((row for row in list_artifact_records() if row["artifact_id"] == supersedes_artifact_id), None)
+    artifact_version = int(previous.get("artifact_version") or 1) + 1 if previous else 1
+    record = create_artifact_record(
         artifact_id=artifact_id, run_id=run_id, task_id=task_id, project_id=run["project_id"],
         artifact_type=kind, display_name=source.name, path=str(source), relative_path=relative,
         media_type=mimetypes.guess_type(source.name)[0] or "application/octet-stream", size=source.stat().st_size,
         checksum=checksum, source_stage="", quality_status="unchecked",
         preview_available=kind in {"table", "manifest", "configuration", "report", "chart", "vector"},
-        downloadable=True, lineage_dataset_id="", warnings=[],
+        downloadable=True, lineage_dataset_id="", artifact_version=artifact_version,
+        supersedes_artifact_id=supersedes_artifact_id or "", frozen=False, warnings=[],
     )
+    if previous:
+        update_artifact_record(previous["artifact_id"], quality_status="superseded", warnings=[f"Superseded by {artifact_id}"])
+    return record
 
 
 def discover_run_artifacts(run_id: str) -> list[dict]:
@@ -157,3 +167,17 @@ def verify_artifact_bundle(bundle_path: str | Path) -> dict:
 
 def mark_artifact_superseded(artifact_id: str, replacement_id: str) -> dict:
     return update_artifact_record(artifact_id, quality_status="superseded", warnings=[f"Replaced by {replacement_id}"])
+
+
+def freeze_artifacts(artifact_ids: list[str]) -> list[dict]:
+    frozen = []
+    rows = {row["artifact_id"]: row for row in list_artifact_records()}
+    for artifact_id in artifact_ids:
+        row = rows.get(artifact_id)
+        if not row:
+            raise KeyError(f"Unknown artifact: {artifact_id}")
+        path = Path(row["path"])
+        if not path.is_file() or calculate_artifact_checksum(path) != row.get("checksum"):
+            raise ValueError(f"Artifact integrity failed before freeze: {artifact_id}")
+        frozen.append(update_artifact_record(artifact_id, frozen=True))
+    return frozen

@@ -1,5 +1,9 @@
 # HydroLite Studio v0.7.0-dev
 
+## Project delivery governance
+
+HydroLite 支持本地项目版本、数据/配置快照、技术审核、warning acknowledgment、冻结成果校验，以及 thin/portable 项目包。交付审核与科学验证严格分离；`Approved for Delivery` 不代表模型已通过真实项目独立验证。入口见 [项目版本](docs/project_versioning.md) 与 [交付审核](docs/delivery_review_workflow.md)。
+
 ## GEE Catalog and Method Inspiration Lab
 
 `python -m hydrolite gee-catalog status` provides an offline-first official-source metadata catalog. It does not download imagery or execute Earth Engine; see [GEE catalog](docs/gee_dataset_intelligence.md).

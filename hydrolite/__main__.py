@@ -387,6 +387,48 @@ def build_parser() -> argparse.ArgumentParser:
     project_compare.add_argument("project_dir")
     project_export = project_subparsers.add_parser("export", help="Export a project package zip.")
     project_export.add_argument("project_dir")
+    project_export.add_argument("--mode", choices=("thin", "portable"), default="thin")
+    project_export.add_argument("--output")
+    project_version_create = project_subparsers.add_parser("version-create", help="Create immutable project/data/config snapshots.")
+    project_version_create.add_argument("project")
+    project_version_create.add_argument("--created-by", default="local_user")
+    project_version_create.add_argument("--description", default="")
+    project_version_create.add_argument("--scenario", action="append", default=[])
+    project_version_create.add_argument("--snapshot-mode", choices=("metadata_only", "referenced", "portable"), default="referenced")
+    project_versions = project_subparsers.add_parser("versions", help="List immutable project versions.")
+    project_versions.add_argument("project")
+    project_version_show = project_subparsers.add_parser("version-show", help="Show an immutable project version.")
+    project_version_show.add_argument("version")
+    project_version_compare = project_subparsers.add_parser("version-compare", help="Compare two project versions.")
+    project_version_compare.add_argument("left"); project_version_compare.add_argument("right")
+    project_verify_package = project_subparsers.add_parser("verify-package", help="Verify a HydroLite project package before import.")
+    project_verify_package.add_argument("package")
+    project_import_package = project_subparsers.add_parser("import", help="Verify and import a HydroLite project package.")
+    project_import_package.add_argument("package"); project_import_package.add_argument("target_root")
+    project_import_package.add_argument("--conflict-mode", choices=("import_as_copy", "block_with_conflict"), default="import_as_copy")
+
+    delivery_parser = subparsers.add_parser("delivery", help="Local project delivery governance commands.")
+    delivery_sub = delivery_parser.add_subparsers(dest="delivery_command", required=True)
+    delivery_create = delivery_sub.add_parser("create", help="Create a draft deliverable for a project version.")
+    delivery_create.add_argument("project_version")
+    delivery_create.add_argument("--run-id", action="append", default=[])
+    delivery_create.add_argument("--artifact-id", action="append", default=[])
+    delivery_create.add_argument("--report-id", action="append", default=[])
+    delivery_create.add_argument("--scientific-validation", default="framework_ready")
+    delivery_create.add_argument("--capability", action="append", default=[])
+    delivery_create.add_argument("--warning", action="append", default=[])
+    delivery_create.add_argument("--limitation", action="append", default=[])
+    delivery_create.add_argument("--claim", default="analysis_report")
+    for command in ("status", "verify", "export"):
+        child = delivery_sub.add_parser(command); child.add_argument("deliverable")
+    for command in ("submit", "review", "request-changes", "approve", "reject", "supersede"):
+        child = delivery_sub.add_parser(command); child.add_argument("deliverable")
+        child.add_argument("--actor", default="local_user"); child.add_argument("--comment", default=f"CLI {command} action.")
+    delivery_ack = delivery_sub.add_parser("acknowledge-warning")
+    delivery_ack.add_argument("deliverable"); delivery_ack.add_argument("warning_code")
+    delivery_ack.add_argument("--actor", default="technical_reviewer"); delivery_ack.add_argument("--comment", default="Warning reviewed and acknowledged.")
+    delivery_demo = delivery_sub.add_parser("demo", help="Govern existing lightweight demo outputs without rerunning models.")
+    delivery_demo.add_argument("project"); delivery_demo.add_argument("--project-version"); delivery_demo.add_argument("--output", default="output/delivery_demo")
 
     wizard_parser = subparsers.add_parser("wizard", help="HydroLite project wizard commands.")
     wizard_subparsers = wizard_parser.add_subparsers(dest="wizard_command", required=True)
@@ -700,6 +742,7 @@ def build_parser() -> argparse.ArgumentParser:
     runs_sub = runs_parser.add_subparsers(dest="runs_command", required=True)
     for command in ("plan", "create"):
         child = runs_sub.add_parser(command); child.add_argument("project_id"); child.add_argument("workflow_id")
+        if command == "create": child.add_argument("--project-version")
     runs_sub.add_parser("list")
     for command in ("start", "inspect", "progress", "cancel", "retry", "validate", "report"):
         child = runs_sub.add_parser(command); child.add_argument("run_id")
@@ -1062,7 +1105,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "runtime":
         from hydrolite.deployment import build_deployment_manifest, write_deployment_report
         from hydrolite.process_manager import cleanup_orphaned_runtime_processes, list_hydrolite_processes
-        from hydrolite.runtime_db import get_database_version, initialize_runtime_database, list_project_records, list_run_records, list_task_records
+        from hydrolite.runtime_db import get_database_version, get_migration_backup_path, initialize_runtime_database, list_project_records, list_run_records, list_task_records
         from hydrolite.runtime_paths import ensure_runtime_directories, get_runtime_db_path, get_runtime_root
         from hydrolite.runtime_recovery import recover_all_runtime
         if args.runtime_command == "init":
@@ -1070,7 +1113,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "passed", "database": str(path), "schema_version": get_database_version()}, indent=2)); return 0
         if args.runtime_command == "status":
             initialize_runtime_database()
-            print(json.dumps({"status": "passed", "runtime_root": str(get_runtime_root()), "database": str(get_runtime_db_path()), "projects": len(list_project_records()), "runs": len(list_run_records()), "tasks": len(list_task_records())}, indent=2)); return 0
+            print(json.dumps({"status": "passed", "runtime_root": str(get_runtime_root()), "database": str(get_runtime_db_path()), "schema_version": get_database_version(), "migration_backup": str(get_migration_backup_path() or "not_required"), "projects": len(list_project_records()), "runs": len(list_run_records()), "tasks": len(list_task_records())}, indent=2)); return 0
         if args.runtime_command == "diagnose":
             result = build_deployment_manifest(); paths = write_deployment_report(get_runtime_root() / "reports", result)
             print(json.dumps({"status": "passed", "outputs": {key: str(value) for key, value in paths.items()}}, indent=2)); return 0
@@ -1104,7 +1147,7 @@ def main(argv: list[str] | None = None) -> int:
         from hydrolite.run_planner import build_run_plan
         from hydrolite.runtime_db import list_run_records
         if args.runs_command == "plan": result = build_run_plan(args.project_id, args.workflow_id)
-        elif args.runs_command == "create": result = create_run(args.project_id, args.workflow_id)
+        elif args.runs_command == "create": result = create_run(args.project_id, args.workflow_id, {"project_version_id": args.project_version} if args.project_version else None)
         elif args.runs_command == "list": result = list_run_records()
         elif args.runs_command == "start": result = start_run(args.run_id)
         elif args.runs_command == "inspect": result = inspect_run(args.run_id)
@@ -1338,6 +1381,20 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Inputs written to: {result['output_dir']}")
             return 0
     if args.command == "project":
+        if args.project_command in {"version-create", "versions", "version-show", "version-compare"}:
+            from hydrolite.project_versioning import compare_project_versions, create_project_version, list_project_versions, show_project_version
+            if args.project_command == "version-create":
+                result = create_project_version(args.project, created_by=args.created_by, description=args.description, scenario_ids=args.scenario, snapshot_mode=args.snapshot_mode)
+            elif args.project_command == "versions": result = list_project_versions(args.project)
+            elif args.project_command == "version-show": result = show_project_version(args.version)
+            else: result = compare_project_versions(args.left, args.right)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+        if args.project_command in {"verify-package", "import"}:
+            from hydrolite.deliverable_package import import_project_package
+            from hydrolite.integrity_verification import verify_project_package
+            if args.project_command == "verify-package": result = verify_project_package(args.package)
+            else: result = import_project_package(args.package, args.target_root, conflict_mode=args.conflict_mode)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result.get("status") not in {"failed"} else 1
         if args.project_command == "create":
             summary = create_project(args.project_dir)
             print(f"HydroLite project created. Summary written to: {summary}")
@@ -1364,9 +1421,35 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Project comparison written to: {outputs.output_dir}")
             return 0
         if args.project_command == "export":
-            package = export_project_package(args.project_dir)
+            from hydrolite.deliverable_package import create_project_package
+            package = create_project_package(args.project_dir, args.output, mode=args.mode)
             print(f"Project package written to: {package}")
             return 0
+    if args.command == "delivery":
+        from hydrolite.deliverable_package import create_delivery_bundle
+        from hydrolite.delivery_review import (
+            acknowledge_warning, approve_delivery, create_deliverable, delivery_status, reject_delivery,
+            request_delivery_changes, review_delivery, run_delivery_governance_demo, submit_delivery, supersede_delivery,
+        )
+        from hydrolite.integrity_verification import verify_deliverable
+        if args.delivery_command == "demo": result = run_delivery_governance_demo(args.project, args.output, project_version_id=args.project_version)
+        elif args.delivery_command == "create":
+            result = create_deliverable(
+                args.project_version, run_ids=args.run_id, artifact_ids=args.artifact_id, report_ids=args.report_id,
+                scientific_validation_level=args.scientific_validation, capabilities=args.capability,
+                warnings=args.warning, limitations=args.limitation, delivery_claim=args.claim,
+            )
+        elif args.delivery_command == "status": result = delivery_status(args.deliverable)
+        elif args.delivery_command == "verify": result = verify_deliverable(args.deliverable)
+        elif args.delivery_command == "export": result = {"status": "passed", "package": str(create_delivery_bundle(args.deliverable))}
+        elif args.delivery_command == "submit": result = submit_delivery(args.deliverable, actor=args.actor, comment=args.comment)
+        elif args.delivery_command == "review": result = review_delivery(args.deliverable, actor=args.actor, comment=args.comment)
+        elif args.delivery_command == "request-changes": result = request_delivery_changes(args.deliverable, actor=args.actor, comment=args.comment)
+        elif args.delivery_command == "approve": result = approve_delivery(args.deliverable, actor=args.actor, comment=args.comment)
+        elif args.delivery_command == "reject": result = reject_delivery(args.deliverable, actor=args.actor, comment=args.comment)
+        elif args.delivery_command == "supersede": result = supersede_delivery(args.deliverable, actor=args.actor, comment=args.comment)
+        else: result = acknowledge_warning(args.deliverable, args.warning_code, actor=args.actor, comment=args.comment)
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if not isinstance(result, dict) or result.get("status") != "failed" else 1
     if args.command == "wizard":
         if args.wizard_command == "validate":
             result = validate_wizard_config(args.template)
