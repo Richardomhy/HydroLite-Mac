@@ -1,64 +1,70 @@
 from __future__ import annotations
 
+from pathlib import Path
+import pandas as pd
 import streamlit as st
 
-from hydrolite.project_service import archive_project, create_project_snapshot, delete_project_registration, import_existing_project, list_recent_projects, register_workspace_as_project, unarchive_project, update_project_readiness
+from hydrolite.project_service import archive_project, create_project_snapshot, import_existing_project, list_recent_projects, register_workspace_as_project, unarchive_project, update_project_readiness
+from hydrolite.runtime_db import list_artifact_records, list_run_records
 from hydrolite.runtime_paths import get_project_runtime_dir
+from hydrolite.scenario_registry import get_scenario
+from hydrolite.ui.components.artifact_list import render_artifact_list
+from hydrolite.ui.components.metric_card import render_metric_card
+from hydrolite.ui.state import load_app_state
+
+
+def project_dashboard_payload(context) -> dict:
+    runs = [row for row in list_run_records() if not context.project_id or row.get("project_id") == context.project_id]
+    return {
+        "project_name": context.project_name or "未加载", "project_status": "loaded" if context.project_loaded else "missing",
+        "study_area": context.project.get("study_area", context.project.get("region", "未设置")) if context.project_loaded else "未设置",
+        "created_at": context.project.get("created_at", "未记录") if context.project_loaded else "未记录",
+        "last_run": runs[-1].get("created_at", "暂无") if runs else "暂无",
+        "current_scenario": load_app_state(st.session_state).current_scenario or "未选择",
+        "data_completeness": "待校验" if context.project_loaded else "无项目", "model_readiness": "按场景检查",
+    }
 
 
 def render(context) -> None:
-    st.header("项目中心")
-    st.caption("注册和归档只影响运行中心记录，不删除原始工作区。")
-    try:
-        import json
-        from hydrolite.hindcast import DEFAULT_OUTPUT
-
-        readiness_path = DEFAULT_OUTPUT / "readiness" / "hindcast_readiness.json"
-        readiness = json.loads(readiness_path.read_text(encoding="utf-8")) if readiness_path.exists() else {}
-        metrics = st.columns(3)
-        metrics[0].metric("历史事件数", readiness.get("event_count", 0))
-        metrics[1].metric("验证等级", readiness.get("validation_level", "missing_data"))
-        metrics[2].metric("同化状态", "available" if (DEFAULT_OUTPUT / "assimilation/assimilation_metrics.xlsx").exists() else "not_run")
-    except Exception:
-        pass
-    try:
-        from pathlib import Path
-        validation = json.loads((Path(__file__).resolve().parents[3] / "output/continuous_validation/summary/continuous_validation_manifest.json").read_text(encoding="utf-8"))
-        metrics = st.columns(3)
-        metrics[0].metric("连续验证", validation.get("continuous_model_validation", "not_run"))
-        metrics[1].metric("PET", validation.get("pet_status", "not_run"))
-        metrics[2].metric("水环境门禁", validation.get("water_quality_hydrology_gate", "blocked"))
-    except Exception:
-        pass
-    try:
-        import json
-        from hydrolite.drought_workflow import DEFAULT_ROOT as DROUGHT_OUTPUT
-        manifest = json.loads((DROUGHT_OUTPUT / "continuous/continuous_model_manifest.json").read_text(encoding="utf-8")) if (DROUGHT_OUTPUT / "continuous/continuous_model_manifest.json").exists() else {}
-        drought = json.loads((DROUGHT_OUTPUT / "monitoring/current_drought_status.json").read_text(encoding="utf-8")) if (DROUGHT_OUTPUT / "monitoring/current_drought_status.json").exists() else {}
-        metrics = st.columns(4)
-        metrics[0].metric("连续数据年数", round(manifest.get("record_days", 0) / 365.25, 1))
-        metrics[1].metric("连续模型", manifest.get("water_balance", {}).get("status", "not_run"))
-        metrics[2].metric("当前干旱", drought.get("class", "not_run"))
-        metrics[3].metric("最近干旱 Run", drought.get("analysis_date", "-"))
-    except Exception:
-        pass
-    path = st.text_input("工作区或项目路径", value=str(context.project_dir))
-    left, right = st.columns(2)
-    if left.button("注册工作区"):
-        try: st.success(register_workspace_as_project(path))
-        except Exception as exc: st.error(str(exc))
-    if right.button("导入现有项目"):
-        try: st.success(import_existing_project(path))
-        except Exception as exc: st.error(str(exc))
-    projects = list_recent_projects()
-    st.dataframe(projects, use_container_width=True)
-    if projects:
-        project_id = st.selectbox("项目", [row["project_id"] for row in projects])
-        a, b, c = st.columns(3)
-        if a.button("更新就绪度"): st.json(update_project_readiness(project_id))
-        if b.button("创建快照"): st.success(create_project_snapshot(project_id, get_project_runtime_dir(project_id) / "snapshots"))
-        archived = next(row["archived"] for row in projects if row["project_id"] == project_id)
-        if c.button("恢复归档" if archived else "归档"): st.json(unarchive_project(project_id) if archived else archive_project(project_id))
-        confirm = st.checkbox("确认仅删除项目注册（不会删除工作区）")
-        if st.button("删除项目注册", disabled=not confirm):
-            st.json(delete_project_registration(project_id, confirm=True))
+    st.header("项目 Dashboard")
+    try: payload = project_dashboard_payload(context)
+    except Exception: payload = {"project_name": context.project_name or "未加载", "project_status": "unknown", "study_area": "未设置", "created_at": "未记录", "last_run": "暂无", "current_scenario": "未选择", "data_completeness": "待校验", "model_readiness": "按场景检查"}
+    columns = st.columns(4)
+    for column, key, label in zip(columns, ("project_name", "project_status", "data_completeness", "model_readiness"), ("项目", "状态", "数据完整度", "模型就绪度")):
+        with column: render_metric_card(label, payload[key])
+    st.caption(f"研究区：{payload['study_area']} · 创建时间：{payload['created_at']} · 最后运行：{payload['last_run']} · 当前场景：{payload['current_scenario']}")
+    tabs = st.tabs(["Overview", "Data", "Scenarios", "Runs", "Results", "Reports"])
+    with tabs[0]:
+        path = st.text_input("工作区或项目路径", value=str(context.project_dir))
+        a, b = st.columns(2)
+        if a.button("注册工作区"):
+            try: st.success(register_workspace_as_project(path))
+            except Exception as exc: st.error(str(exc))
+        if b.button("导入现有项目"):
+            try: st.success(import_existing_project(path))
+            except Exception as exc: st.error(str(exc))
+        projects = list_recent_projects()
+        if projects: st.dataframe(pd.DataFrame(projects), use_container_width=True, hide_index=True)
+        else: st.info("暂无已注册项目。项目向导可创建新项目；不会覆盖已有目录。")
+        if context.project_loaded:
+            actions = st.columns(3)
+            if actions[0].button("更新就绪度"): st.json(update_project_readiness(context.project_id))
+            if actions[1].button("创建快照"): st.success(create_project_snapshot(context.project_id, get_project_runtime_dir(context.project_id) / "snapshots"))
+            if actions[2].button("归档/恢复"):
+                project = next((row for row in projects if row.get("project_id") == context.project_id), {})
+                st.json(unarchive_project(context.project_id) if project.get("archived") else archive_project(context.project_id))
+    with tabs[1]:
+        st.json(context.directories if context.project_loaded else {"status": "no_project"})
+        if not context.project_loaded: st.info("加载项目后显示数据目录与完整度。")
+    with tabs[2]:
+        state = load_app_state(st.session_state)
+        if state.current_scenario:
+            scenario = get_scenario(state.current_scenario); st.json(scenario.as_dict())
+        else: st.info("尚未选择场景。请进入场景中心。")
+    with tabs[3]:
+        rows = [row for row in list_run_records() if row.get("project_id") == context.project_id] if context.project_loaded else []
+        if rows: st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        else: st.info("暂无项目运行。")
+    artifacts = [row for row in list_artifact_records() if row.get("project_id") == context.project_id] if context.project_loaded else []
+    with tabs[4]: render_artifact_list(artifacts)
+    with tabs[5]: render_artifact_list([row for row in artifacts if str(row.get("artifact_type", "")).lower() == "report"])

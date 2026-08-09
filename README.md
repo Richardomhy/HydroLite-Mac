@@ -477,6 +477,13 @@ SWMM cases can inject a HydroLite flow hydrograph into the copied `working.inp` 
 The original `data_raw/swmm/demo.inp` is not edited. Coupling writes `[TIMESERIES]` and `[INFLOWS]` only into `output/<case_name>/swmm/working.inp`, then writes `coupling_summary.xlsx`.
 # HydroLite Studio
 
+> 当前开发界面采用场景驱动工作流：**项目 → 场景 → 数据就绪度 → 运行 → 成果与可信度**。默认 Simple Mode 不要求用户编辑 YAML 或理解内部模型 stage；Advanced Mode 保留 Workflow、环境和详细成果入口。
+
+- [产品架构](docs/product_architecture.md)
+- [场景中心](docs/scenario_center.md)
+- [产品状态与验证等级](docs/product_status_and_validation.md)
+- [Simple / Advanced Mode](docs/simple_vs_advanced_mode.md)
+
 > macOS desktop MVP: [architecture](docs/macos_desktop_architecture.md) · [中文桌面指南](docs/desktop_user_guide_zh.md) · [build/sign/notarize](docs/release_process_en.md)
 
 The `0.7.0-dev` desktop channel wraps the existing Streamlit workbench in a SwiftUI/WKWebView shell with a dynamic loopback backend. Local ad-hoc packages are supported; Developer ID signing and notarization remain `credentials_required` unless valid Apple credentials are supplied.

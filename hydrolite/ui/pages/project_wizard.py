@@ -68,6 +68,8 @@ def render(context: WorkbenchContext) -> None:
     st.caption("按步骤创建项目、选择数据、生成情景 YAML，并自动运行项目校验。")
     st.info("项目向导不新增模型算法；仅生成 project.yaml、case YAML 和项目摘要。")
     st.info("不知道数据格式？请先前往 `数据模板` 页面下载标准模板，整理 CSV/GeoJSON 后再创建项目。")
+    wizard_step = st.segmented_control("创建步骤", ["1 基本信息", "2 项目类型", "3 研究区域", "4 目标场景", "5 数据检查", "6 创建项目"], default="1 基本信息")
+    st.caption(f"当前步骤：{wizard_step}。向导只组织已有能力，不改变模型计算。")
     with st.expander("从数据中心创建项目"):
         workspace_path = st.text_input("已通过质量检查的工作区", value="output/demo_workspace" if context.is_cloud else "workspaces/real_project")
         workspace = Path(workspace_path)
@@ -88,6 +90,9 @@ def render(context: WorkbenchContext) -> None:
     default_project = f"projects/{template_name}_project"
     project_name = st.text_input("项目名称", value=f"{template_name.replace('_', ' ').title()} Project")
     project_path = st.text_input("项目路径", value=default_project)
+    project_type = st.selectbox("项目类型", ["watershed", "river", "reservoir", "urban_drainage", "water_environment", "flood_risk", "multi_domain"])
+    study_area = st.text_input("研究区域", value="demo_basin")
+    target_scenario = st.selectbox("目标场景", [f"SC{index:02d}" for index in range(1, 13)])
 
     st.subheader("模块")
     c1, c2, c3, c4 = st.columns(4)
@@ -109,6 +114,7 @@ def render(context: WorkbenchContext) -> None:
     }
 
     config = _wizard_config_from_form(project_name, project_path, modules, paths)
+    config["project"].update({"project_type": project_type, "study_area": study_area, "target_scenario": target_scenario})
     safe, message = _safe_project_path(project_path, context)
     if not safe:
         st.error(message)

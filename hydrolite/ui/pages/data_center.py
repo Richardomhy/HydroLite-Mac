@@ -16,7 +16,7 @@ from hydrolite.data_upload import copy_upload_to_workspace, inspect_uploaded_fil
 from hydrolite.input_builder import build_all_inputs
 from hydrolite.data_lineage import validate_lineage_graph, write_lineage_report
 from hydrolite.workspace import create_workspace, inspect_workspace, list_workspace_datasets
-from hydrolite.ui.state import PROJECT_ROOT, WorkbenchContext
+from hydrolite.ui.state import PROJECT_ROOT, WorkbenchContext, load_app_state
 
 
 OUTPUT = PROJECT_ROOT / "output" / "data_center"
@@ -34,6 +34,16 @@ def render(context: WorkbenchContext) -> None:
     st.header("数据中心")
     st.caption("真实项目数据上传、识别、字段映射、质量校验、血缘、外部数据计划与模型输入准备。")
     st.warning("原始上传文件保持只读；只有通过质量检查的 standardized/derived 数据可进入模型输入。")
+    state = load_app_state(st.session_state)
+    if state.ui_mode == "simple":
+        tabs = st.tabs(["数据概况", "完整度", "问题", "需要操作"])
+        with tabs[0]:
+            if context.project_loaded: st.json({"project": context.project_name, "directories": context.directories, "case_count": len(context.cases)})
+            else: st.info("没有项目。请先在项目页面创建或打开项目。")
+        with tabs[1]: st.info("数据完整度按当前场景的 Required Data / Optional Data 计算。请进入场景页面选择任务。")
+        with tabs[2]: st.info("问题状态包括 Missing、Invalid、Needs Mapping、Needs Unit Fix 和 Needs CRS Fix。")
+        with tabs[3]: st.info("下一步建议：先选择场景，再处理缺失数据；可自动修复项会明确标记，原始上传保持只读。")
+        return
     workspace_value = st.text_input("工作区路径", value="output/demo_workspace" if context.is_cloud else "workspaces/real_project")
     project_name = st.text_input("项目名称", value="Real Project")
     workspace, safe = _safe_workspace(workspace_value, context)

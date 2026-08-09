@@ -1,94 +1,76 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 
-from hydrolite.capability_registry import list_capabilities
-from hydrolite.project import export_project_package, write_project_summary
-from hydrolite.ui.components import recent_files, show_download, show_markdown_file
-from hydrolite.ui.state import WorkbenchContext
+from hydrolite.__version__ import __version__
+from hydrolite.scenario_registry import list_scenarios
+from hydrolite.ui.components.metric_card import render_metric_card
+from hydrolite.ui.components.status_badge import status_text
+from hydrolite.ui.state import load_app_state, update_app_state
 
 
-def render(context: WorkbenchContext) -> None:
-    st.header("项目首页")
+def _recent_runtime() -> tuple[list[dict], list[dict]]:
     try:
-        from hydrolite.runtime_db import list_artifact_records, list_project_records, list_run_records
-        projects, runs, artifacts = list_project_records(), list_run_records(), list_artifact_records()
-        metrics = st.columns(4)
-        metrics[0].metric("已注册项目", len(projects))
-        metrics[1].metric("Ready 项目", sum(row.get("status") == "ready" for row in projects))
-        metrics[2].metric("运行中 Run", sum(row.get("status") in {"queued", "running"} for row in runs))
-        metrics[3].metric("失败 Run", sum(row.get("status") == "failed" for row in runs))
-        st.caption(f"成果资产：{len(artifacts)}。推荐：项目中心 -> 运行中心 -> 任务中心 -> 成果中心。")
-    except Exception as exc:
-        st.warning(f"生产运行中心尚未初始化：{exc}")
-    st.caption("以项目为中心查看 HydroLite、GEE、SWMM 与 OpenHydroNet 输入工作流。")
-    st.info(
-        "当前开发版本：HydroLite Studio v0.7.0-dev；稳定 beta：v0.6.0-beta.1。在线版："
-        "https://hydrolite-mac-6zljwlwgtiwhkwneromuak.streamlit.app 。GitHub："
-        "https://github.com/Richardomhy/HydroLite-Mac.git 。推荐流程："
-        "项目首页 -> 教程与 Demo -> 全流程工作流 -> 数据与校验 -> 情景运行 -> GEE 数据中心 -> SWMM 联动 -> "
-        "OpenHydroNet AI 输入 -> 结果对比 -> 报告与导出。"
+        from hydrolite.runtime_db import list_project_records, list_run_records
+        return list_project_records(), list_run_records()
+    except Exception:
+        return [], []
+
+
+def render(context) -> None:
+    state = load_app_state(st.session_state)
+    st.title("HydroLite Studio")
+    st.subheader("水文 · 水环境 · 洪水风险分析与决策平台")
+    st.caption(f"v{__version__} · 当前模式：{'Simple' if state.ui_mode == 'simple' else 'Advanced'}")
+    projects, runs = _recent_runtime(); recent_runs = sorted(runs, key=lambda row: str(row.get("created_at", "")), reverse=True)[:5]
+    metrics = st.columns(4)
+    values = (
+        ("当前项目", context.project_name or "未加载"),
+        ("数据状态", "待检查" if not context.project_loaded else "已加载项目"),
+        ("最近运行", recent_runs[0].get("status", "暂无") if recent_runs else "暂无"),
+        ("系统健康", "需关注" if not context.gee_project_detected else "正常"),
     )
-    st.caption("在线版适合演示和查看示例；本地版适合完整 GEE/SWMM/OpenHydroNet 工作流。")
-    st.warning(
-        "安全说明：演示不会修改 data_raw 原始数据；不会提交 Google credentials、tokens、API keys、"
-        "外部 OpenHydroNet 仓库或模型权重；OpenHydroNet 页面仅生成 input package，不执行真实 AI 预测。"
-    )
-    st.success("第一次使用？进入左侧导航的 `教程与 Demo` 页面，按步骤完成一次完整软件演示。")
-    st.info(
-        "Beta 测试反馈：完成演示后可进入左侧 `Beta 反馈` 页面，通过 GitHub Issues 提交 bug、功能建议、"
-        "数据模板问题或整体体验反馈。提交前请勿上传敏感数据。"
-    )
-    st.info("v0.7.0-dev 新增 `全流程工作流` 页面，用于查看阶段状态和 dry-run 计划；planned 阶段不代表已实现。")
-    st.info("真实项目建议先进入 `数据中心`：创建工作区、上传并校验数据、生成需求与模型输入，再进入项目向导。原始上传保持只读。")
-    st.info("洪水预测 MVP 已进入 `partial`：可运行情景降雨、HydroLite 物理集合、synthetic-demo 水库联算和可选 ML/LSTM smoke test；它不是业务化洪水预警系统。")
-    st.info("历史洪水验证与数据同化已进入 `partial`：可执行事件目录、质量控制、多事件回放、Nudging/EnKF 和提前期验证；synthetic demo 不代表真实项目验证。")
-    st.subheader("平台能力矩阵")
-    st.dataframe(pd.DataFrame(list_capabilities()), use_container_width=True, hide_index=True)
-    if not context.project_loaded:
-        st.error(context.error_message)
-        st.info("请先在终端运行 `python -m hydrolite project create projects/demo_project`，或输入已有项目路径。")
-        return
+    for column, (label, value) in zip(metrics, values):
+        with column: render_metric_card(label, value)
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("项目名称", context.project_name)
-    c2.metric("项目 ID", context.project_id)
-    c3.metric("情景数量", len(context.cases))
-    st.write(f"当前项目路径: `{context.project_dir}`")
+    st.subheader("最近项目")
+    if projects:
+        st.dataframe(pd.DataFrame(projects[-5:]), use_container_width=True, hide_index=True)
+    else: st.info("尚无已注册项目。可进入“项目”创建项目，或打开示例项目。")
+    left, right = st.columns(2)
+    if left.button("创建项目", use_container_width=True): update_app_state(st.session_state, last_action="open_project_wizard")
+    if right.button("打开示例项目", use_container_width=True):
+        update_app_state(st.session_state, current_project="projects/demo_project", last_action="open_demo_project")
+        st.success("示例项目路径已选定；请在侧栏确认当前项目。")
 
-    st.subheader("project.yaml 概览")
-    st.json({k: v for k, v in context.project.items() if k != "_project_dir"})
+    st.subheader("请选择你的任务")
+    quick_ids = {"SC01", "SC03", "SC04", "SC06", "SC08", "SC10", "SC12"}
+    quick = [item for item in list_scenarios(include_advanced=state.ui_mode == "advanced") if item["scenario_id"] in quick_ids]
+    columns = st.columns(3)
+    for index, scenario in enumerate(quick):
+        with columns[index % 3].container(border=True):
+            st.write(f"**{scenario['name_zh']}**")
+            st.caption(scenario["business_question"])
+            st.write(status_text(scenario["production_status"]))
+            if st.button("选择", key=f"home_{scenario['scenario_id']}"):
+                update_app_state(st.session_state, current_scenario=scenario["scenario_id"], last_action="scenario_selected")
+                st.success("已选择。请进入“场景”完成数据检查和配置。")
 
-    modules = context.project.get("modules") or {}
-    if isinstance(modules, dict):
-        st.subheader("模块启用状态")
-        st.dataframe(pd.DataFrame([{"module": k, "enabled": v} for k, v in modules.items()]), use_container_width=True)
+    left, right = st.columns(2)
+    with left:
+        st.subheader("数据状态")
+        if context.project_loaded:
+            st.write(f"情景文件：{len(context.cases)}")
+            st.write(f"数据目录登记：{len(context.directories)}")
+            st.info("下一步：进入“数据”检查缺失、映射、单位和 CRS。")
+        else: st.info("没有项目，因此尚未计算数据就绪度。")
+    with right:
+        st.subheader("最近运行")
+        if recent_runs: st.dataframe(pd.DataFrame(recent_runs), use_container_width=True, hide_index=True)
+        else: st.info("尚无运行记录。选择场景并提交后会显示在这里。")
 
-    st.subheader("最近输出文件")
-    files = recent_files(context.project_dir / "output", limit=20)
-    if files:
-        st.dataframe(
-            pd.DataFrame(
-                [{"file": str(path.relative_to(context.project_dir)), "size_bytes": path.stat().st_size} for path in files]
-            ),
-            use_container_width=True,
-        )
-    else:
-        st.info("暂无项目输出。")
-
-    cols = st.columns(3)
-    if cols[0].button("加载项目", use_container_width=True):
-        st.success("项目已加载。")
-    if cols[1].button("刷新项目状态", use_container_width=True):
-        st.rerun()
-    if cols[2].button("生成项目摘要", use_container_width=True):
-        with st.spinner("正在生成项目摘要..."):
-            summary = write_project_summary(context.project_dir)
-        st.success(f"项目摘要已生成: `{summary}`")
-
-    show_markdown_file("project_summary.md", context.project_dir / "project_summary.md")
-    package = context.project_dir / "reports" / f"{context.project_id}_package.zip"
-    show_download("下载当前项目包", package, "application/zip")
+    st.subheader("需要处理")
+    if not context.project_loaded: st.warning("User Action Required：加载或创建项目。")
+    if not context.gee_project_detected: st.warning("GEE 计算认证不可用；官方离线目录仍可使用。")
+    st.caption("首页只读取 Registry、运行摘要和项目元数据，不执行训练、GEE refresh 或大型数据扫描。")

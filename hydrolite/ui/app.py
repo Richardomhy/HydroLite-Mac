@@ -45,18 +45,22 @@ from hydrolite.ui.pages import (
     project_home,
     project_wizard,
     research_methods_lab,
+    results_center,
     qgis_bridge,
     report_export,
     scenario_run,
+    scenario_center,
     swmm_center,
     tutorial_demo,
     run_center,
     system_center,
     task_center,
+    water_quality_lab,
     watershed_delineation,
     workflow_engine,
 )
 from hydrolite.ui.state import (
+    AppState,
     CASES_DIR,
     DEFAULT_PROJECT,
     OUTPUT_ROOT,
@@ -64,10 +68,13 @@ from hydrolite.ui.state import (
     WorkbenchContext,
     is_streamlit_cloud,
     load_workbench_context,
+    load_app_state,
     scan_case_files,
     scan_project_dirs,
     swmm_python_status,
+    update_app_state,
 )
+from hydrolite.ui.navigation import get_navigation_item, list_navigation
 from hydrolite.gee.auth import get_gee_status
 from hydrolite.gee.basin import get_boundary_bbox
 from hydrolite.gee.datasets import list_supported_datasets
@@ -79,7 +86,8 @@ PAGES = {
     "项目中心": project_center.render,
     "运行中心": run_center.render,
     "任务中心": task_center.render,
-    "成果中心": artifact_center.render,
+    "成果中心": results_center.render,
+    "成果资产": artifact_center.render,
     "系统与环境": system_center.render,
     "数据中心": data_center.render,
     "数据连接器": data_connectors.render,
@@ -102,9 +110,11 @@ PAGES = {
     "干旱分析与预测": drought_center.render,
     "历史洪水验证": hindcast_validation.render,
     "情景运行": scenario_run.render,
+    "场景中心": scenario_center.render,
     "GEE 数据中心": gee_center.render,
     "GEE 数据集智能": gee_dataset_intelligence.render,
     "水文研究方法实验室": research_methods_lab.render,
+    "水质方法实验室": water_quality_lab.render,
     "QGIS Bridge": qgis_bridge.render,
     "流域划分": watershed_delineation.render,
     "HEC-HMS": hec_hms.render,
@@ -183,7 +193,6 @@ def get_openhydronet_panel_payload() -> dict[str, object]:
 
 
 def _sidebar_project_selector() -> Path:
-    st.sidebar.title(f"HydroLite Studio v{__version__}")
     project_dirs = scan_project_dirs()
     default = DEFAULT_PROJECT if DEFAULT_PROJECT.exists() else (project_dirs[0] if project_dirs else DEFAULT_PROJECT)
     selected = st.sidebar.text_input("当前项目路径", value=str(default))
@@ -193,6 +202,12 @@ def _sidebar_project_selector() -> Path:
 def _sidebar_status(context: WorkbenchContext) -> None:
     st.sidebar.caption("项目状态")
     st.sidebar.write(f"当前项目名称: `{context.project_name or 'unloaded'}`")
+    state = load_app_state(st.session_state)
+    if state.ui_mode == "simple":
+        st.sidebar.write(f"当前场景: `{state.current_scenario or '未选择'}`")
+        st.sidebar.write(f"最近操作: `{state.last_action or '无'}`")
+        if context.is_cloud: st.sidebar.info("云端演示模式：已有结果可查看，部分本地后端会降级。")
+        return
     gee_init = context.gee_status.get("initialization", {}) if isinstance(context.gee_status, dict) else {}
     st.sidebar.write(f"GEE 状态: `{gee_init.get('status', 'unknown')}`")
     st.sidebar.write(f"SWMM 状态: `{'external solver detected' if context.swmm_python_detected else 'current env/fallback'}`")
@@ -207,17 +222,26 @@ def _sidebar_status(context: WorkbenchContext) -> None:
 
 def main() -> None:
     st.set_page_config(page_title="HydroLite Studio", layout="wide")
+    st.sidebar.title(f"HydroLite Studio v{__version__}")
+    state = load_app_state(st.session_state)
+    language = st.sidebar.radio("Language / 语言", ["中文", "English"], index=0 if state.language == "中文" else 1, horizontal=True)
+    mode_label = st.sidebar.radio("界面模式", ["Simple", "Advanced"], index=0 if state.ui_mode == "simple" else 1, horizontal=True)
+    state = update_app_state(st.session_state, language=language, ui_mode=mode_label.lower())
     project_dir = _sidebar_project_selector()
+    state = update_app_state(st.session_state, current_project=str(project_dir))
     context = load_workbench_context(project_dir)
     _sidebar_status(context)
 
-    page_name = st.sidebar.radio("主导航", list(PAGES.keys()))
-    st.title("HydroLite Studio 工作台")
-    st.caption("项目化水文水动力建模、数据校验、GEE 数据产品、SWMM 联动、AI 输入包与报告导出。")
+    navigation = list_navigation(language)
+    selected_label = st.sidebar.radio("主导航", [item["label"] for item in navigation])
+    nav = next(item for item in navigation if item["label"] == selected_label)
+    definition = get_navigation_item(nav["nav_id"])
+    page_options = [definition.primary_page] + (list(definition.advanced_pages) if state.ui_mode == "advanced" else [])
+    page_name = page_options[0] if len(page_options) == 1 else st.sidebar.selectbox("页面", page_options)
+    st.caption("场景驱动工作台 · Simple Mode 面向业务任务，Advanced Mode 展示 Workflow、模型、环境和详细成果。")
 
     if not context.project_loaded:
-        st.warning(context.error_message)
-        st.info("不会自动覆盖已有项目。请确认项目路径，或用 CLI 创建项目。")
+        st.warning("当前没有加载项目。首页、场景目录和系统状态仍可使用。")
 
     PAGES[page_name](context)
 

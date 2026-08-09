@@ -265,11 +265,23 @@ from hydrolite.method_benchmark import write_method_benchmark
 from hydrolite.flood_susceptibility import DEFAULT_OUTPUT_DIR as SUSCEPTIBILITY_OUTPUT, readiness as susceptibility_readiness, run_susceptibility_command, train_adaptive as susceptibility_train_adaptive, train_baselines as susceptibility_train_baselines, validate_outputs as susceptibility_validate_outputs, write_report as susceptibility_write_report
 from hydrolite.flood_susceptibility_features import build_conditioning_features
 from hydrolite.flood_susceptibility_validation import spatial_block_cv
+from hydrolite.product_status import product_status_summary
+from hydrolite.scenario_registry import assess_scenario_readiness, get_scenario, list_scenarios
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m hydrolite")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    product = subparsers.add_parser("product", help="Product capability and validation status.")
+    product_sub = product.add_subparsers(dest="product_command", required=True)
+    product_sub.add_parser("status")
+
+    scenarios = subparsers.add_parser("scenarios", help="User-facing business scenario registry.")
+    scenarios_sub = scenarios.add_subparsers(dest="scenarios_command", required=True)
+    scenarios_sub.add_parser("list")
+    scenario_show = scenarios_sub.add_parser("show"); scenario_show.add_argument("scenario_id")
+    scenario_ready = scenarios_sub.add_parser("readiness"); scenario_ready.add_argument("scenario_id"); scenario_ready.add_argument("--available", nargs="*", default=[])
 
     run_parser = subparsers.add_parser("run", help="Run a HydroLite YAML case.")
     run_parser.add_argument("case_file", help="Path to YAML case file, e.g. cases/demo.yaml")
@@ -833,6 +845,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     import json
     args = build_parser().parse_args(argv)
+    if args.command == "product":
+        print(json.dumps(product_status_summary(), indent=2, ensure_ascii=False, default=str))
+        return 0
+    if args.command == "scenarios":
+        if args.scenarios_command == "list": result = {"status": "passed", "scenarios": list_scenarios()}
+        elif args.scenarios_command == "show": result = {"status": "passed", "scenario": get_scenario(args.scenario_id).as_dict()}
+        else: result = {"status": "passed", "readiness": assess_scenario_readiness(args.scenario_id, args.available).as_dict()}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
     if args.command == "run":
         outputs = run_case(args.case_file)
         print(f"HydroLite run complete. Outputs written to: {outputs.output_dir}")

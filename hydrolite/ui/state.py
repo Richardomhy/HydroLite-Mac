@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 import importlib.metadata
 import os
@@ -38,6 +38,53 @@ CASES_DIR = PROJECT_ROOT / "cases"
 OUTPUT_ROOT = PROJECT_ROOT / "output"
 PROJECTS_ROOT = PROJECT_ROOT / "projects"
 DEFAULT_PROJECT = PROJECTS_ROOT / "demo_project"
+
+
+@dataclass(frozen=True)
+class ProjectState:
+    current_project: str = ""
+    project_loaded: bool = False
+
+
+@dataclass(frozen=True)
+class ScenarioState:
+    current_scenario: str = ""
+    wizard_step: int = 1
+
+
+@dataclass(frozen=True)
+class RunState:
+    selected_run: str = ""
+    run_status: str = "not_started"
+
+
+@dataclass(frozen=True)
+class AppState:
+    current_project: str = ""
+    current_scenario: str = ""
+    selected_run: str = ""
+    ui_mode: str = "simple"
+    language: str = "中文"
+    last_action: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def load_app_state(store: Any) -> AppState:
+    payload = store.get("hydrolite_app_state", {}) if hasattr(store, "get") else {}
+    allowed = AppState.__dataclass_fields__
+    return AppState(**{key: value for key, value in dict(payload).items() if key in allowed})
+
+
+def save_app_state(store: Any, state: AppState) -> AppState:
+    store["hydrolite_app_state"] = state.as_dict()
+    return state
+
+
+def update_app_state(store: Any, **changes: Any) -> AppState:
+    payload = load_app_state(store).as_dict(); payload.update(changes)
+    return save_app_state(store, AppState(**payload))
 
 
 @dataclass(frozen=True)
