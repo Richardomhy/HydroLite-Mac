@@ -40,7 +40,7 @@ _RECIPES = {
     "full_modeling_workflow": {"stages": ["data_center", "data_standardization", "watershed_delineation", "hydrology", "water_balance_audit", "hec_hms_project", "reservoir_routing", "flood_forecast", "rusle", "sediment_delivery", "watershed_accounting", "reporting"], "local_only_tasks": ["hec_hms_run"]},
     "reporting_only": {"stages": ["reporting"]},
     "gee_dataset_discovery": {"stages": ["gee_catalog_intelligence", "reporting"], "expected_outputs": ["gee_catalog_report_zh.md"]},
-    "research_method_intake": {"stages": ["research_source_intake", "research_license_review", "method_inspiration_lab"], "expected_outputs": ["research_registry.xlsx", "method_cards.xlsx"]},
+    "research_method_intake": {"stages": ["research_source_intake", "research_license_review", "method_inspiration_lab"], "expected_outputs": ["research_sources.xlsx", "research_methods.xlsx"]},
     "gamma_lag_experiment": {"stages": ["gamma_lag_features"], "expected_outputs": ["gamma_kernels.xlsx", "gamma_lag_features.csv"]},
     "graph_hydrology_experiment": {"stages": ["river_graph_features", "graph_temporal_residual"], "expected_outputs": ["graph_manifest.json"]},
     "water_quality_multihorizon_experiment": {"stages": ["water_quality_method_lab", "hierarchical_multihorizon"], "expected_outputs": ["multihorizon_metrics.xlsx"]},

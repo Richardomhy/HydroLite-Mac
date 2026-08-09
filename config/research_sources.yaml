@@ -1,22 +1,141 @@
 policy:
   clean_room_required: true
-  required_notice: "Independent HydroLite implementation; not a paper-model reproduction."
-  prohibited_assets:
-    - third_party_skill_source
-    - third_party_skill_readme
-    - third_party_skill_catalog
-    - paper_full_text
-    - paper_figures
-    - user_data
-    - credentials
-    - model_weights
-    - dss_or_hdf5
-    - external_checkout
-  prohibited_runtime_dependencies:
-    - ruiduobao/gee-dataset-intelligence-skill
+  required_notice: "HydroLite 对这些公开研究仅进行通用方法借鉴和独立设计，不构成对原论文模型的精确复现。"
+  prohibited_runtime_dependencies: ["ruiduobao/gee-dataset-intelligence-skill"]
+  prohibited_assets: [third_party_skill_source, third_party_skill_readme, third_party_skill_catalog, paper_full_text, paper_figures, user_data, credentials, model_weights, dss_or_hdf5, external_checkout]
+sources:
+  - source_id: gamma_lag_hydrologic_prior_source
+    source_type: journal_article
+    title: "融合先验信息与深度学习的小样本水文建模"
+    authors: []
+    year: 2026
+    journal: "水科学进展"
+    publisher: null
+    doi: "10.14042/j.cnki.32.1309.2026.04.002"
+    primary_url: "https://link.cnki.net/doi/10.14042/j.cnki.32.1309.2026.04.002"
+    secondary_urls: []
+    repository_url: null
+    abstract: null
+    keywords: [Gamma, hydrology, prior, small-sample]
+    full_text_available: false
+    full_text_local_reference: null
+    source_license: copyrighted_literature
+    license_url: null
+    code_available: false
+    code_repository: null
+    code_license: not_applicable
+    copyright_status: copyrighted
+    access_status: metadata_only
+    verification_status: metadata_verified
+    provenance: bibliographic_metadata_only
+    notes: "No paper text, figures, code, hyperparameters, or results are stored."
+    implementation_mode: method_inspired_clean_room
+  - source_id: trend_graph_multihorizon_water_quality_source
+    source_type: journal_article
+    title: "A spatial-temporal trend-aware neural network model for accurate water quality prediction in river"
+    authors: []
+    year: 2025
+    journal: "Water Research"
+    publisher: Elsevier
+    doi: null
+    primary_url: "https://www.sciencedirect.com/science/article/pii/S0043135425012953"
+    secondary_urls: ["https://doi.org/10.1016/j.watres.2025.124389"]
+    repository_url: null
+    abstract: null
+    keywords: [trend-aware, river, water-quality, multihorizon]
+    full_text_available: false
+    full_text_local_reference: null
+    source_license: copyrighted_literature
+    license_url: null
+    code_available: false
+    code_repository: null
+    code_license: not_applicable
+    copyright_status: copyrighted
+    access_status: metadata_only
+    verification_status: source_incomplete
+    provenance: PII_and_DOI_link_metadata_only
+    notes: "Title and PII are registered; no architecture or text is copied."
+    implementation_mode: method_inspired_clean_room
+  - source_id: adaptive_flood_susceptibility_xai_source
+    source_type: journal_article
+    title: "A reinforcement learning approach with explainable AI for spatial flood susceptibility analysis"
+    authors: []
+    year: 2025
+    journal: "Journal of Hydrology: Regional Studies"
+    publisher: Elsevier
+    doi: "10.1016/j.ejrh.2025.103035"
+    primary_url: "https://doi.org/10.1016/j.ejrh.2025.103035"
+    secondary_urls: []
+    repository_url: null
+    abstract: null
+    keywords: [flood-susceptibility, XAI, reinforcement-learning]
+    full_text_available: false
+    full_text_local_reference: null
+    source_license: copyrighted_literature
+    license_url: null
+    code_available: false
+    code_repository: null
+    code_license: not_applicable
+    copyright_status: copyrighted
+    access_status: metadata_only
+    verification_status: metadata_verified
+    provenance: DOI_metadata_only
+    notes: "RL is not presumed superior to supervised baselines."
+    implementation_mode: method_inspired_clean_room
+  - source_id: physics_graph_temporal_residual_source
+    source_type: journal_article
+    title: "Enhancing hydrological simulation and climate change impact assessment for the Poyang Lake Region, China: A novel hybrid SWAT-GCN-BiLSTM framework"
+    authors: []
+    year: 2026
+    journal: "Journal of Hydrology: Regional Studies"
+    publisher: Elsevier
+    doi: "10.1016/j.ejrh.2026.103145"
+    primary_url: "https://doi.org/10.1016/j.ejrh.2026.103145"
+    secondary_urls: []
+    repository_url: null
+    abstract: null
+    keywords: [physics, graph, residual, BiLSTM]
+    full_text_available: false
+    full_text_local_reference: null
+    source_license: copyrighted_literature
+    license_url: null
+    code_available: false
+    code_repository: null
+    code_license: not_applicable
+    copyright_status: copyrighted
+    access_status: metadata_only
+    verification_status: metadata_verified
+    provenance: DOI_metadata_only
+    notes: "Bidirectional temporal models are historical-analysis only."
+    implementation_mode: method_inspired_clean_room
 third_party_sources:
   - source_id: ruiduobao/gee-dataset-intelligence-skill
+    source_type: github_repository
+    title: gee-dataset-intelligence-skill
+    authors: [ruiduobao]
+    year: null
+    journal: null
+    publisher: GitHub
+    doi: null
+    primary_url: "https://github.com/ruiduobao/gee-dataset-intelligence-skill"
+    secondary_urls: []
+    repository_url: "https://github.com/ruiduobao/gee-dataset-intelligence-skill"
+    abstract: null
+    keywords: [GEE, catalog]
+    full_text_available: false
+    full_text_local_reference: null
+    source_license: license_file_missing
     license_status: license_file_missing
+    license_url: null
+    code_available: true
+    code_repository: "https://github.com/ruiduobao/gee-dataset-intelligence-skill"
+    code_license: license_file_missing
+    copyright_status: unknown
+    access_status: metadata_only
+    verification_status: source_incomplete
+    provenance: repository_metadata_only
+    notes: "Clean-room product-idea reference only."
+    implementation_mode: method_inspired_clean_room
     integration_mode: method_inspired_clean_room
     copy_allowed: false
     runtime_dependency_allowed: false

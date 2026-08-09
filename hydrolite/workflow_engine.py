@@ -459,8 +459,8 @@ _STAGES: tuple[WorkflowStage, ...] = (
         for stage_id, title, artifact, command, page in (
             ("gee_catalog_intelligence", "GEE 数据集智能目录", "gee_catalog_manifest.json", "python -m hydrolite gee-catalog report", "GEE 数据集智能"),
             ("gee_catalog_refresh", "GEE 目录刷新", "catalog.json", "python -m hydrolite gee-catalog refresh dry-run", "GEE 数据集智能"),
-            ("research_source_intake", "研究来源登记", "research_registry.xlsx", "python -m hydrolite research registry", "水文研究方法实验室"),
-            ("research_license_review", "来源许可审查", "source_licensing_report.xlsx", "python -m hydrolite research licenses", "水文研究方法实验室"),
+            ("research_source_intake", "研究来源登记", "research_sources.xlsx", "python -m hydrolite research registry", "水文研究方法实验室"),
+            ("research_license_review", "来源许可审查", "source_license_assessments.xlsx", "python -m hydrolite research licenses", "水文研究方法实验室"),
             ("method_inspiration_lab", "方法借鉴实验室", "method_inspiration_report_zh.md", "python -m hydrolite research report", "水文研究方法实验室"),
             ("gamma_lag_features", "Gamma 因果滞后", "gamma_kernels.xlsx", "python -m hydrolite method gamma-demo", "水文研究方法实验室"),
             ("river_graph_features", "河网图特征", "graph_manifest.json", "python -m hydrolite method graph-demo", "水文研究方法实验室"),

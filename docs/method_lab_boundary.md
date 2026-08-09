@@ -8,4 +8,5 @@ HydroLite method experiments are clean-room implementations of general ideas. Th
 - Physical HydroLite water-balance outputs remain authoritative. Feature and residual layers are parallel experimental outputs.
 - `water_quality` remains `planned`; `flood_forecast` and `drought_forecast` remain `partial`.
 - Tracked source must not include credentials, external checkouts, model weights, DSS/HDF5, paper PDFs, or copied third-party Skill assets.
-- `config/research_sources.yaml` is the machine-readable clean-room policy used by baseline tests.
+- `config/research_sources.yaml` and `config/research_methods.yaml` are the machine-readable clean-room admission policy used by baseline tests.
+- Source, license, method-card and integration-boundary reports contain metadata only; full-text access does not grant redistribution or copying rights.

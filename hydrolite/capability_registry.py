@@ -27,6 +27,7 @@ _CAPABILITIES = {
     "water_quality": "planned",
     "water_quality_method_lab": "partial",
     "gee_catalog_intelligence": "partial",
+    "research_method_registry": "partial",
     "method_inspiration_lab": "partial",
     "flood_susceptibility": "partial",
     "machine_learning": "partial",

@@ -7,6 +7,9 @@ experimental modules should use these values instead of inventing new labels.
 from enum import Enum
 
 
+CLEAN_ROOM_NOTICE = "本实现借鉴公开论文中的通用方法思想，为 HydroLite 独立设计，不构成原论文模型的精确复现。"
+
+
 class _TextEnum(str, Enum):
     def __str__(self) -> str:
         return self.value

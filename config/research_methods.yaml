@@ -1,0 +1,133 @@
+methods:
+  - method_id: gamma_lag_hydrologic_prior
+    display_name: Gamma lag hydrologic prior
+    display_name_zh: Gamma 因果滞后水文先验
+    source_ids: [gamma_lag_hydrologic_prior_source]
+    domain: hydrology
+    problem_type: causal_feature_engineering
+    method_family: feature_engineering
+    method_summary: Causal multi-timescale lag features with physical residual comparison.
+    core_idea: Gamma-shaped fast, medium, and slow response components with nonnegative weights.
+    borrowed_concepts: [Gamma lag, fast_medium_slow_response, nonnegative_weights, small_sample_prior, physical_residual]
+    not_to_copy: [paper_network, source_code, loss_implementation, hyperparameters, training_results, figures]
+    required_inputs: [timestamped_rainfall]
+    optional_inputs: [effective_rainfall, hydrolite_surface_runoff, interflow, baseflow]
+    outputs: [causal_lag_features, provenance]
+    temporal_scale: event_to_daily
+    spatial_scale: subbasin_or_station
+    causal_constraints: current_and_past_values_only
+    physical_constraints: hydrolite_water_balance_remains_authoritative
+    training_required: false
+    minimum_data_requirement: bounded_time_series_with_units
+    validation_requirement: future_perturbation_causality_test
+    known_strengths: [interpretable_lag_prior, small_sample_compatible]
+    known_weaknesses: [parameters_are_not_calibration]
+    leakage_risks: [future_rainfall]
+    computational_cost: low
+    optional_dependencies: []
+    HydroLite_target_components: [gamma_lag_features]
+    recommended_integration_mode: method_inspired_clean_room
+    baseline_comparisons: [raw_lag, rolling_rainfall, hydrolite_physical, simple_linear_reservoir]
+    value_added_gate: not_tested
+    current_status: method_card_complete
+    next_milestone: M3
+    limitations: Synthetic demonstrations cannot establish real-project value.
+  - method_id: trend_graph_multihorizon_water_quality
+    display_name: Trend graph multihorizon water quality method
+    display_name_zh: 趋势河网多提前期水质方法
+    source_ids: [trend_graph_multihorizon_water_quality_source]
+    domain: water_quality
+    problem_type: multistation_forecasting_interface
+    method_family: graph_temporal
+    method_summary: Causal trend context, station relations, and horizon-specific comparison interface.
+    core_idea: Trend-aware temporal context and directed multi-station relations without reproducing a paper architecture.
+    borrowed_concepts: [trend_features, station_graph, graph_weighting, multihorizon, hierarchical_aggregation]
+    not_to_copy: [STTNN_name, paper_architecture, attention_equations, paper_dataset, paper_metrics]
+    required_inputs: [timestamp, station_id, water_quality_variable, units, river_topology]
+    optional_inputs: [flow, water_level, rainfall, temperature, upstream_values]
+    outputs: [method_readiness, horizon_contract]
+    temporal_scale: daily_to_multihorizon
+    spatial_scale: monitoring_station
+    causal_constraints: forecast_features_at_or_before_issue_time
+    physical_constraints: water_quality_main_capability_remains_planned
+    training_required: true
+    minimum_data_requirement: multistation_time_series_with_topology
+    validation_requirement: temporal_holdout_and_station_holdout
+    known_strengths: [explicit_trend_context]
+    known_weaknesses: [no_reaction_process_model]
+    leakage_risks: [future_context, cross_station_leakage]
+    computational_cost: medium
+    optional_dependencies: []
+    HydroLite_target_components: [trend_aware_features, hierarchical_multihorizon, water_quality_method_lab]
+    recommended_integration_mode: method_inspired_clean_room
+    baseline_comparisons: [persistence, station_independent, upstream_weighted, linear_regression]
+    value_added_gate: not_tested
+    current_status: method_card_complete
+    next_milestone: M4_M5
+    limitations: Water-quality production capability is planned, not implemented.
+  - method_id: adaptive_flood_susceptibility_xai
+    display_name: Adaptive flood susceptibility XAI method
+    display_name_zh: 自适应洪水易发性与解释方法
+    source_ids: [adaptive_flood_susceptibility_xai_source]
+    domain: flood_susceptibility
+    problem_type: spatial_classification_experiment
+    method_family: susceptibility
+    method_summary: Spatial factor baseline comparison with optional adaptive selection and non-causal explanation.
+    core_idea: Compare supervised baselines before any justified adaptive decision experiment.
+    borrowed_concepts: [conditioning_factors, adaptive_learning, ensemble, XAI, spatial_validation, imbalance_diagnostics]
+    not_to_copy: [RL_Stack, paper_reward, paper_maps, paper_training_schedule]
+    required_inputs: [flood_inventory, conditioning_factors, spatial_blocks]
+    optional_inputs: [hydrolite_runoff]
+    outputs: [readiness, baseline_comparison, explanation_contract]
+    temporal_scale: event_or_static
+    spatial_scale: spatial_block
+    causal_constraints: XAI_values_are_not_causal_effects
+    physical_constraints: does_not_replace_hydrolite_water_balance
+    training_required: true
+    minimum_data_requirement: labeled_inventory_with_spatial_holdout
+    validation_requirement: spatial_block_cv
+    known_strengths: [spatial_leakage_awareness]
+    known_weaknesses: [labels_and_pseudo_absence_dominate_results]
+    leakage_risks: [adjacent_pixel, same_event, random_split]
+    computational_cost: medium
+    optional_dependencies: [scikit_learn, shap_optional, stable_baselines3_optional]
+    HydroLite_target_components: [flood_susceptibility]
+    recommended_integration_mode: method_inspired_clean_room
+    baseline_comparisons: [prevalence, logistic_regression, random_forest, gradient_boosting]
+    value_added_gate: not_tested
+    current_status: method_card_complete
+    next_milestone: M6
+    limitations: RL without value added must be reject_as_recommended_model.
+  - method_id: physics_graph_temporal_residual
+    display_name: Physics graph temporal residual method
+    display_name_zh: 物理河网时序残差订正方法
+    source_ids: [physics_graph_temporal_residual_source]
+    domain: hydrology
+    problem_type: residual_correction_interface
+    method_family: hybrid_residual
+    method_summary: Physical states become directed graph features; correction remains separate from physical prediction.
+    core_idea: Directed upstream/downstream features support a constrained residual interface.
+    borrowed_concepts: [physical_states, directed_graph, upstream_downstream, residual_correction, extreme_process_review]
+    not_to_copy: [SWAT_replacement, GCN_BiLSTM_architecture, source_hyperparameters, climate_conclusions]
+    required_inputs: [subbasin_states, reach_topology, physical_prediction]
+    optional_inputs: [ET, soil_water, runoff, interflow, baseflow]
+    outputs: [graph_feature_contract, residual_contract]
+    temporal_scale: daily_to_event
+    spatial_scale: subbasin_and_reach
+    causal_constraints: bidirectional_historical_analysis_only; true_future_forecast_blocked
+    physical_constraints: physical_prediction_and_water_balance_preserved
+    training_required: true
+    minimum_data_requirement: aligned_graph_time_series
+    validation_requirement: causal_holdout_and_baseline_comparison
+    known_strengths: [topology_aware_context]
+    known_weaknesses: [graph_structure_must_add_value]
+    leakage_risks: [bidirectional_future_context, reverse_edge]
+    computational_cost: medium
+    optional_dependencies: [torch_optional]
+    HydroLite_target_components: [river_graph, trend_aware_features, graph_temporal_residual]
+    recommended_integration_mode: method_inspired_clean_room
+    baseline_comparisons: [basin_average, upstream_weighted, hydrolite_physical, simple_residual_regression]
+    value_added_gate: not_tested
+    current_status: method_card_complete
+    next_milestone: M4
+    limitations: BiLSTM is limited to historical_analysis, hindcast, and reconstruction.

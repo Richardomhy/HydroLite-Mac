@@ -1,5 +1,6 @@
 from hydrolite.provenance import build_provenance_record, experiment_output_path, is_protected_path
 from hydrolite.research_status import ExperimentStatus, MethodStatus, is_experiment_status, is_method_status
+from hydrolite.capability_registry import get_capability
 
 
 def test_shared_statuses_are_explicit_and_validated():
@@ -9,6 +10,7 @@ def test_shared_statuses_are_explicit_and_validated():
     assert not is_experiment_status("production_ready")
     assert is_method_status("source_incomplete")
     assert not is_method_status("copy_paper_code")
+    assert get_capability("research_method_registry")["status"] == "partial"
 
 
 def test_provenance_keeps_outputs_away_from_protected_paths():

@@ -214,9 +214,11 @@ from hydrolite.workflow_engine import (
     validate_workflow_config,
 )
 from hydrolite.drought_cli import register_drought_cli, run_drought_cli
-from hydrolite.research_registry import built_in_sources, write_research_outputs
+from hydrolite.research_registry import built_in_sources, get_source as get_research_source, write_research_outputs
 from hydrolite.source_licensing import audit_source_licenses
 from hydrolite.research_method_card import method_cards
+from hydrolite.research_intake import get_method as get_research_method
+from hydrolite.research_validation import validate_research_registry
 from hydrolite.gee_catalog import (
     catalog_status, compare_datasets, generate_ee_code, get_catalog_dataset,
     recommend_datasets, refresh_catalog, search_catalog, validate_catalog,
@@ -738,8 +740,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     research = subparsers.add_parser("research", help="Clean-room research source and method records.")
     research_sub = research.add_subparsers(dest="research_command", required=True)
-    for command in ("sources", "registry", "licenses", "method-cards", "report"):
+    for command in ("status", "sources", "registry", "licenses", "method-cards", "methods", "validate", "report"):
         research_sub.add_parser(command)
+    source_parser = research_sub.add_parser("source", help="Show one registered research source.")
+    source_parser.add_argument("source_id")
+    method_parser = research_sub.add_parser("method", help="Show one registered method card.")
+    method_parser.add_argument("method_id")
 
     gee_catalog = subparsers.add_parser("gee-catalog", help="Offline-first Google Earth Engine dataset metadata catalog.")
     gee_catalog_sub = gee_catalog.add_subparsers(dest="gee_catalog_command", required=True)
@@ -832,9 +838,13 @@ def main(argv: list[str] | None = None) -> int:
         return run_drought_cli(args)
     if args.command == "research":
         output = ROOT / "output" / "research_methods"
-        if args.research_command == "sources": result = {"sources": built_in_sources()}
+        if args.research_command == "status": result = validate_research_registry()
+        elif args.research_command in {"sources", "registry"}: result = {"sources": built_in_sources()}
+        elif args.research_command == "source": result = {"source": get_research_source(args.source_id)}
         elif args.research_command == "licenses": result = {"licenses": audit_source_licenses()}
-        elif args.research_command == "method-cards": result = {"method_cards": method_cards()}
+        elif args.research_command in {"method-cards", "methods"}: result = {"method_cards": method_cards()}
+        elif args.research_command == "method": result = {"method": get_research_method(args.method_id).as_dict()}
+        elif args.research_command == "validate": result = validate_research_registry()
         else:
             paths = write_research_outputs(output); result = {"status": "passed", "outputs": {key: str(value) for key, value in paths.items()}}
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
