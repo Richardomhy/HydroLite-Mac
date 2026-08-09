@@ -171,6 +171,7 @@ output/drought_model_v2/
 output/gee_catalog_intelligence/
 output/research_methods/
 output/method_inspiration/
+output/method_inspiration/gamma/
 output/flood_susceptibility/
 .hydrolite/gee_catalog/
 *catalog_refresh_cache*

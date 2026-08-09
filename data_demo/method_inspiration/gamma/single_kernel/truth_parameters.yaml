@@ -1,0 +1,27 @@
+synthetic_demo: true
+truth_type: single
+single:
+  shape: 2.5
+  scale: 2.0
+  support_length: 40
+  runoff_coefficient: 0.82
+components:
+- component_id: quick
+  shape: 1.6
+  scale: 1.2
+  support_length: 24
+  weight: 0.55
+  enabled: true
+- component_id: intermediate
+  shape: 3.0
+  scale: 2.0
+  support_length: 36
+  weight: 0.3
+  enabled: true
+- component_id: slow
+  shape: 5.0
+  scale: 4.0
+  support_length: 60
+  weight: 0.15
+  enabled: true
+noise_std: 0.0

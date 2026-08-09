@@ -228,6 +228,17 @@ from hydrolite.gee_catalog.transport import fetch_catalog_object, write_transpor
 from hydrolite.gee_catalog.reporting import build_catalog_statistics
 from hydrolite.gee_catalog.loader import load_catalog_records
 from hydrolite.gamma_lag_features import write_gamma_feature_report
+from hydrolite.gamma_validation import (
+    build_gamma_bundle,
+    gamma_status,
+    run_kernel_demo,
+    run_multi_truth,
+    run_parameter_recovery,
+    run_single_truth,
+    validate_gamma_outputs,
+    write_gamma_reports,
+)
+from hydrolite.gamma_benchmark import run_gamma_benchmark, run_sample_efficiency
 from hydrolite.river_graph import write_graph_manifest
 from hydrolite.graph_hydrology_features import build_node_feature_matrix, write_graph_feature_summary
 from hydrolite.trend_aware_features import write_trend_feature_report
@@ -767,6 +778,11 @@ def build_parser() -> argparse.ArgumentParser:
     for command in ("gamma-demo", "graph-demo", "trend-demo", "multihorizon-demo", "graph-residual-demo", "water-quality-demo", "benchmark", "validate", "report"):
         method_sub.add_parser(command)
 
+    gamma = subparsers.add_parser("gamma", help="Causal Gamma lag feature experiments.")
+    gamma_sub = gamma.add_subparsers(dest="gamma_command", required=True)
+    for command in ("status", "kernel-demo", "truth-single", "truth-multi", "recover", "benchmark", "sample-efficiency", "validate", "report", "bundle"):
+        gamma_sub.add_parser(command)
+
     susceptibility = subparsers.add_parser("susceptibility", help="Spatial flood-susceptibility method experiments.")
     susceptibility_sub = susceptibility.add_subparsers(dest="susceptibility_command", required=True)
     for command in ("readiness", "build-features", "split-spatial", "train-baselines", "train-adaptive"):
@@ -881,6 +897,29 @@ def main(argv: list[str] | None = None) -> int:
         elif args.method_command == "validate": result = {"status": "passed", "water_quality": "planned", "bidirectional_forecast": run_graph_temporal_residual([1, 2], [1, 2], mode="graph_bidirectional_hindcast_only", purpose="forecast")}
         else:
             paths = {"gamma": write_gamma_feature_report(output), "trend": write_trend_feature_report(output), "multihorizon": write_multihorizon_report(output), "benchmark": write_method_benchmark(output)}; (output / "method_inspiration_report.md").write_text("# Method inspiration experiments\n\nClean-room features and baselines only; no paper-model reproduction.\n", encoding="utf-8"); result = {"status": "passed", "outputs": {key: str(value) for key, value in paths.items()}}
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "gamma":
+        output = ROOT / "output" / "method_inspiration" / "gamma"
+        if args.gamma_command == "status":
+            result = gamma_status()
+        elif args.gamma_command == "kernel-demo":
+            result = run_kernel_demo(output)
+        elif args.gamma_command == "truth-single":
+            run = run_single_truth(output); result = {key: run[key] for key in ("status", "metrics", "noisy_metrics", "output")}
+        elif args.gamma_command == "truth-multi":
+            run = run_multi_truth(output); result = {key: run[key] for key in ("status", "metrics", "output")}
+        elif args.gamma_command == "recover":
+            run = run_parameter_recovery(output); result = {"status": run["status"], "identifiability": run["identifiability"], "single_parameters": {key: run["single"][key] for key in ("shape", "scale", "runoff_coefficient")}, "multi_components": run["multi"]["components"], "single_metrics": run["single_metrics"], "multi_metrics": run["multi_metrics"], "output": run["output"]}
+        elif args.gamma_command == "benchmark":
+            run = run_gamma_benchmark(output); result = {"status": run["status"], "metrics": run["metrics"].to_dict(orient="records"), "comparisons": run["comparisons"], "synthetic_value_added": run["synthetic_value_added"], "real_data_value_added": run["real_data_value_added"], "output": run["output"]}
+        elif args.gamma_command == "sample-efficiency":
+            run = run_sample_efficiency(output); result = {"status": run["status"], "metrics": run["metrics"].to_dict(orient="records"), "parameter_stability": run["stability"].to_dict(orient="records"), "fixed_test_start": run["fixed_test_start"], "temporal_shuffle": run["temporal_shuffle"], "output": run["output"]}
+        elif args.gamma_command == "validate":
+            result = validate_gamma_outputs(output)
+        elif args.gamma_command == "report":
+            result = {"status": "passed", "outputs": {key: str(value) for key, value in write_gamma_reports(output).items()}}
+        else:
+            result = {"status": "passed", "bundle": str(build_gamma_bundle(output))}
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
     if args.command == "susceptibility":
         output = ROOT / "output" / "flood_susceptibility"

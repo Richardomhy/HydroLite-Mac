@@ -1,0 +1,61 @@
+{
+  "synthetic_demo": true,
+  "generator": "HydroLite Gamma Lag Features",
+  "generator_version": "1",
+  "hydrolite_version": "0.7.0-dev",
+  "random_seed": 20260723,
+  "date_range": [
+    "2020-01-01",
+    "2020-06-28"
+  ],
+  "timestep": 1.0,
+  "timestep_unit": "day",
+  "truth_parameters": {
+    "synthetic_demo": true,
+    "truth_type": "single",
+    "single": {
+      "shape": 2.5,
+      "scale": 2.0,
+      "support_length": 40,
+      "runoff_coefficient": 0.82
+    },
+    "components": [
+      {
+        "component_id": "quick",
+        "shape": 1.6,
+        "scale": 1.2,
+        "support_length": 24,
+        "weight": 0.55,
+        "enabled": true
+      },
+      {
+        "component_id": "intermediate",
+        "shape": 3.0,
+        "scale": 2.0,
+        "support_length": 36,
+        "weight": 0.3,
+        "enabled": true
+      },
+      {
+        "component_id": "slow",
+        "shape": 5.0,
+        "scale": 4.0,
+        "support_length": 60,
+        "weight": 0.15,
+        "enabled": true
+      }
+    ],
+    "noise_std": 0.0
+  },
+  "noise": {
+    "standard_deviation": 0.0
+  },
+  "checksums": {
+    "rainfall.csv": "cb9e2facedb1b159d36f9e561e3f8f4584f7e773bd01e2fb98015ca2a874fc0b",
+    "effective_rainfall.csv": "afc9a9e95c5bc7827ad79b44daf9216a952cc5fab28cf43a60f8a5bc856ddd6d",
+    "observed_response.csv": "314a32cadb342d1fc0d648fb7d9ef4b332dc6780170b53ea922803c1af5c8dcd",
+    "truth_parameters.yaml": "5fc6823b6c2878119e3ff11f9145cd2e2291ea98c0b389e67cabc0a9472fc8b2",
+    "gamma_config.yaml": "df075abb651919fea5ef507a4b277e79c719c8997d528f8e80770d8740593c98",
+    "expected_results.json": "49f5dc6930bb7505edd777f93f36ac2dd8635f9826e45f4e5a120e9b2584bd14"
+  }
+}

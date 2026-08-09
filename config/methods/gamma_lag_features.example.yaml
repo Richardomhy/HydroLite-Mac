@@ -1,0 +1,47 @@
+method_id: gamma_lag_hydrologic_prior
+implementation_name: Gamma Lag Features
+synthetic_demo_defaults: true
+timestep: 1.0
+timestep_unit: day
+source_variable: effective_rainfall
+source_unit: mm
+source_dataset_id: synthetic_gamma_demo
+source_run_id: synthetic_gamma_demo_v1
+warmup_policy: zero_padding_with_warmup_flag
+single_kernel:
+  shape: 2.5
+  scale: 2.0
+  support_length: 40
+  runoff_coefficient: 0.82
+components:
+  - component_id: quick
+    shape: 1.6
+    scale: 1.2
+    support_length: 24
+    weight: 0.55
+    enabled: true
+  - component_id: intermediate
+    shape: 3.0
+    scale: 2.0
+    support_length: 36
+    weight: 0.30
+    enabled: true
+  - component_id: slow
+    shape: 5.0
+    scale: 4.0
+    support_length: 60
+    weight: 0.15
+    enabled: true
+combination:
+  normalize_nonnegative_weights: true
+  physical_water_balance_modified: false
+validation:
+  synthetic_truth: true
+  forward_nse_min: 0.999
+  forward_kge_min: 0.995
+  forward_abs_pbias_max: 0.1
+  detect_future_leakage: true
+benchmark:
+  baselines: [raw_current_input, rolling_sum, exponential_decay, linear_reservoir]
+  temporal_shuffle: false
+  real_data_value_added: not_tested

@@ -29,6 +29,7 @@ _CAPABILITIES = {
     "gee_catalog_intelligence": "partial",
     "research_method_registry": "partial",
     "method_inspiration_lab": "partial",
+    "gamma_lag_features": "partial",
     "flood_susceptibility": "partial",
     "machine_learning": "partial",
     "deep_learning": "unavailable_optional",

@@ -52,7 +52,7 @@ def validate_method_card(card: ResearchMethodCard, source_ids: set[str]) -> list
         errors.append("method_id_and_source_links_required")
     if any(source_id not in source_ids for source_id in card.source_ids):
         errors.append("unknown_source_link")
-    if card.current_status not in METHOD_CARD_STATUSES:
+    if card.current_status not in METHOD_CARD_STATUSES or (card.current_status == "experimental" and card.method_id != "gamma_lag_hydrologic_prior"):
         errors.append("method_card_status_not_admitted")
     if card.value_added_gate not in VALUE_ADDED_GATES or card.value_added_gate != "not_tested":
         errors.append("value_added_not_tested_required")
@@ -62,6 +62,8 @@ def validate_method_card(card: ResearchMethodCard, source_ids: set[str]) -> list
         errors.append("excluded_elements_required")
     if card.method_id == "physics_graph_temporal_residual" and "true_future_forecast_blocked" not in card.causal_constraints:
         errors.append("bidirectional_future_forecast_must_be_blocked")
+    if card.current_status == "experimental" and not card.validation_required:
+        errors.append("experimental_method_requires_validation")
     if card.domain == "water_quality" and get_capability("water_quality")["status"] != "planned":
         errors.append("water_quality_capability_must_remain_planned")
     return errors

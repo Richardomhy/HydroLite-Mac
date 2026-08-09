@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 
-METHOD_CARD_STATUSES = {"method_card_complete", "clean_room_ready"}
+METHOD_CARD_STATUSES = {"method_card_complete", "clean_room_ready", "experimental"}
 VALUE_ADDED_GATES = {"not_tested", "demonstrated", "not_demonstrated", "insufficient_data", "unstable", "leakage_detected"}
 
 
@@ -45,10 +45,16 @@ class ResearchMethodCard:
     current_status: str
     next_milestone: str
     limitations: str
+    implementation_status: str | None = None
+    m3_result: str | None = None
+    synthetic_value_added: str | None = None
+    real_data_value_added: str = "not_tested"
+    output_links: list[str] | None = None
+    validation_required: bool = True
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "ResearchMethodCard":
-        return cls(**{key: payload.get(key) for key in cls.__dataclass_fields__})
+        return cls(**{key: payload[key] for key in cls.__dataclass_fields__ if key in payload})
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

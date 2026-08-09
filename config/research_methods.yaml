@@ -29,9 +29,15 @@ methods:
     recommended_integration_mode: method_inspired_clean_room
     baseline_comparisons: [raw_lag, rolling_rainfall, hydrolite_physical, simple_linear_reservoir]
     value_added_gate: not_tested
-    current_status: method_card_complete
-    next_milestone: M3
-    limitations: Synthetic demonstrations cannot establish real-project value.
+    current_status: experimental
+    implementation_status: causal_feature_mvp
+    m3_result: synthetic_forward_and_benchmark_passed
+    synthetic_value_added: demonstrated
+    real_data_value_added: not_tested
+    output_links: [output/method_inspiration/gamma/reports/gamma_lag_manifest.json]
+    validation_required: true
+    next_milestone: M4
+    limitations: Synthetic demonstrations establish software consistency only and cannot establish real-project value.
   - method_id: trend_graph_multihorizon_water_quality
     display_name: Trend graph multihorizon water quality method
     display_name_zh: 趋势河网多提前期水质方法

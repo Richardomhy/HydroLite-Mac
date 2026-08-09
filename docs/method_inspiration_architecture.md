@@ -29,4 +29,6 @@ HydroLite 的方法实验室只独立实现公开资料中的通用思想。它�
 
 M2 只建立“来源 -> 许可证 -> 方法卡 -> 集成边界 -> 准入状态”的元数据链。它不实现 Gamma、河网、图时序、水质或洪水易发性算法；这些属于后续独立里程碑。
 
+M3 仅在该登记层之上实现 `Gamma Lag Features`：纯数学因果核、合成真值、轻量参数恢复和独立基线。它不引入神经网络、河网图、水质或易发性功能，也不改变 HydroLite 水量账本。
+
 机器可读配置位于 `config/research_sources.yaml` 与 `config/research_methods.yaml`，报告由 `python -m hydrolite research report` 写入已忽略的 `output/research_methods/`。

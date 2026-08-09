@@ -462,7 +462,7 @@ _STAGES: tuple[WorkflowStage, ...] = (
             ("research_source_intake", "研究来源登记", "research_sources.xlsx", "python -m hydrolite research registry", "水文研究方法实验室"),
             ("research_license_review", "来源许可审查", "source_license_assessments.xlsx", "python -m hydrolite research licenses", "水文研究方法实验室"),
             ("method_inspiration_lab", "方法借鉴实验室", "method_inspiration_report_zh.md", "python -m hydrolite research report", "水文研究方法实验室"),
-            ("gamma_lag_features", "Gamma 因果滞后", "gamma_kernels.xlsx", "python -m hydrolite method gamma-demo", "水文研究方法实验室"),
+            ("gamma_lag_features", "Gamma 因果滞后", "reports/gamma_lag_manifest.json", "python -m hydrolite gamma report", "水文研究方法实验室"),
             ("river_graph_features", "河网图特征", "graph_manifest.json", "python -m hydrolite method graph-demo", "水文研究方法实验室"),
             ("graph_temporal_residual", "图时序残差", "graph_feature_summary.xlsx", "python -m hydrolite method graph-residual-demo", "水文研究方法实验室"),
             ("trend_aware_features", "趋势感知特征", "trend_features.csv", "python -m hydrolite method trend-demo", "水文研究方法实验室"),
