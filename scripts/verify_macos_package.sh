@@ -6,6 +6,6 @@ MOUNT="$(mktemp -d /tmp/hydrolite-dmg.XXXXXX)"
 cleanup() { hdiutil detach "$MOUNT" -quiet 2>/dev/null || true; rmdir "$MOUNT" 2>/dev/null || true; }
 trap cleanup EXIT
 hdiutil attach "$DMG" -mountpoint "$MOUNT" -nobrowse -quiet
-test -d "$MOUNT/HydroLite-Studio-0.7.0-arm64.app"
+test -d "$MOUNT/$(basename "${HYDROLITE_APP_PATH:-$ROOT/dist/macos/HydroLite-Studio-0.7.0-arm64.app}")"
 test -L "$MOUNT/Applications"
 echo "package verification passed"

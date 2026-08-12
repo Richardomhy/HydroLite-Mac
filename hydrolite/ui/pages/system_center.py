@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import os
 import shutil
 import subprocess
@@ -22,6 +23,7 @@ from hydrolite.ui.state import load_app_state
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 APP_PATH = PROJECT_ROOT / "dist" / "macos" / "HydroLite-Studio-0.7.0-arm64.app"
+RC_APP_PATH = PROJECT_ROOT / "dist" / "macos" / "rc" / "HydroLite-Studio-0.7.0-RC1-arm64.app"
 
 
 def _desktop_action(command: str) -> dict:
@@ -68,13 +70,16 @@ def render(context) -> None:
     if st.button("保存设置"): settings["runtime_mode"] = mode; st.success(save_settings(settings))
     if st.button("恢复安全默认设置"): st.json(reset_settings())
     st.subheader("macOS 桌面发行")
-    diagnosis = build_desktop_diagnosis(APP_PATH)
+    diagnosis = build_desktop_diagnosis(RC_APP_PATH if RC_APP_PATH.exists() else APP_PATH)
+    readiness_path = PROJECT_ROOT / "output" / "desktop_release" / "desktop_release_readiness.json"
+    readiness = json.loads(readiness_path.read_text(encoding="utf-8")) if readiness_path.exists() else {"status": "not_built"}
     st.json({
         "app_bundle": diagnosis["app_bundle"],
         "architecture": diagnosis["architecture"],
         "signing": diagnosis["signing"],
         "developer_identities": diagnosis["developer_identities"],
         "update": inspect_update_status(PROJECT_ROOT / "packaging" / "macos" / "update_config.example.json"),
+        "release_candidate": readiness,
         "zip": str(PROJECT_ROOT / "dist" / "macos" / "HydroLite-Studio-0.7.0-arm64.zip"),
         "dmg": str(PROJECT_ROOT / "dist" / "macos" / "HydroLite-Studio-0.7.0-arm64.dmg"),
     })
@@ -83,6 +88,7 @@ def render(context) -> None:
         st.info("Streamlit Cloud 仅展示桌面发行状态；构建、签名和打包请在本地 macOS 执行。")
     else:
         actions = {
+            "构建 RC": "rc-build",
             "诊断构建环境": "diagnose", "构建本地 App": "build", "验证 Bundle": "verify",
             "创建 ZIP": "package-zip", "创建 DMG": "package-dmg", "检查签名": "signing-status",
             "公证 dry-run": "notarization-gate", "检查更新配置": "update-status",

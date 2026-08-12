@@ -139,6 +139,8 @@ DerivedData/
 build/
 dist/
 output/macos_packaging/
+output/desktop_release/
+dist/macos/rc/
 *.app
 *.dmg
 HydroLite-Studio-*.zip

@@ -19,11 +19,17 @@ final class BackendManager: ObservableObject {
         applicationSupport.appendingPathComponent("backend_manifest.json")
     }
     private var applicationSupport: URL {
-        FileManager.default.homeDirectoryForCurrentUser
+        if let root = ProcessInfo.processInfo.environment["HYDROLITE_DESKTOP_TEST_ROOT"] {
+            return URL(fileURLWithPath: root, isDirectory: true).appendingPathComponent("HydroLite Studio", isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/HydroLite Studio", isDirectory: true)
     }
     private var logs: URL {
-        FileManager.default.homeDirectoryForCurrentUser
+        if let root = ProcessInfo.processInfo.environment["HYDROLITE_DESKTOP_TEST_ROOT"] {
+            return URL(fileURLWithPath: root, isDirectory: true).appendingPathComponent("HydroLite Studio", isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs/HydroLite Studio", isDirectory: true)
     }
 
@@ -41,7 +47,10 @@ final class BackendManager: ObservableObject {
             }
             let task = Process()
             task.executableURL = executable
-            task.arguments = ["--port", "0", "--runtime-dir", FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hydrolite/runtime").path, "--manifest", manifestURL.path]
+            let runtime = ProcessInfo.processInfo.environment["HYDROLITE_DESKTOP_TEST_ROOT"].map {
+                URL(fileURLWithPath: $0, isDirectory: true).appendingPathComponent("runtime").path
+            } ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hydrolite/runtime").path
+            task.arguments = ["--port", "0", "--runtime-dir", runtime, "--manifest", manifestURL.path, "--parent-pid", String(ProcessInfo.processInfo.processIdentifier)]
             task.currentDirectoryURL = resources
             let output = logs.appendingPathComponent("backend.stdout.log")
             let errors = logs.appendingPathComponent("backend.stderr.log")

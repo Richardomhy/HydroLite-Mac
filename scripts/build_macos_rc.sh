@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+RC_DIR="$ROOT/dist/macos/rc"
+STAGE="$ROOT/build/macos/rc-staging"
+OUT="$ROOT/output/desktop_release"
+PY="${HYDROLITE_BUILD_PYTHON:-$(conda info --base)/envs/hydrolite-build/bin/python}"
+NAME="HydroLite-Studio-0.7.0-RC1-arm64"
+APP="$RC_DIR/$NAME.app"; ZIP="$RC_DIR/$NAME.zip"; DMG="$RC_DIR/$NAME.dmg"
+BUILD="$($PY -c 'from hydrolite.desktop.release_candidate import calculate_next_build_number; print(calculate_next_build_number())')"
+rm -rf "$RC_DIR" "$STAGE" "$OUT"
+mkdir -p "$RC_DIR" "$STAGE" "$OUT"
+export HYDROLITE_BUILD_PYTHON="$PY" HYDROLITE_DESKTOP_OUTPUT="$OUT"
+export HYDROLITE_BACKEND_DIST="$STAGE/backend" HYDROLITE_PYINSTALLER_WORK="$STAGE/pyinstaller"
+export HYDROLITE_SHELL_OUTPUT="$STAGE/shell/HydroLiteStudio" HYDROLITE_BACKEND_DIR="$STAGE/backend/hydrolite-backend"
+export HYDROLITE_APP_PATH="$APP" HYDROLITE_RC_DIR="$RC_DIR" HYDROLITE_ZIP_PATH="$ZIP" HYDROLITE_DMG_PATH="$DMG" HYDROLITE_DMG_STAGE="$STAGE/dmg"
+export HYDROLITE_BUILD_NUMBER="$BUILD" HYDROLITE_SHORT_VERSION="0.7.0" HYDROLITE_RELEASE_CHANNEL="rc"
+bash "$ROOT/scripts/build_macos_backend.sh"
+"$STAGE/backend/hydrolite-backend/hydrolite-backend" --version
+bash "$ROOT/scripts/build_macos_shell.sh"
+bash "$ROOT/scripts/assemble_macos_app.sh"
+bash "$ROOT/scripts/sign_macos_app.sh" ad_hoc
+bash "$ROOT/scripts/package_macos_zip.sh"
+bash "$ROOT/scripts/package_macos_dmg.sh"
+bash "$ROOT/scripts/verify_macos_package.sh" "$DMG"
+"$PY" -m hydrolite.desktop.release_candidate --app "$APP" --dmg "$DMG" --zip "$ZIP" --output "$OUT" --rc-dir "$RC_DIR"
+echo "$APP"

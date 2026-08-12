@@ -3,8 +3,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 . "$ROOT/scripts/macos_xcode_env.sh"
 PKG="$ROOT/desktop/macos/HydroLiteStudio"
-OUT="$ROOT/output/macos_packaging"
-mkdir -p "$OUT" "$ROOT/build/macos/shell"
+OUT="${HYDROLITE_DESKTOP_OUTPUT:-$ROOT/output/macos_packaging}"
+SHELL_OUT="${HYDROLITE_SHELL_OUTPUT:-$ROOT/build/macos/shell/HydroLiteStudio}"
+mkdir -p "$OUT" "$(dirname "$SHELL_OUT")"
 VENDOR="$PKG/.build/vendor"
 SPARKLE="$VENDOR/Sparkle.xcframework"
 if [[ ! -d "$SPARKLE" ]]; then
@@ -17,11 +18,11 @@ if [[ ! -d "$SPARKLE" ]]; then
   unzip -q "$ARCHIVE" "Sparkle.xcframework/*" -d "$VENDOR"
 fi
 swift build --package-path "$PKG" -c release
-cp "$PKG/.build/release/HydroLiteStudio" "$ROOT/build/macos/shell/HydroLiteStudio"
+cp "$PKG/.build/release/HydroLiteStudio" "$SHELL_OUT"
 cat > "$OUT/shell_build_report.md" <<EOF
 # Swift Shell Build Report
 
 - Status: success
 - Swift: \`$(swift --version | head -1)\`
-- Architecture: \`$(file "$ROOT/build/macos/shell/HydroLiteStudio")\`
+- Architecture: \`$(file "$SHELL_OUT")\`
 EOF

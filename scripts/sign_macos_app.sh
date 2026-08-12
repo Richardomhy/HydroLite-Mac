@@ -16,10 +16,13 @@ case "$MODE" in
   unsigned) echo "unsigned requested"; exit 0 ;;
   *) echo "mode must be unsigned, ad_hoc, or developer_id"; exit 64 ;;
 esac
-while IFS= read -r -d '' file; do
+while IFS= read -r file; do
   if file "$file" | grep -q "Mach-O"; then
     codesign --force --sign "$IDENTITY" "${OPTIONS[@]}" "$file"
   fi
-done < <(find "$APP/Contents" -type f -print0)
+done < <(find "$APP/Contents" -type f -print | awk '{ print length, $0 }' | sort -rn | cut -d' ' -f2-)
+while IFS= read -r bundle; do
+  codesign --force --sign "$IDENTITY" "${OPTIONS[@]}" "$bundle"
+done < <(find "$APP/Contents" -type d \( -name '*.framework' -o -name '*.xpc' -o -name '*.appex' \) -print | awk '{ print length, $0 }' | sort -rn | cut -d' ' -f2-)
 codesign --force --sign "$IDENTITY" "${OPTIONS[@]}" --entitlements "$ENT" "$APP"
 bash "$ROOT/scripts/verify_macos_signature.sh" "$APP"

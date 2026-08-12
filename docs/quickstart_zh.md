@@ -29,7 +29,7 @@ https://github.com/Richardomhy/HydroLite-Mac.git
 ## 3. 安装依赖
 
 ```bash
-cd "/Users/minghenyu/Documents/hydrolite 模型"
+cd "<HydroLite-Mac 项目目录>"
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt

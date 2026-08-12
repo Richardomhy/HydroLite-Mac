@@ -778,6 +778,7 @@ def build_parser() -> argparse.ArgumentParser:
         "diagnose", "build-env", "resources", "build-backend", "build-shell", "assemble",
         "build", "launch", "verify", "security-audit", "signing-status", "package-zip",
         "package-dmg", "notarization-gate", "staple", "update-status", "report", "validate",
+        "rc-build",
     ):
         desktop_sub.add_parser(command)
     desktop_sign = desktop_sub.add_parser("sign")

@@ -44,6 +44,7 @@ def run_desktop_command(command: str, mode: str | None = None) -> int:
         "package-zip": "package_macos_zip.sh",
         "package-dmg": "package_macos_dmg.sh",
         "signing-status": "detect_macos_signing.sh",
+        "rc-build": "build_macos_rc.sh",
     }
     if command in scripts:
         return _run(scripts[command])

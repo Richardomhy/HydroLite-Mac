@@ -23,7 +23,11 @@ struct HydroLiteStudioApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About HydroLite Studio") {
-                    NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "HydroLite Studio", .applicationVersion: "0.7.0-dev"])
+                    NSApp.orderFrontStandardAboutPanel(options: [
+                        .applicationName: "HydroLite Studio",
+                        .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.7.0",
+                        .version: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+                    ])
                 }
             }
             CommandMenu("HydroLite") {

@@ -11,16 +11,21 @@ import tempfile
 APP_NAME = "HydroLite Studio"
 
 
+def _test_root() -> Path | None:
+    value = os.getenv("HYDROLITE_DESKTOP_TEST_ROOT")
+    return Path(value).expanduser().resolve() if value else None
+
+
 def get_application_support_dir() -> Path:
-    return Path.home() / "Library" / "Application Support" / APP_NAME
+    return (_test_root() or Path.home() / "Library" / "Application Support") / APP_NAME
 
 
 def get_desktop_log_dir() -> Path:
-    return Path.home() / "Library" / "Logs" / APP_NAME
+    return (_test_root() or Path.home() / "Library" / "Logs") / APP_NAME
 
 
 def get_desktop_cache_dir() -> Path:
-    return Path.home() / "Library" / "Caches" / APP_NAME
+    return (_test_root() or Path.home() / "Library" / "Caches") / APP_NAME
 
 
 def get_desktop_preferences_dir() -> Path:

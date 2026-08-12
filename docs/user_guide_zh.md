@@ -29,7 +29,7 @@ requirements.txt           Python 依赖
 建议在项目根目录创建虚拟环境：
 
 ```bash
-cd "/Users/minghenyu/Documents/hydrolite 模型"
+cd "<HydroLite-Mac 项目目录>"
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
