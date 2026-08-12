@@ -13,6 +13,7 @@ from typing import Any
 from hydrolite.gee.auth import get_gee_status
 from hydrolite.openhydronet.runner import detect_openhydronet_environment
 from hydrolite.project import project_info
+from hydrolite.workspace import read_workspace_project_identity
 
 
 def _project_root() -> Path:
@@ -199,13 +200,14 @@ def load_workbench_context(project_dir: str | Path) -> WorkbenchContext:
     try:
         info = project_info(project_path)
         project = info["project"]
+        identity = read_workspace_project_identity(project, project_path.name)
         return WorkbenchContext(
             project_dir=project_path,
             project_exists=True,
             project_loaded=True,
             project=project,
-            project_name=str(project.get("project_name") or project_path.name),
-            project_id=str(project.get("project_id") or project_path.name),
+            project_name=identity["display_name"],
+            project_id=identity["project_id"] or project_path.name,
             directories=dict(info.get("directories") or {}),
             cases=list(info.get("cases") or []),
             is_cloud=is_streamlit_cloud(),

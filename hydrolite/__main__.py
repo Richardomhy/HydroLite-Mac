@@ -299,6 +299,14 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("healthcheck", help="Run HydroLite Studio release healthcheck.")
     subparsers.add_parser("roadmap", help="Show HydroLite Studio v0.7.0 roadmap document paths.")
 
+    real_project = subparsers.add_parser("real-project", help="Read-only real-project baseline audit.")
+    real_project_sub = real_project.add_subparsers(dest="real_project_command", required=True)
+    real_project_audit = real_project_sub.add_parser("audit", help="Inventory and assess a real project without changing its source files.")
+    real_project_audit.add_argument("source_root")
+    real_project_audit.add_argument("--workspace-dir", default=str(Path.home() / ".hydrolite" / "workspaces" / "real-project-validation"))
+    real_project_audit.add_argument("--output-dir", default=str(ROOT / "output" / "real_project_validation"))
+    real_project_audit.add_argument("--project-name", default="Real Project Validation")
+
     gee_parser = subparsers.add_parser("gee", help="GEE data center commands.")
     gee_subparsers = gee_parser.add_subparsers(dest="gee_command", required=True)
     gee_subparsers.add_parser("diagnose", help="Diagnose local Google Earth Engine availability.")
@@ -951,6 +959,20 @@ def main(argv: list[str] | None = None) -> int:
         print(f"roadmap: {root / 'docs' / 'roadmap_v0.7.0.md'}")
         print(f"milestones: {root / 'docs' / 'milestones_v0.7.0.md'}")
         print(f"issue_backlog: {root / 'docs' / 'issue_backlog_v0.7.0.md'}")
+        return 0
+    if args.command == "real-project":
+        from hydrolite.real_project import run_real_project_audit
+        result = run_real_project_audit(
+            args.source_root, workspace_dir=args.workspace_dir,
+            output_dir=args.output_dir, project_name=args.project_name,
+        )
+        print(json.dumps({
+            "status": result["status"], "output_dir": str(result["output_dir"]),
+            "project_id": result["project"]["project_id"],
+            "project_version_id": result["version"]["project_version_id"],
+            "deliverable_id": result["deliverable"]["deliverable_id"],
+            "delivery_review_status": result["deliverable"]["review_status"],
+        }, indent=2, ensure_ascii=False))
         return 0
     if args.command in {"continuous", "drought"}:
         return run_drought_cli(args)

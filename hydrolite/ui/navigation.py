@@ -19,7 +19,7 @@ class NavigationItem:
 
 NAVIGATION = (
     NavigationItem("home", "首页", "Home", "项目首页", ("教程与 Demo", "Beta 反馈")),
-    NavigationItem("projects", "项目", "Projects", "项目中心", ("项目向导",)),
+    NavigationItem("projects", "项目", "Projects", "项目中心", ("项目向导", "真实项目基线")),
     NavigationItem("scenarios", "场景", "Scenarios", "场景中心", ("全流程工作流", "情景运行")),
     NavigationItem("data", "数据", "Data", "数据中心", ("数据与校验", "数据连接器", "数据模板", "GEE 数据集智能", "GEE 数据中心")),
     NavigationItem("runs", "运行", "Runs", "运行中心", ("任务中心",)),

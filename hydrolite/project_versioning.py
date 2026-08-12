@@ -33,6 +33,7 @@ from hydrolite.runtime_db import (
     update_run_record,
 )
 from hydrolite.runtime_paths import get_project_runtime_dir
+from hydrolite.workspace import read_workspace_project_identity
 
 
 PARAMETER_SOURCE_TYPES = {
@@ -186,13 +187,14 @@ def resolve_project(project: str | Path) -> dict[str, Any]:
     if not config_path.exists():
         raise ValueError(f"project.yaml is missing: {config_path}")
     config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-    project_id = str(config.get("project_id") or f"prj_{uuid.uuid4().hex[:12]}")
+    identity = read_workspace_project_identity(config, root.name)
+    project_id = identity["project_id"] or f"prj_{uuid.uuid4().hex[:12]}"
     if get_project_record(project_id):
         project_id = f"{project_id}_{uuid.uuid4().hex[:6]}"
     created = create_project_record(
         project_id=project_id,
-        name=str(config.get("project_name") or root.name),
-        display_name=str(config.get("display_name") or config.get("project_name") or root.name),
+        name=identity["name"],
+        display_name=identity["display_name"],
         workspace_path=str(root),
         project_yaml=str(config_path),
         status="ready_with_warnings",
@@ -347,7 +349,7 @@ def create_configuration_snapshot(project: str | Path, *, scenario_id: str = "",
 
 def create_project_version(
     project: str | Path, *, created_by: str = "local_user", description: str = "",
-    scenario_ids: Iterable[str] = (), snapshot_mode: str = "referenced",
+    scenario_ids: Iterable[str] = (), snapshot_mode: str = "referenced", status: str = "frozen",
 ) -> dict[str, Any]:
     record = resolve_project(project)
     previous = sorted(list_project_version_records(project_id=record["project_id"]), key=lambda row: int(row.get("version_number") or 0))
@@ -370,7 +372,7 @@ def create_project_version(
         configuration_snapshot_id=config["snapshot_id"],
         software_version=__version__,
         git_commit=_git_commit(),
-        status="frozen",
+        status=status,
         checksum="",
         provenance={"working_copy_independent": True, "snapshot_mode": snapshot_mode},
     ).as_dict()

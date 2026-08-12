@@ -25,6 +25,7 @@ _CAPABILITIES = {
     "conservation": "partial",
     "watershed_accounting": "partial",
     "water_quality": "planned",
+    "water_quality_data_analysis": "available",
     "water_quality_method_lab": "partial",
     "gee_catalog_intelligence": "partial",
     "research_method_registry": "partial",

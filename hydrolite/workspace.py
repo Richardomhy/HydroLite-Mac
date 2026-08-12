@@ -32,6 +32,18 @@ def calculate_file_checksum(path: str | Path) -> str:
     return digest.hexdigest()
 
 
+def read_workspace_project_identity(config: dict[str, Any], default_name: str) -> dict[str, str]:
+    """Read both the current nested workspace schema and legacy flat project keys."""
+    nested = config.get("project") if isinstance(config.get("project"), dict) else {}
+    name = str(nested.get("name") or config.get("project_name") or default_name)
+    project_id = str(nested.get("id") or config.get("project_id") or "")
+    return {
+        "project_id": project_id,
+        "name": name,
+        "display_name": str(nested.get("display_name") or config.get("display_name") or name),
+    }
+
+
 def create_workspace(workspace_dir: str | Path, project_name: str) -> dict[str, Any]:
     root = Path(workspace_dir).expanduser().resolve()
     if "data_raw" in root.parts:

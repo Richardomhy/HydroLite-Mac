@@ -18,6 +18,7 @@ from hydrolite.runtime_db import (
     update_project_record,
 )
 from hydrolite.runtime_paths import get_project_runtime_dir
+from hydrolite.workspace import read_workspace_project_identity
 
 
 def _now() -> str:
@@ -52,14 +53,17 @@ def register_workspace_as_project(workspace_dir: str | Path) -> dict:
     if not metadata["project_yaml"].exists() or not metadata["manifest_path"].exists():
         raise ValueError("Workspace requires project.yaml and workspace_manifest.json")
     config, manifest = metadata["config"], metadata["manifest"]
-    project_id = f"prj_{uuid.uuid4().hex[:12]}"
+    identity = read_workspace_project_identity(config, root.name)
+    project_id = identity["project_id"] or f"prj_{uuid.uuid4().hex[:12]}"
+    if get_project_record(project_id):
+        project_id = f"{project_id}_{uuid.uuid4().hex[:6]}"
     datasets = manifest.get("datasets", [])
     qualities = {row.get("quality_status") for row in datasets if row.get("quality_status")}
     data_quality = "ready" if datasets and qualities <= {"ready", "ready_with_warnings"} else ("needs_data" if not datasets else "needs_repair")
     record = create_project_record(
         project_id=project_id,
-        name=str(config.get("project_name") or root.name),
-        display_name=str(config.get("display_name") or config.get("project_name") or root.name),
+        name=identity["name"],
+        display_name=identity["display_name"],
         workspace_path=str(root),
         project_yaml=str(metadata["project_yaml"]),
         status="ready" if data_quality == "ready" else data_quality,

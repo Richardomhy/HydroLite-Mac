@@ -67,6 +67,17 @@ _STAGES: tuple[WorkflowStage, ...] = (
         ["归档只修改注册记录，不删除用户工作区。"], ["application_runtime"], "项目注册、归档和元数据快照 MVP。",
     ),
     WorkflowStage(
+        "real_project_baseline", "真实项目基线审计", "Real project baseline audit",
+        "只读盘点真实资料，审计数据质量、能力就绪度、真实证据和产品摩擦。",
+        "Inventory real-project data read-only and audit quality, readiness, real evidence, and product friction.",
+        PARTIAL, ["external project source", "project workspace"],
+        ["data inventory", "readiness matrix", "real validation summary", "reviewed baseline deliverable"],
+        "python -m hydrolite real-project audit <source_root>", "真实项目基线",
+        ["不复制或修改真实资料；只运行数据和能力同时就绪的分析。"],
+        ["project_operations", "data_center", "artifact_management"],
+        "M8A 只读闭环；正式模型验证和情景交付留待 M8B。",
+    ),
+    WorkflowStage(
         "workspace", "真实项目工作区", "Real project workspace",
         "创建 raw 只读、standardized/derived 分离且带 manifest 的项目工作区。",
         "Create a project workspace with immutable raw files, separated standardized/derived data, and a manifest.",

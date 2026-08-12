@@ -37,6 +37,7 @@ _EVIDENCE = {
     "flood_susceptibility": ("synthetic_demo", ("Logistic selected; complex-model value-added not demonstrated; susceptibility is not risk.",)),
     "flood_susceptibility_xai": ("synthetic_demo", ("XAI importance stability is unstable; RL suitability is rl_not_justified; real data not tested.",)),
     "water_quality": ("framework_ready", ("Production water-quality simulation remains planned.",)),
+    "water_quality_data_analysis": ("ready_with_warnings", ("Observation analysis is available; it is not a pollutant process simulation.",)),
     "flood_forecast": ("ready_with_warnings", ("Partial capability; not a production warning service.",)),
     "drought_forecast": ("ready_with_warnings", ("Partial capability; validate forcing and horizon skill.",)),
     "hydrology": ("production_ready", ("Project-specific data validation and calibration remain required.",)),

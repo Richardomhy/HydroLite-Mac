@@ -10,7 +10,9 @@ test -x "$SHELL"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/backend" "$APP/Contents/Frameworks"
 cp "$SHELL" "$APP/Contents/MacOS/HydroLite Studio"
-strip -S "$APP/Contents/MacOS/HydroLite Studio"
+if [[ "${HYDROLITE_SKIP_STRIP:-0}" != "1" ]]; then
+  strip -S "$APP/Contents/MacOS/HydroLite Studio"
+fi
 cp -R "$BACKEND" "$APP/Contents/Resources/backend/"
 cp "$ROOT/desktop/macos/HydroLiteStudio/Resources/Info.plist" "$APP/Contents/Info.plist"
 SPARKLE="$(find "$PKG/.build/vendor/Sparkle.xcframework" -type d -name Sparkle.framework -print -quit 2>/dev/null || true)"
