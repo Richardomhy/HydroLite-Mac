@@ -47,6 +47,79 @@ def test_observed_module_imports_and_negative_validation():
     assert "observed_streamflow_non_negative" in set(checks[checks["status"] == "failed"]["check_name"])
 
 
+def test_observed_config_defaults_to_demo_and_accepts_real_data_flag(tmp_path):
+    from hydrolite.config import load_case
+
+    base = yaml.safe_load(Path("cases/demo_gee.yaml").read_text(encoding="utf-8"))
+    case = tmp_path / "case.yaml"
+    case.write_text(yaml.safe_dump(base, sort_keys=False), encoding="utf-8")
+    assert load_case(case).observed.synthetic_demo is True
+
+    base["observed"]["synthetic_demo"] = False
+    case.write_text(yaml.safe_dump(base, sort_keys=False), encoding="utf-8")
+    assert load_case(case).observed.synthetic_demo is False
+
+
+def test_model_performance_records_real_observation_provenance():
+    from hydrolite.observed import build_model_performance
+
+    observed = pd.DataFrame(
+        {
+            "datetime": pd.to_datetime(["2024-06-01", "2024-06-02"]),
+            "gauge_id": ["G1", "G1"],
+            "observed_streamflow_m3s": [1.0, 2.0],
+        }
+    )
+    simulated = pd.DataFrame(
+        {
+            "time": pd.to_datetime(["2024-06-01", "2024-06-02"]),
+            "outflow_cms": [1.1, 1.9],
+        }
+    )
+    metrics, *_ = build_model_performance(
+        "real_case",
+        observed_file="observed.csv",
+        simulated_file="result_flow.csv",
+        observed_df=observed,
+        simulated_df=simulated,
+        simulated_flow_col="outflow_cms",
+        synthetic_demo=False,
+    )
+    assert bool(metrics.loc[0, "synthetic_demo_only"]) is False
+
+
+def test_real_observed_run_report_is_not_labeled_synthetic(tmp_path):
+    from hydrolite.runner import run_case
+
+    project_root = Path.cwd().resolve()
+    output_dir = tmp_path / "output"
+    case_data = {
+        "name": "real_observed_case",
+        "model": {"time_step_hours": 1.0},
+        "inputs": {
+            "directory": str(project_root),
+            "rainfall": "data_demo/rainfall.csv",
+            "subcatchments": "data_demo/subcatchments.csv",
+            "reaches": "data_demo/reaches.csv",
+        },
+        "outputs": {"directory": str(output_dir)},
+        "observed": {
+            "enabled": True,
+            "observed_streamflow_csv": str(project_root / "data_demo/observed/demo_observed_streamflow.csv"),
+            "synthetic_demo": False,
+        },
+    }
+    case = tmp_path / "real_case.yaml"
+    case.write_text(yaml.safe_dump(case_data, sort_keys=False), encoding="utf-8")
+
+    outputs = run_case(case, skip_validate=True)
+    report = outputs.model_performance_report_md.read_text(encoding="utf-8")
+    assert "configured by the case as non-synthetic user-provided observations" in report
+    assert "synthetic/demo only" not in report
+    metrics = pd.read_excel(outputs.model_performance_xlsx, sheet_name="metrics")
+    assert bool(metrics.loc[0, "synthetic_demo_only"]) is False
+
+
 def test_negative_observed_flow_makes_validate_fail(tmp_path):
     before = _snapshot_data_raw()
     observed = tmp_path / "bad_observed.csv"

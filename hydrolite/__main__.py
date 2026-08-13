@@ -299,13 +299,26 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("healthcheck", help="Run HydroLite Studio release healthcheck.")
     subparsers.add_parser("roadmap", help="Show HydroLite Studio v0.7.0 roadmap document paths.")
 
-    real_project = subparsers.add_parser("real-project", help="Read-only real-project baseline audit.")
+    real_project = subparsers.add_parser("real-project", help="Real-project audit and diagnostic modeling workflows.")
     real_project_sub = real_project.add_subparsers(dest="real_project_command", required=True)
     real_project_audit = real_project_sub.add_parser("audit", help="Inventory and assess a real project without changing its source files.")
     real_project_audit.add_argument("source_root")
     real_project_audit.add_argument("--workspace-dir", default=str(Path.home() / ".hydrolite" / "workspaces" / "real-project-validation"))
     real_project_audit.add_argument("--output-dir", default=str(ROOT / "output" / "real_project_validation"))
     real_project_audit.add_argument("--project-name", default="Real Project Validation")
+    real_project_model = real_project_sub.add_parser(
+        "model", help="Run the governed M8B real-project HydroLite diagnostic workflow."
+    )
+    real_project_model.add_argument("source_root")
+    real_project_model.add_argument(
+        "--workspace-dir",
+        default=str(Path.home() / ".hydrolite" / "workspaces" / "gaoqiao-river-basin-real-validation"),
+    )
+    real_project_model.add_argument(
+        "--output-dir",
+        default=str(ROOT / "output" / "real_project_validation"),
+        help="M8A baseline output root; M8B outputs are written below its m8b/ directory.",
+    )
 
     gee_parser = subparsers.add_parser("gee", help="GEE data center commands.")
     gee_subparsers = gee_parser.add_subparsers(dest="gee_command", required=True)
@@ -961,17 +974,28 @@ def main(argv: list[str] | None = None) -> int:
         print(f"issue_backlog: {root / 'docs' / 'issue_backlog_v0.7.0.md'}")
         return 0
     if args.command == "real-project":
-        from hydrolite.real_project import run_real_project_audit
-        result = run_real_project_audit(
-            args.source_root, workspace_dir=args.workspace_dir,
-            output_dir=args.output_dir, project_name=args.project_name,
-        )
+        if args.real_project_command == "audit":
+            from hydrolite.real_project import run_real_project_audit
+            result = run_real_project_audit(
+                args.source_root, workspace_dir=args.workspace_dir,
+                output_dir=args.output_dir, project_name=args.project_name,
+            )
+        else:
+            from hydrolite.real_project_model import run_real_project_model_validation
+            result = run_real_project_model_validation(
+                args.source_root, workspace_dir=args.workspace_dir,
+                baseline_output_dir=args.output_dir,
+            )
         print(json.dumps({
             "status": result["status"], "output_dir": str(result["output_dir"]),
-            "project_id": result["project"]["project_id"],
             "project_version_id": result["version"]["project_version_id"],
             "deliverable_id": result["deliverable"]["deliverable_id"],
             "delivery_review_status": result["deliverable"]["review_status"],
+            **({"project_id": result["project"]["project_id"]} if "project" in result else {
+                "run_id": result["run"]["run_id"],
+                "scientific_status": "real_data_diagnostic",
+                "water_environment_hydrology_gate": result["gate"],
+            }),
         }, indent=2, ensure_ascii=False))
         return 0
     if args.command in {"continuous", "drought"}:

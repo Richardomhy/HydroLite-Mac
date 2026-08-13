@@ -37,7 +37,8 @@ from hydrolite.workspace import read_workspace_project_identity
 
 
 PARAMETER_SOURCE_TYPES = {
-    "default", "literature", "calibrated", "user_defined", "derived", "inherited", "unknown",
+    "default", "literature", "calibrated", "user_defined", "derived", "GIS_derived",
+    "observed", "inherited", "unknown",
 }
 SNAPSHOT_MODES = {"metadata_only", "referenced", "portable"}
 

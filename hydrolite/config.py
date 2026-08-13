@@ -25,6 +25,7 @@ class ObservedConfig:
     time_column: str = "datetime"
     flow_column: str = "observed_streamflow_m3s"
     gauge_id_column: str = "gauge_id"
+    synthetic_demo: bool = True
 
 
 @dataclass(frozen=True)
@@ -119,6 +120,7 @@ def load_case(path: str | Path) -> CaseConfig:
         time_column=str(observed.get("time_column", "datetime")),
         flow_column=str(observed.get("flow_column", "observed_streamflow_m3s")),
         gauge_id_column=str(observed.get("gauge_id_column", "gauge_id")),
+        synthetic_demo=bool(observed.get("synthetic_demo", True)),
     )
 
     return CaseConfig(

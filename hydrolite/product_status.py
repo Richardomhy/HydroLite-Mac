@@ -8,7 +8,10 @@ from typing import Any
 from hydrolite.capability_registry import get_capability, list_capabilities
 
 
-VALIDATION_LEVELS = ("synthetic_demo", "framework_ready", "ready_with_warnings", "real_data_tested", "independently_validated", "production_ready")
+VALIDATION_LEVELS = (
+    "synthetic_demo", "framework_ready", "ready_with_warnings", "real_data_diagnostic",
+    "real_data_tested", "independently_validated", "production_ready",
+)
 
 
 @dataclass(frozen=True, slots=True)

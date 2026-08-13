@@ -140,6 +140,61 @@ def test_real_project_ui_follows_workspace_pointer(tmp_path):
     assert set(closure["状态"]) == {"passed", "warning"}
 
 
+def test_real_project_ui_prefers_m8b_actual_status(tmp_path):
+    from hydrolite.ui.pages.real_project_baseline import (
+        build_real_project_summary, build_ui_closure, load_real_project_baseline,
+    )
+    from hydrolite.ui.pages.results_center import _real_m8b_payload
+    from hydrolite.ui.state import WorkbenchContext
+
+    output = tmp_path / "audit-output"
+    workspace = tmp_path / "workspace"
+    (workspace / "reports").mkdir(parents=True)
+    (workspace / "reports" / "real_project_baseline_pointer.json").write_text(
+        json.dumps({"output_dir": str(output)}), encoding="utf-8"
+    )
+    for relative in (
+        "m8b/basin/basin_summary.xlsx",
+        "m8b/inputs/parameter_provenance.xlsx",
+        "m8b/events/event_readiness.xlsx",
+        "m8b/validation/validation_summary.xlsx",
+        "m8b/scenarios/scenario_comparison.xlsx",
+    ):
+        path = output / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame({"status": ["passed"]}).to_excel(path, index=False)
+    manifest = {
+        "real_project": True,
+        "project_version": "pv_version_2",
+        "actual_hydrolite_run_ids": ["run_actual"],
+        "scientific_status": "real_data_diagnostic",
+        "scenario_type": "what_if_sensitivity_scenario",
+        "delivery_review_status": "reviewed",
+        "integrity_status": "passed",
+        "warnings": ["single_event_diagnostic"],
+    }
+    manifest_path = output / "m8b/reports/m8b_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    context = WorkbenchContext(
+        workspace, True, True, {"project": {"real_project": True}}, "Project", "project", {}, [],
+        False, False, "", False, "", {}, {}, "",
+    )
+
+    tables = load_real_project_baseline(output)
+    summary = build_real_project_summary(manifest)
+    closure = build_ui_closure(context, output, tables).set_index("环节")["状态"]
+    payload = _real_m8b_payload(context)
+    assert {"流域与拓扑", "真实运行验证", "情景对比"} <= tables.keys()
+    assert summary == {
+        "Project Version": "pv_version_2", "HydroLite Real Run": "run_actual",
+        "Scientific Validation": "real_data_diagnostic", "Scenario": "what_if_sensitivity_scenario",
+        "Delivery": "reviewed",
+    }
+    assert closure["Run"] == "passed" and closure["Results"] == "warning" and closure["Delivery"] == "passed"
+    assert payload and payload[1]["Scientific Validation"] == "real_data_diagnostic"
+
+
 def test_build_and_run_entrypoints_exist():
     root = Path(__file__).resolve().parents[1]
     script = root / "script" / "build_and_run.sh"

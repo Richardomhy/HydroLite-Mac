@@ -142,6 +142,7 @@ def build_model_performance(
     observed_df: pd.DataFrame,
     simulated_df: pd.DataFrame,
     simulated_flow_col: str,
+    synthetic_demo: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     aligned = align_observed_and_simulated(observed_df, simulated_df, simulated_flow_col=simulated_flow_col)
     checks, observed_warnings = validate_observed_streamflow(observed_df)
@@ -157,7 +158,7 @@ def build_model_performance(
         **metrics,
         "observed_file": str(observed_file),
         "simulated_file": str(simulated_file),
-        "synthetic_demo_only": True,
+        "synthetic_demo_only": bool(synthetic_demo),
     }
     warnings = pd.concat([observed_warnings, pd.DataFrame(metric_warnings)], ignore_index=True)
     return pd.DataFrame([metrics_row]), aligned, checks, warnings

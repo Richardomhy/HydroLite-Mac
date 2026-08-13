@@ -78,6 +78,17 @@ _STAGES: tuple[WorkflowStage, ...] = (
         "M8A 只读闭环；正式模型验证和情景交付留待 M8B。",
     ),
     WorkflowStage(
+        "real_project_model_validation", "真实项目水文诊断", "Real-project hydrology diagnostic",
+        "复用 M8A 治理工作区，执行真实 HydroLite Run、水量平衡、事件诊断和 what-if 情景对比。",
+        "Reuse the governed M8A workspace for an actual HydroLite run, water balance, event diagnostics, and what-if scenarios.",
+        PARTIAL, ["real_project_baseline", "reviewed basin inputs", "rainfall and observed flow"],
+        ["actual run manifest", "event metrics", "scenario comparison", "reviewed diagnostic deliverable"],
+        "python -m hydrolite real-project model <source_root>", "真实项目基线",
+        ["科学状态仅为 real_data_diagnostic；情景仅为 what-if；不修改外部原始资料。"],
+        ["real_project_baseline", "hydrolite_simulation", "artifact_management"],
+        "M8B 真实项目诊断闭环；不构成独立事件验证，不实施 M9 水质过程模型。",
+    ),
+    WorkflowStage(
         "workspace", "真实项目工作区", "Real project workspace",
         "创建 raw 只读、standardized/derived 分离且带 manifest 的项目工作区。",
         "Create a project workspace with immutable raw files, separated standardized/derived data, and a manifest.",

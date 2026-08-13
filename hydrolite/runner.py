@@ -163,6 +163,7 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None, skip_v
                 observed_df=observed_df,
                 simulated_df=result,
                 simulated_flow_col=str(simulated_flow_col),
+                synthetic_demo=config.observed.synthetic_demo,
             )
             observed_vs_simulated_csv = config.output_dir / "observed_vs_simulated.csv"
             model_performance_xlsx = config.output_dir / "model_performance.xlsx"
@@ -180,6 +181,23 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None, skip_v
             )
             plot_observed_vs_simulated(aligned, observed_vs_simulated_png)
             n_pairs = int(metrics_df.loc[0, "n_pairs"]) if not metrics_df.empty else 0
+            if config.observed.synthetic_demo:
+                observed_data_note = "Observed data note: synthetic/demo only, not real station observation."
+                limitations = [
+                    "This demo observed streamflow is synthetic and exists only to exercise the evaluation workflow.",
+                    "Real calibration, evaluation, or OpenHydroNet training requires true gauge observations and QA flags.",
+                ]
+            else:
+                observed_data_note = (
+                    "Observed data provenance: configured by the case as non-synthetic user-provided observations; "
+                    "HydroLite does not independently verify the station source."
+                )
+                limitations = [
+                    "Confirm station provenance, rating-curve quality, timestamps, units, gauge-to-outlet mapping, "
+                    "missing-data handling, and QA flags before using these metrics for formal validation.",
+                    "The non-synthetic designation is supplied by the case configuration and is not an independent "
+                    "certification by HydroLite.",
+                ]
             model_performance_report_md.write_text(
                 "\n".join(
                     [
@@ -187,7 +205,7 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None, skip_v
                         "",
                         f"Case: `{config.name}`",
                         f"Observed data source: `{config.observed.observed_streamflow_csv}`",
-                        "Observed data note: synthetic/demo only, not real station observation.",
+                        observed_data_note,
                         f"Simulated data source: `{outputs.result_flow_csv}`",
                         f"Aligned sample count: `{n_pairs}`",
                         f"Time range: `{aligned['datetime'].min() if not aligned.empty else ''}` to `{aligned['datetime'].max() if not aligned.empty else ''}`",
@@ -207,8 +225,7 @@ def run_case(case_file: str | Path, output_dir: str | Path | None = None, skip_v
                         "",
                         "## Limitations",
                         "",
-                        "This demo observed streamflow is synthetic and exists only to exercise the evaluation workflow.",
-                        "Real calibration, evaluation, or OpenHydroNet training requires true gauge observations and QA flags.",
+                        *limitations,
                     ]
                 )
                 + "\n",
