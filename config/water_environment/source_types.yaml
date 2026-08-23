@@ -1,0 +1,12 @@
+schema_version: 1
+source_types:
+  point_or_quasi_point: [industrial, municipal_domestic, rural_domestic, wastewater_treatment, direct_outfall]
+  agricultural_diffuse: [crop_agriculture, orchard, fertilizer_application, pesticide_related_context]
+  livestock: [pig, cattle, poultry, other_livestock]
+  aquaculture: [pond_aquaculture, lake_aquaculture, intensive_aquaculture]
+  runoff_related: [urban_runoff, rural_runoff]
+  other: [solid_waste_related, unknown, user_defined]
+classification_gate:
+  high: accepted
+  medium: manual_confirmation_required
+  low: unresolved

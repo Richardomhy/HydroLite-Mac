@@ -1,0 +1,10 @@
+field_name,description_zh,canonical_field,unit,required,example
+factor_id,系数唯一编号,factor_id,,true,factor_001
+source_type,适用污染源类型,source_type,,true,rural_domestic
+pollutant,污染物,pollutant,,true,TN
+value,系数值,value,declared_by_units,true,
+numerator_unit,分子单位,numerator_unit,,true,kg/year
+denominator_unit,分母单位,denominator_unit,,true,person
+source_reference,系数来源,source_reference,,true,
+source_type_reference,来源类型,source_type_reference,,true,local_official
+approved_for_real_project,是否经项目批准,approved_for_real_project,boolean,true,false

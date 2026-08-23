@@ -1,0 +1,12 @@
+schema_version: 1
+canonical_load_unit: kg/day
+pollutants:
+  - pollutant_id: CODMn
+    display_name: 高锰酸盐指数
+  - pollutant_id: NH3-N
+    display_name: 氨氮
+  - pollutant_id: TN
+    display_name: 总氮
+  - pollutant_id: TP
+    display_name: 总磷
+scope_note: M9A only accounts for generated, removed, and net-emission load.

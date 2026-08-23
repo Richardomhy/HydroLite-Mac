@@ -1,0 +1,8 @@
+field_name,description_zh,canonical_field,unit,required,example
+treatment_id,处理记录编号,treatment_id,,true,treatment_001
+source_id,污染源编号,source_id,,true,source_001
+pollutant,污染物,pollutant,,true,TN
+removal_fraction,去除比例,removal_fraction,fraction,true,0.5
+treatment_type,处理方式,treatment_type,,true,example_process
+actual_operation_factor,实际运行系数,actual_operation_factor,fraction,false,0.8
+evidence,处理效果证据,evidence,,true,

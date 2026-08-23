@@ -39,6 +39,12 @@ def render(context) -> None:
     state = load_app_state(st.session_state)
     st.header("成果中心" if state.language == "中文" else "Results Center")
     st.caption("先看结论、可信度和限制，再查看完整模型文件。")
+    m9a_manifest = PROJECT_ROOT / "output/water_environment/m9a/reports/m9a_manifest.json"
+    if m9a_manifest.is_file():
+        m9a = json.loads(m9a_manifest.read_text(encoding="utf-8"))
+        with st.expander("Water Environment Source Accounting · M9A", expanded=False):
+            st.warning("仅包含污染源清单和产生/净排放负荷账本；污染物输移和河流水质过程未实现。")
+            st.json({"scientific_status": m9a.get("scientific_status"), "water_quality": m9a.get("water_quality"), "pollutant_delivery_model_gate": m9a.get("pollutant_delivery_model_gate"), "coverage": m9a.get("coverage")})
     real_payload = _real_m8b_payload(context)
     if real_payload:
         manifest, summary = real_payload

@@ -1,0 +1,32 @@
+schema_version: 1
+allow_example_factors: false
+notes: Reference schema only. These records are not approved for any real project.
+factors:
+  - &example
+    factor_id: example_direct_outfall_codmn
+    source_type: direct_outfall
+    pollutant: CODMn
+    value: null
+    numerator_unit: kg/day
+    denominator_unit: m3/day
+    temporal_basis: daily_average
+    region_applicability: replace_for_project
+    source_reference: replace_with_project_approved_reference
+    source_type_reference: unknown
+    confidence: unknown
+    uncertainty_low: null
+    uncertainty_high: null
+    valid_from: ""
+    valid_to: ""
+    notes: Schema example only; no numeric factor is supplied.
+    approved_for_real_project: false
+    example: true
+  - <<: *example
+    factor_id: example_direct_outfall_nh3n
+    pollutant: NH3-N
+  - <<: *example
+    factor_id: example_direct_outfall_tn
+    pollutant: TN
+  - <<: *example
+    factor_id: example_direct_outfall_tp
+    pollutant: TP

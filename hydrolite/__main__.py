@@ -314,6 +314,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--workspace-dir",
         default=str(Path.home() / ".hydrolite" / "workspaces" / "gaoqiao-river-basin-real-validation"),
     )
+
+    water_environment = subparsers.add_parser("water-environment", help="M9A pollution-source inventory and source-load accounting.")
+    water_environment_sub = water_environment.add_subparsers(dest="water_environment_command", required=True)
+    for command in ("status", "inventory", "factors", "ledger", "validate", "report"):
+        child = water_environment_sub.add_parser(command)
+        child.add_argument("--source-root", default=None, help="Read-only real-project source root; required only for the first inventory run.")
+        child.add_argument("--workspace-dir", default=str(Path.home() / ".hydrolite" / "workspaces" / "gaoqiao-river-basin-real-validation"))
+        child.add_argument("--output-dir", default=str(ROOT / "output" / "water_environment" / "m9a"))
     real_project_model.add_argument(
         "--output-dir",
         default=str(ROOT / "output" / "real_project_validation"),
@@ -998,6 +1006,14 @@ def main(argv: list[str] | None = None) -> int:
             }),
         }, indent=2, ensure_ascii=False))
         return 0
+    if args.command == "water-environment":
+        from hydrolite.water_environment import run_water_environment_command
+        result = run_water_environment_command(
+            args.water_environment_command, source_root=args.source_root,
+            workspace_dir=args.workspace_dir, output_dir=args.output_dir,
+        )
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+        return 0 if result.get("status") not in {"failed", "output_missing"} else 1
     if args.command in {"continuous", "drought"}:
         return run_drought_cli(args)
     if args.command == "research":

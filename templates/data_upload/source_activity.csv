@@ -1,0 +1,9 @@
+field_name,description_zh,canonical_field,unit,required,example
+source_id,污染源编号,source_id,,true,source_001
+activity_type,活动量类型,activity_type,,true,wastewater_discharge
+value,活动量,value,declared_by_unit,true,100
+unit,活动量单位,unit,,true,m3/day
+start_date,起始日期,start_date,date,true,2026-01-01
+end_date,结束日期,end_date,date,true,2026-12-31
+observed_or_estimated,实测或估算,observed_or_estimated,,true,observed
+provenance,数据来源说明,provenance,,true,user_upload

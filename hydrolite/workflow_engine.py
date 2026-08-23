@@ -460,6 +460,24 @@ _STAGES: tuple[WorkflowStage, ...] = (
         ["docs", "report export planned"],
         "已有中文文档，后续整理成可交付手册。",
     ),
+    WorkflowStage(
+        "pollution_source_inventory", "污染源清单", "Pollution source inventory",
+        "只从明确证据建立污染源对象并进行保守空间归属。",
+        "Build evidenced source objects with conservative spatial attribution.",
+        PARTIAL, ["pollution_source_inventory"], ["pollution_source_inventory.xlsx", "source_inventory.geojson"],
+        "python -m hydrolite water-environment inventory", "数据中心",
+        ["不从文件名、面积或企业名称猜测污染源负荷。"], ["data_center"],
+        "M9A foundation; real-project sources require evidence and provenance.",
+    ),
+    WorkflowStage(
+        "source_load_accounting", "污染源负荷账本", "Source load accounting",
+        "核算产生、削减和净排放负荷，并保持证据链与守恒门禁。",
+        "Account for generated, removed, and net-emission load with evidence and balance gates.",
+        PARTIAL, ["pollution_source_inventory", "source_activity", "emission_factor"], ["source_load_ledger.xlsx", "source_load_balance.xlsx"],
+        "python -m hydrolite water-environment ledger", "成果中心",
+        ["净排放负荷不等于污染物入水体输入；不实现输移或水质过程。"], ["pollution_source_inventory", "unit_system"],
+        "M9A source-accounting only; water_quality remains planned.",
+    ),
     *tuple(
         WorkflowStage(stage_id, title, title, "连续模型验证门禁。", "Continuous-model validation gate.", PARTIAL, ["continuous outputs"], [artifact], command, "连续模型验证", ["水量守恒不等于过程验证。"], ["continuous_hydrology"], "诊断 MVP；不启用水质模型。")
         for stage_id, title, artifact, command in (

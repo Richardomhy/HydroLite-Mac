@@ -57,6 +57,7 @@ from hydrolite.ui.pages import (
     system_center,
     task_center,
     water_quality_lab,
+    water_environment_source_accounting,
     watershed_delineation,
     workflow_engine,
 )
@@ -117,6 +118,7 @@ PAGES = {
     "GEE 数据集智能": gee_dataset_intelligence.render,
     "水文研究方法实验室": research_methods_lab.render,
     "水质方法实验室": water_quality_lab.render,
+    "水环境源负荷核算": water_environment_source_accounting.render,
     "QGIS Bridge": qgis_bridge.render,
     "流域划分": watershed_delineation.render,
     "HEC-HMS": hec_hms.render,

@@ -1,2 +1,10 @@
-source_id,source_type,longitude,latitude,load_kg_d,load_unit,synthetic_demo
-P1,synthetic_point,113.96,22.55,2.5,kg/d,true
+field_name,description_zh,canonical_field,unit,required,example
+source_id,污染源唯一编号,source_id,,true,source_001
+source_type,污染源类型,source_type,,true,direct_outfall
+name,污染源名称,name,,true,匿名排口
+longitude,经度,longitude,degree,false,113.9
+latitude,纬度,latitude,degree,false,22.5
+administrative_unit,行政区,administrative_unit,,false,示例单元
+subbasin_id,子流域编号,subbasin_id,,false,SB01
+reach_id,河段编号,reach_id,,false,R01
+provenance,数据来源说明,provenance,,true,user_upload

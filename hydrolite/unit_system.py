@@ -11,13 +11,17 @@ _UNITS = {
     "mm": ("length", 0.001, 0.0), "cm": ("length", 0.01, 0.0), "m": ("length", 1.0, 0.0), "km": ("length", 1000.0, 0.0), "ft": ("length", 0.3048, 0.0),
     "m2": ("area", 1.0, 0.0), "ha": ("area", 10000.0, 0.0), "km2": ("area", 1_000_000.0, 0.0),
     "m3": ("volume", 1.0, 0.0), "万m3": ("volume", 10_000.0, 0.0), "l": ("volume", 0.001, 0.0), "ml": ("volume", 1000.0, 0.0),
-    "m3/s": ("flow", 1.0, 0.0), "l/s": ("flow", 0.001, 0.0), "m3/d": ("flow", 1 / 86400, 0.0), "cfs": ("flow", 0.028316846592, 0.0),
+    "m3/s": ("flow", 1.0, 0.0), "l/s": ("flow", 0.001, 0.0), "m3/d": ("flow", 1 / 86400, 0.0), "m3/day": ("flow", 1 / 86400, 0.0), "cfs": ("flow", 0.028316846592, 0.0),
     "inch": ("length", 0.0254, 0.0),
     "mg/l": ("concentration", 1.0, 0.0), "ug/l": ("concentration", 0.001, 0.0), "g/l": ("concentration", 1000.0, 0.0),
-    "kg/d": ("load", 1.0, 0.0), "t/yr": ("load", 1000 / 365.25, 0.0), "kg/event": ("event_load", 1.0, 0.0),
+    "kg/d": ("load", 1.0, 0.0), "kg/day": ("load", 1.0, 0.0),
+    "kg/month": ("load", 1 / 30.4375, 0.0), "kg/year": ("load", 1 / 365.25, 0.0),
+    "t/yr": ("load", 1000 / 365.25, 0.0), "t/year": ("load", 1000 / 365.25, 0.0),
+    "kg/event": ("event_load", 1.0, 0.0),
+    "person": ("person_count", 1.0, 0.0), "head": ("animal_count", 1.0, 0.0),
     "c": ("temperature", 1.0, 0.0), "k": ("temperature", 1.0, -273.15),
 }
-_ALIASES = {"m²": "m2", "km²": "km2", "m³": "m3", "万 m³": "万m3", "m³/s": "m3/s", "m³/d": "m3/d", "l/s": "l/s", "μg/l": "ug/l", "°c": "c", "cms": "m3/s"}
+_ALIASES = {"m²": "m2", "km²": "km2", "m³": "m3", "万 m³": "万m3", "m³/s": "m3/s", "m³/d": "m3/d", "m3/day": "m3/d", "l/s": "l/s", "μg/l": "ug/l", "°c": "c", "cms": "m3/s", "kg/d": "kg/day", "t/yr": "t/year", "t/a": "t/year"}
 
 
 def normalize_unit_name(unit: str) -> str:
