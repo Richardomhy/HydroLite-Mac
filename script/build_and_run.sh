@@ -10,9 +10,28 @@ APP="$ROOT/build/macos/debug/HydroLite Studio.app"
 SHELL_OUT="$ROOT/build/macos/shell-debug/HydroLiteStudio"
 BACKEND="$ROOT/build/macos/backend/hydrolite-backend"
 
+wait_for_shutdown() {
+  for _ in {1..10}; do
+    if ! pgrep -x "$APP_NAME" >/dev/null && ! pgrep -x hydrolite-backend >/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+  pkill -KILL -x "$APP_NAME" >/dev/null 2>&1 || true
+  pkill -KILL -x hydrolite-backend >/dev/null 2>&1 || true
+  for _ in {1..5}; do
+    if ! pgrep -x "$APP_NAME" >/dev/null && ! pgrep -x hydrolite-backend >/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "Previous HydroLite Studio process did not exit" >&2
+  return 1
+}
+
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 pkill -x hydrolite-backend >/dev/null 2>&1 || true
-sleep 1
+wait_for_shutdown
 . "$ROOT/scripts/macos_xcode_env.sh"
 
 if [[ ! -x "$BACKEND/hydrolite-backend" ]] || find "$ROOT/hydrolite" "$ROOT/streamlit_app.py" "$ROOT/packaging/macos" -type f -newer "$BACKEND/hydrolite-backend" -print -quit | grep -q .; then

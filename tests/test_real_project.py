@@ -200,4 +200,6 @@ def test_build_and_run_entrypoints_exist():
     script = root / "script" / "build_and_run.sh"
     environment = root / ".codex" / "environments" / "environment.toml"
     assert script.is_file() and script.stat().st_mode & 0o111
+    script_text = script.read_text(encoding="utf-8")
     assert 'command = "./script/build_and_run.sh"' in environment.read_text(encoding="utf-8")
+    assert "wait_for_shutdown" in script_text and "pkill -KILL" in script_text
