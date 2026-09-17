@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from typing import Any
 
@@ -107,6 +107,8 @@ class EmissionFactor(Record):
     notes: str
     approved_for_real_project: bool = False
     example: bool = False
+    factor_stage: str = "generation_factor"
+    evidence: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)

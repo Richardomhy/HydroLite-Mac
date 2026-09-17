@@ -4,6 +4,14 @@ from copy import deepcopy
 
 
 _RECIPES = {
+    "water_environment_evidence_closure": {
+        "name_zh": "污染源证据补全", "name_en": "Source evidence closure",
+        "stages": ["source_evidence_completion", "artifact_management", "reporting"],
+        "command": "python -m hydrolite water-environment evidence",
+        "local_only_tasks": ["source_evidence_completion"],
+        "expected_outputs": ["m9a1_manifest.json", "m9b_readiness.xlsx", "m9a1_data_request_list.xlsx"],
+        "limitations": ["No mobilization, transport, concentrations or automatic factor approval"],
+    },
     "data_preparation": {
         "name_zh": "数据准备",
         "name_en": "Data preparation",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import math
 from typing import Any, Iterable
 
 import pandas as pd
@@ -23,13 +24,17 @@ def _factor_evidence_tier(factor: EmissionFactor | None) -> str:
 
 
 def calculate_generated_load(activity: ActivityRecord, factor: EmissionFactor) -> dict[str, float | None | str]:
+    from hydrolite.emission_factor_approval import factor_stage
+    if factor_stage(factor) != "generation_factor": raise ValueError("Only generation_factor may enter generated_load")
+    if any(token in activity.activity_type.lower() for token in ("capacity", "design")): raise ValueError("Design capacity is not actual activity")
     if activity.value is None: return {"status": "activity_missing", "central": None, "low": None, "high": None}
-    if activity.value < 0: raise ValueError("Activity value cannot be negative")
+    if not math.isfinite(activity.value) or activity.value < 0: raise ValueError("Activity value must be finite and nonnegative")
     try:
         activity_value = float(convert_unit([activity.value], activity.unit, factor.denominator_unit).normalized_value.iloc[0])
     except ValueError as exc:
         raise ValueError(f"Activity/factor units do not match: {activity.unit} != {factor.denominator_unit}") from exc
     if factor.value is None: return {"status": "emission_factor_missing", "central": None, "low": None, "high": None}
+    if not math.isfinite(factor.value) or factor.value < 0: raise ValueError("Factor value must be finite and nonnegative")
     values = [activity_value * factor.value]
     values += [activity_value * value if value is not None else None for value in (factor.uncertainty_low, factor.uncertainty_high)]
     converted = [None if value is None else float(convert_unit([value], factor.numerator_unit, "kg/day").normalized_value.iloc[0]) for value in values]
@@ -131,7 +136,12 @@ def validate_source_load_ledger(ledger: pd.DataFrame, tolerance: float = 1e-9) -
     residual = quantified.generated_load - quantified.removed_load - quantified.net_emission_load
     violations = quantified[(quantified.removed_load < -tolerance) | (quantified.removed_load - quantified.generated_load > tolerance)]
     maximum = float(residual.abs().max()) if len(residual) else 0.0
-    return {"status": "passed" if maximum <= tolerance and violations.empty else "failed", "quantified_records": len(quantified), "unquantified_records": len(ledger) - len(quantified), "max_balance_residual_kg_day": maximum, "violation_count": len(violations), "semantic_scope": "generated_removed_net_emission_only"}
+    observed = ledger[ledger.calculation_status.isin(["measured", "reported"])]
+    invalid_observed = observed[observed.net_emission_load.isna() | (observed.net_emission_load < 0)]
+    invalid_partial = ledger[ledger.generated_load.notna() & (ledger.removed_load.isna() | ledger.net_emission_load.isna())]
+    count = int(ledger.net_emission_load.notna().sum())
+    valid = maximum <= tolerance and violations.empty and invalid_observed.empty and invalid_partial.empty
+    return {"status": "passed" if valid else "failed", "quantified_records": count, "unquantified_records": len(ledger) - count, "generated_balance_records": len(quantified), "observed_emission_records": len(observed), "max_balance_residual_kg_day": maximum, "violation_count": len(violations) + len(invalid_observed) + len(invalid_partial), "semantic_scope": "generated_removed_net_emission_only"}
 
 
 def summarize_source_loads(ledger: pd.DataFrame, sources: pd.DataFrame) -> dict[str, pd.DataFrame]:

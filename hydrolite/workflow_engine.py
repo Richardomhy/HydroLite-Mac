@@ -478,6 +478,15 @@ _STAGES: tuple[WorkflowStage, ...] = (
         ["净排放负荷不等于污染物入水体输入；不实现输移或水质过程。"], ["pollution_source_inventory", "unit_system"],
         "M9A source-accounting only; water_quality remains planned.",
     ),
+    WorkflowStage(
+        "source_evidence_completion", "污染源证据闭环", "Source evidence completion",
+        "证据检索、确认、活动量、系数审批、空间归属、账本与就绪度。",
+        "Evidence search, review, activity, factor approval, spatial mapping, ledger and readiness.",
+        PARTIAL, ["pollution_source_inventory", "source evidence"], ["m9a1_manifest.json", "m9b_readiness.xlsx"],
+        "python -m hydrolite water-environment evidence", "Water Environment Source Accounting",
+        ["不自动批准系数；不执行污染输移；water_quality 仍为 planned。"], ["pollution_source_inventory"],
+        "M9A.1 evidence closure only; M9B remains gated.",
+    ),
     *tuple(
         WorkflowStage(stage_id, title, title, "连续模型验证门禁。", "Continuous-model validation gate.", PARTIAL, ["continuous outputs"], [artifact], command, "连续模型验证", ["水量守恒不等于过程验证。"], ["continuous_hydrology"], "诊断 MVP；不启用水质模型。")
         for stage_id, title, artifact, command in (

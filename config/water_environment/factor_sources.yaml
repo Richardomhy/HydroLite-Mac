@@ -1,0 +1,34 @@
+# Citation metadata and small verified table extracts only; no project approval.
+sources:
+  - id: mee_2021_rural
+    title: 生活污染源产排污系数手册
+    issuer: 生态环境部
+    year: 2021
+    source_type_reference: official_standard
+    reference: https://www.mee.gov.cn/uplodfile/附3生活源-附表%20生活源产排污系数手册.pdf
+    locator: PDF page 19, rural per-capita generation table
+    retrieval_date: '2026-09-12'
+    original_unit: g/person/day
+    normalized_unit: kg/day/person
+    method: rural domestic per-capita pollutant generation
+    applicability: Verify source municipality and actual rural population before project approval.
+    limitations: COD is not CODMn. Municipal coefficients are not measured outfall emissions. No uncertainty interval published here.
+    values:
+      - {region: 湖北黄石市, NH3-N: 1.98, TN: 3.78, TP: 0.30}
+      - {region: 湖北鄂州市, NH3-N: 2.13, TN: 3.91, TP: 0.35}
+      - {region: 湖北咸宁市, NH3-N: 2.01, TN: 3.81, TP: 0.30}
+  - id: ezhou_2021_rural_plan
+    title: 鄂州市农村生活污水治理专项规划（2021-2035）
+    issuer: 鄂州市生态环境局
+    year: 2021
+    source_type_reference: local_official
+    reference: https://sthjj.ezhou.gov.cn/xxgk/fdzdgknr/hbgh/202111/t20211123_442998.html
+    locator: Table 3.2-1 and section 3.2.3.2
+    retrieval_date: '2026-09-12'
+    original_unit: g/person/day
+    normalized_unit: kg/day/person
+    method: rural domestic per-capita pollutant generation
+    applicability: Ezhou rural population only, subject to project review.
+    limitations: Table heading says concentration but units are per-capita daily mass. Same underlying handbook, not independent evidence; never average duplicates. COD is not CODMn.
+    values:
+      - {region: 湖北鄂州市, NH3-N: 2.13, TN: 3.91, TP: 0.35}
