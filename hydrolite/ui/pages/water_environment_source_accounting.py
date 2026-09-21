@@ -40,6 +40,7 @@ def render(context) -> None:
     st.header("Water Environment Source Accounting")
     st.caption("Experimental / Foundation · M9A · source_accounting_only")
     st.warning("当前水环境能力仅完成污染源清单和产生/净排放负荷核算，尚未模拟污染物入河输移和河流水质过程。")
+    render_point_source_closure()
     render_evidence_completion()
     outputs = read_water_environment_outputs()
     if not outputs["manifest"]:
@@ -79,10 +80,10 @@ def render_evidence_completion(output_dir=None):
         items = state.get("evidence", [])
         if items:
             labels = {e["evidence_id"]: f"{e['source_id'] or '待关联来源'} · {e['field_name'] or e['evidence_type']} · {e['status']}" for e in items}
-            choice = st.selectbox("Evidence", list(labels), format_func=labels.get)
+            choice = st.selectbox("Evidence", list(labels), format_func=labels.get, key=str(root) + "evidence")
             item = next(e for e in items if e["evidence_id"] == choice)
             st.json(item)
-            with st.form("evidence_review"):
+            with st.form(str(root) + "evidence_review"):
                 actor = st.text_input("Reviewer")
                 comment = st.text_area("Comment")
                 action = st.selectbox("Decision", ["confirm", "reject", "keep_unresolved"])
@@ -93,9 +94,9 @@ def render_evidence_completion(output_dir=None):
         items = state.get("factors", [])
         st.warning("项目批准仅表示本项目采用，不代表普遍正确；示例和 export/delivery 系数不能批准。")
         if items:
-            choice = st.selectbox("Factor", [f["factor_id"] for f in items])
+            choice = st.selectbox("Factor", [f["factor_id"] for f in items], key=str(root) + "factor")
             st.json(next(f for f in items if f["factor_id"] == choice))
-            with st.form("factor_review"):
+            with st.form(str(root) + "factor_review"):
                 actor = st.text_input("Approver")
                 comment = st.text_area("Approval comment")
                 action = st.selectbox("Factor decision", ["reviewed", "approved_for_project", "rejected", "superseded"])
@@ -107,8 +108,36 @@ def render_evidence_completion(output_dir=None):
         _show_table(root / "activity/activity_gap_matrix.xlsx")
         _show_table(root / "factors/factor_gap_matrix.xlsx")
         _show_table(root / "readiness/m9b_readiness.xlsx")
-        if st.button("重新计算 Readiness"):
-            try: st.json(run_evidence_closure(output_dir=root)["pollutant_delivery_model_gate"])
+        if st.button("重新计算 Readiness", key=str(root) + "rebuild"):
+            try:
+                if (root / "reports/m9a2_manifest.json").is_file():
+                    from hydrolite.point_source_workflow import run_point_source_closure
+                    st.json(run_point_source_closure(output_dir=root)["gates"])
+                else: st.json(run_evidence_closure(output_dir=root)["pollutant_delivery_model_gate"])
             except (ValueError, OSError) as exc: st.error(str(exc))
         request = root / "readiness/m9a1_data_request_list.xlsx"
         if request.is_file(): st.download_button("下载补资料清单", request.read_bytes(), file_name=request.name)
+
+
+def render_point_source_closure(output_dir=None):
+    from hydrolite.point_source_workflow import DEFAULT_OUTPUT as POINT_OUTPUT
+    root = Path(output_dir or POINT_OUTPUT)
+    st.subheader("Point Source Closure / 点源证据闭环")
+    manifest = root / "reports/m9a2_manifest.json"
+    if not manifest.is_file():
+        st.info("本地运行 water-environment point-source-status 生成点源审计。")
+        return
+    facts = json.loads(manifest.read_text(encoding="utf-8"))
+    st.json({k: facts["gates"][k] for k in ("point_source_m9b_eligibility", "point_source_delivery_gate", "diffuse_source_delivery_gate", "pollutant_delivery_model_gate")})
+    st.warning("坐标数值范围不代表 CRS 已确认；点源资格不能代表全流域；不会自动批准系数。")
+    tabs = st.tabs(["Identity", "Spatial", "Flow", "Concentration", "Factor", "Load", "Readiness"])
+    files = ["identity/point_source_identity_audit.xlsx", "spatial/source_reach_review_queue.xlsx", "flow/source_flow_evidence.xlsx", "concentration/source_concentration_audit.xlsx", "factors/factor_decision_pack.xlsx", "load/point_source_load_ledger_v3.xlsx", "readiness/point_source_readiness.xlsx"]
+    for tab, name in zip(tabs, files):
+        with tab: _show_table(root / name)
+    with st.expander("Review Evidence / Confirm Mapping / Review Factor"):
+        if facts.get("project_version"):
+            st.info("此版本已冻结。先在新的输出目录建立修订工作副本，再逐项审核；不改写已交付版本。")
+        else: render_evidence_completion(root)
+    for name in ("m9a2_project_data_request_pack.xlsx", "m9a2_point_source_data_template.xlsx"):
+        path = root / "requests" / name
+        if path.is_file(): st.download_button(name, path.read_bytes(), file_name=name)

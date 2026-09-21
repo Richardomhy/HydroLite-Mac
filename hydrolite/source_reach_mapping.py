@@ -2,13 +2,17 @@
 
 import json
 import re
+import unicodedata
 
 import pandas as pd
 
 
 def normalized_water_name(value: str, aliases: dict[str, str] | None = None) -> str:
-    text = re.sub(r"[\s（）()]+", "", str(value))
+    text = re.sub(r"[\s（）()]+", "", unicodedata.normalize("NFKC", str(value))).lower()
     return (aliases or {}).get(text, text)
+
+
+normalize_waterbody_name = normalized_water_name
 
 
 def map_source_reaches(sources, subbasins, reaches, *, source_crs=None, coordinate_evidence="", analysis_crs=None, aliases=None, near_distance_m=100.0):

@@ -317,6 +317,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     water_environment = subparsers.add_parser("water-environment", help="M9A pollution-source inventory and source-load accounting.")
     water_environment_sub = water_environment.add_subparsers(dest="water_environment_command", required=True)
+    for command in ("point-source-status", "point-source-map", "point-source-load", "data-request", "evidence-refresh"):
+        child = water_environment_sub.add_parser(command)
+        child.add_argument("--source-root")
+        child.add_argument("--template", help="Completed workbook; facts remain candidates until explicit review")
+        child.add_argument("--workspace-dir", default=str(Path.home() / ".hydrolite/workspaces/gaoqiao-river-basin-real-validation"))
+        child.add_argument("--output-dir", default=str(ROOT / "output/water_environment/m9a2"))
+        child.add_argument("--finalize", action="store_true")
     for command in ("evidence", "evidence-review", "factor-candidates", "factor-set", "spatial-map", "readiness"):
         child = water_environment_sub.add_parser(command)
         child.add_argument("--source-root")
@@ -1017,6 +1024,11 @@ def main(argv: list[str] | None = None) -> int:
         }, indent=2, ensure_ascii=False))
         return 0
     if args.command == "water-environment":
+        from hydrolite.point_source_workflow import COMMANDS as POINT_COMMANDS, run_point_source_closure
+        if args.water_environment_command in POINT_COMMANDS:
+            result = run_point_source_closure(output_dir=args.output_dir, workspace_dir=args.workspace_dir, source_root=args.source_root, template=args.template, refresh=args.water_environment_command == "evidence-refresh", finalize=args.finalize)
+            print(json.dumps({k: result.get(k) for k in ("project_version", "ledger_version", "coverage", "gates")}, indent=2, ensure_ascii=False, default=str))
+            return 0
         from hydrolite.source_evidence_workflow import COMMANDS, run_evidence_command
         if args.water_environment_command in COMMANDS:
             result = run_evidence_command(args.water_environment_command, source_root=args.source_root, workspace_dir=args.workspace_dir, output_dir=args.output_dir, object_id=args.object_id, action=args.action, actor=args.actor, comment=args.comment, finalize=args.finalize)

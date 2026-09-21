@@ -51,9 +51,10 @@ def read_evidence_state(root=DEFAULT_OUTPUT):
 
 def record_review(root, object_id, action, *, actor, comment, factor=False, corrections=None):
     from hydrolite.runtime_db import create_audit_event_record
-    frozen = checked_output(root) / "reports/m9a1_manifest.json"
-    if frozen.is_file() and json.loads(frozen.read_text(encoding="utf-8")).get("project_version"):
-        raise ValueError("Frozen output is immutable; use a new output directory for revised evidence")
+    for name in ("m9a1_manifest.json", "m9a2_manifest.json"):
+        frozen = checked_output(root) / "reports" / name
+        if frozen.is_file() and json.loads(frozen.read_text(encoding="utf-8")).get("project_version"):
+            raise ValueError("Frozen output is immutable; use a new output directory for revised evidence")
     state = read_evidence_state(root)
     if not state: raise ValueError("Run evidence search before review")
     if factor:

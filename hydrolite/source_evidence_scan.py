@@ -25,7 +25,7 @@ ALIASES = {
     "aquaculture_production": ("水产产量", "aquaculture_production"),
     "industrial_activity": ("产品产量", "industrial_activity"),
     "treatment_efficiency": ("去除率", "削减率", "treatment_efficiency"),
-    "receiving_water": ("受纳水体", "排入河流", "河流名称", "receiving_water"),
+    "receiving_water": ("受纳水体", "排入水体", "排入河流", "排放去向", "河流名称", "水体名称", "排口去向", "receiving_water", "receiving water", "downstream"),
     "outfall_to_reach_relation": ("reach_id", "河段编号"),
     "source_type": ("一级分类", "二级分类", "source_type"),
     "location": ("经度", "纬度", "longitude", "latitude"),
@@ -95,7 +95,7 @@ def _tables(path: Path):
         yield "text", "visible", [[line] for line in path.read_text(encoding="utf-8", errors="replace").splitlines() if any(k in line for k in KEYWORDS)]
 
 
-def scan_source_evidence(root: str | Path, sources: pd.DataFrame) -> tuple[list[SourceEvidenceRecord], pd.DataFrame]:
+def scan_source_evidence(root: str | Path, sources: pd.DataFrame, *, paths=None) -> tuple[list[SourceEvidenceRecord], pd.DataFrame]:
     root = Path(root).expanduser().resolve()
     if not root.is_dir(): raise FileNotFoundError(f"external_project_storage_unavailable: {root}")
     names = {}
@@ -103,14 +103,14 @@ def scan_source_evidence(root: str | Path, sources: pd.DataFrame) -> tuple[list[
         for key in (source.source_id, source.name): names.setdefault(str(key).strip(), set()).add(source.source_id)
     records, audit, seen = [], [], set()
     supported = {".xlsx", ".xls", ".csv", ".docx", ".txt", ".json", ".gpkg", ".shp", ".geojson"}
-    for path in sorted(root.rglob("*")):
+    for path in sorted(root.rglob("*") if paths is None else paths):
         if not path.is_file() or path.is_symlink(): continue
         logical = path.relative_to(root).as_posix()
         row = {"file_reference": logical, "status": "metadata_only", "reason": "not_targeted"}
         # ponytail: bounded metadata scan, no OCR or model-output parsing.
         if any(part.lower() in {"txtinout", ".git", "node_modules", "__pycache__"} for part in path.parts):
             row["reason"] = "model_output_or_runtime_excluded"; audit.append(row); continue
-        selected = path.suffix.lower() in {".xlsx", ".xls", ".gpkg", ".shp", ".geojson"} or any(k in path.name for k in KEYWORDS)
+        selected = paths is not None or path.suffix.lower() in {".xlsx", ".xls", ".gpkg", ".shp", ".geojson"} or any(k in path.name for k in KEYWORDS)
         if not selected or path.suffix.lower() not in supported:
             if selected: row["reason"] = "image_or_pdf_requires_existing_text_only"
             audit.append(row); continue
