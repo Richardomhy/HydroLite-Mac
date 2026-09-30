@@ -21,7 +21,7 @@ NAVIGATION = (
     NavigationItem("home", "首页", "Home", "项目首页", ("教程与 Demo", "Beta 反馈")),
     NavigationItem("projects", "项目", "Projects", "项目中心", ("项目向导", "真实项目基线")),
     NavigationItem("scenarios", "场景", "Scenarios", "场景中心", ("全流程工作流", "情景运行")),
-    NavigationItem("data", "数据", "Data", "数据中心", ("数据与校验", "数据连接器", "数据模板", "GEE 数据集智能", "GEE 数据中心")),
+    NavigationItem("data", "数据", "Data", "数据中心", ("项目实测数据", "数据与校验", "数据连接器", "数据模板", "GEE 数据集智能", "GEE 数据中心")),
     NavigationItem("runs", "运行", "Runs", "运行中心", ("任务中心",)),
     NavigationItem("results", "成果", "Results", "成果中心", ("成果资产", "报告与导出", "结果对比", "水量平衡审计", "水环境源负荷核算")),
     NavigationItem("research", "方法实验室", "Research Lab", "水文研究方法实验室", ("洪水易发性", "水质方法实验室", "参数率定与敏感性", "连续模型验证", "历史洪水验证")),

@@ -632,6 +632,14 @@ def build_parser() -> argparse.ArgumentParser:
         x = data_sub.add_parser(command); x.add_argument("workspace_dir")
     x = data_sub.add_parser("requirements"); x.add_argument("workflow_id"); x.add_argument("workspace_dir")
 
+    measurements = subparsers.add_parser("measurements", help="Project-scoped measured-data intake and review.")
+    measurements_sub = measurements.add_subparsers(dest="measurements_command", required=True)
+    for command in ("requirements", "templates", "refresh"):
+        x = measurements_sub.add_parser(command); x.add_argument("project")
+    x = measurements_sub.add_parser("validate"); x.add_argument("file"); x.add_argument("--requirement", required=True, choices=("MR01", "MR02", "MR03", "MR04", "MR05", "MR06")); x.add_argument("--sheet")
+    x = measurements_sub.add_parser("import"); x.add_argument("file"); x.add_argument("--project", required=True); x.add_argument("--requirement", required=True, choices=("MR01", "MR02", "MR03", "MR04", "MR05", "MR06")); x.add_argument("--submitter", default="local_user"); x.add_argument("--source-ids", default=""); x.add_argument("--sheet")
+    x = measurements_sub.add_parser("review"); x.add_argument("submission"); x.add_argument("--project", required=True); x.add_argument("--action", required=True, choices=("accept", "reject", "keep_unresolved")); x.add_argument("--reviewer", required=True); x.add_argument("--comment", required=True)
+
     connectors_parser = subparsers.add_parser("connectors", help="External data connector status and acquisition plans.")
     connectors_sub = connectors_parser.add_subparsers(dest="connectors_command", required=True)
     for command in ("list", "status", "gee-status", "earthdata-status", "cds-status", "stac-status"):
@@ -1992,6 +2000,37 @@ def main(argv: list[str] | None = None) -> int:
             result = build_all_inputs(args.workspace_dir, output)
             result["data_center_reports"] = {key: str(value) for key, value in write_data_center_reports(output, args.workspace_dir).items()}
             print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "measurements":
+        from hydrolite.project_measurement_intake import (
+            generate_templates, list_requirements, refresh_measurement_gates,
+            review_measurement_submission, submit_measurement_file,
+            validate_measurement_file, write_measurement_intake_reports,
+        )
+        if args.measurements_command == "requirements":
+            result = list_requirements(args.project)
+            reports = write_measurement_intake_reports(args.project, ROOT / "output/measurement_intake/m10a")
+            print(json.dumps({"summary": result["summary"], "requirements": result["requirements"], "outputs": {k: str(v) for k, v in reports.items()}}, indent=2, ensure_ascii=False, default=str)); return 0
+        if args.measurements_command == "templates":
+            template_output = ROOT / "output/measurement_intake/m10a/templates"
+            result = generate_templates(args.project, template_output)
+            reports = write_measurement_intake_reports(args.project, ROOT / "output/measurement_intake/m10a")
+            print(json.dumps({"status": "completed", **result, "reports": {k: str(v) for k, v in reports.items()}}, indent=2, ensure_ascii=False)); return 0
+        if args.measurements_command == "validate":
+            result = validate_measurement_file(args.file, args.requirement, sheet_name=args.sheet)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 1 if result["status"] == "invalid" else 0
+        if args.measurements_command == "import":
+            source_ids = {value.strip() for value in args.source_ids.split(",") if value.strip()} or None
+            result = submit_measurement_file(args.file, args.project, args.requirement, submitter=args.submitter, source_ids=source_ids, sheet_name=args.sheet)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 1 if result["status"] == "invalid" else 0
+        if args.measurements_command == "review":
+            result = review_measurement_submission(args.project, args.submission, args.action, reviewer=args.reviewer, comment=args.comment)
+            refresh = result.get("gate_refresh")
+            reports = write_measurement_intake_reports(args.project, ROOT / "output/measurement_intake/m10a")
+            print(json.dumps({"review": result, "gate_refresh": refresh, "outputs": {k: str(v) for k, v in reports.items()}}, indent=2, ensure_ascii=False, default=str)); return 0
+        if args.measurements_command == "refresh":
+            result = refresh_measurement_gates(args.project)
+            reports = write_measurement_intake_reports(args.project, ROOT / "output/measurement_intake/m10a")
+            print(json.dumps({"gate_refresh": result, "outputs": {k: str(v) for k, v in reports.items()}}, indent=2, ensure_ascii=False, default=str)); return 0
     if args.command == "connectors":
         output = ROOT / "output" / "data_center"
         output.mkdir(parents=True, exist_ok=True)

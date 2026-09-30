@@ -512,6 +512,17 @@ _STAGES: tuple[WorkflowStage, ...] = (
         ["不下载到 data_raw；不执行下载内容；unknown license 不进入 portable package。"], ["resolve_data_requirements"],
         "Explicit bounded fetch; quality review remains in Data Center.",
     ),
+    WorkflowStage(
+        "project_measurement_intake", "项目实测数据接入", "Project measurement intake",
+        "从 USER_REQUIRED 清单生成版本化模板，安全校验项目实测/调查数据，经人工审核后登记血缘并刷新既有需求解析。",
+        "Generate versioned templates for USER_REQUIRED items, validate project measurements safely, import only after human review, and refresh the existing resolver.",
+        PARTIAL, ["existing project workspace", "project measurement file", "human review"],
+        ["measurement_validation_summary.xlsx", "measurement_review_history.xlsx", "gate_refresh_summary.xlsx"],
+        "python -m hydrolite measurements requirements <project>", "数据中心",
+        ["不混淆公开数据、项目实测/调查数据和审批参数；不直接设置 ready；不启动 M9B。"],
+        ["workspace", "data_requirement_resolver", "data_lineage", "project_versioning"],
+        "M10A intake MVP; rejected/upload-only submissions do not enter standardized data or create versions.",
+    ),
     *tuple(
         WorkflowStage(stage_id, title, title, "连续模型验证门禁。", "Continuous-model validation gate.", PARTIAL, ["continuous outputs"], [artifact], command, "连续模型验证", ["水量守恒不等于过程验证。"], ["continuous_hydrology"], "诊断 MVP；不启用水质模型。")
         for stage_id, title, artifact, command in (
