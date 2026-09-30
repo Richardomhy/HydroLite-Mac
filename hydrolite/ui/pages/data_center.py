@@ -23,6 +23,30 @@ from hydrolite.ui.state import PROJECT_ROOT, WorkbenchContext, load_app_state
 
 
 OUTPUT = PROJECT_ROOT / "output" / "data_center"
+ACQUISITION_STATUS_LABELS = {
+    "local_ready": "Local",
+    "auto_fetch_available": "Auto Fetch",
+    "approval_required": "Review",
+    "project_measurement_required": "User Required",
+    "unavailable": "User Required",
+    "network_blocked": "Network Blocked",
+    "fetched": "Downloaded · QC required",
+    "cached": "Cached · QC required",
+    "offline_cached": "Cached · QC required",
+    "invalid_content_type": "Failed · file type check",
+    "checksum_mismatch": "Failed · checksum check",
+    "authentication_required": "Authentication Required",
+    "auth_required": "Authentication Required",
+    "non_public_resolution": "Blocked by Security",
+    "dns_failure": "Failed · DNS",
+    "proxy_blocked": "Failed · proxy",
+    "tls_failure": "Failed · TLS",
+    "remote_unavailable": "Failed · provider unavailable",
+}
+
+
+def acquisition_status_label(status: str) -> str:
+    return ACQUISITION_STATUS_LABELS.get(status, "Failed" if status.endswith(("failed", "error")) else status.replace("_", " ").title())
 
 
 def _safe_workspace(value: str, context: WorkbenchContext) -> tuple[Path, bool]:
@@ -135,7 +159,7 @@ def render(context: WorkbenchContext) -> None:
             st.caption(f"运行前置状态：{resolution['run_gate']}；此状态不会改变水文/水环境科学门禁。")
             frame = pd.DataFrame([{
                 "需求": row["requirement"]["requirement_id"], "数据类型": row["requirement"]["data_type"],
-                "策略": row["strategy"], "状态": row["status"], "本地数据": ", ".join(row.get("local_dataset_ids", [])),
+                "策略": row["strategy"], "状态": acquisition_status_label(row["status"]), "本地数据": ", ".join(row.get("local_dataset_ids", [])),
                 "候选数": len(row.get("candidates", [])), "说明": row["reason"],
             } for row in resolution["requirements"]])
             st.dataframe(frame, use_container_width=True, hide_index=True)
@@ -157,7 +181,16 @@ def render(context: WorkbenchContext) -> None:
                                 result = DataConnectorRegistry().fetch(candidate["candidate"], confirm_large=large_confirm)
                                 if result.get("checksum"):
                                     result["data_center"] = import_fetched_dataset(result, workspace, DataRequirement(**row["requirement"]))
-                                st.json(result)
+                                message = result.get("error_message")
+                                if result.get("status") in {"fetched", "cached", "offline_cached"}:
+                                    st.success(f"{acquisition_status_label(result['status'])}；已记录校验和。请继续运行 Data Center 标准化与 QC。")
+                                    st.json({key: value for key, value in result.items() if key != "local_path"})
+                                elif result.get("status") == "non_public_resolution":
+                                    st.warning("数据源当前解析到非公网网络地址，为保护本机安全，HydroLite 已阻止连接。")
+                                elif message:
+                                    st.warning(f"{acquisition_status_label(result.get('status', 'failed'))}：{message}")
+                                else:
+                                    st.warning(acquisition_status_label(result.get("status", "failed")))
                         elif row["strategy"] == "AUTO_DISCOVER_REQUIRE_APPROVAL":
                             st.warning("该项只允许发现并人工审批；不会自动进入项目参数。")
                         elif candidate["candidate"].get("access_status") == "authentication_required":

@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 from hydrolite.app_settings import load_settings
 from hydrolite.connectors.contracts import FetchedDataset
-from hydrolite.connectors.transport import ConnectorError, open_public
+from hydrolite.connectors.transport import ConnectorError, NetworkSecurityPolicy, open_public
 from hydrolite.workspace import calculate_file_checksum
 
 POLICIES = {"reuse_if_unchanged", "refresh_if_stale", "force_refresh", "offline_only"}
@@ -64,7 +64,12 @@ class DatasetCache:
             existing = next((parent for parent in (root, *root.parents) if parent.exists()), None)
             if existing is None:
                 raise ConnectorError("data_cache_storage_unavailable", "No mounted parent for configured cache")
-            return {"status": "available", "cache_root": str(root), "external_volume": str(root).startswith("/Volumes/"), "free_bytes": shutil.disk_usage(existing).free}
+            free = shutil.disk_usage(existing).free
+            if not os.access(existing, os.W_OK):
+                raise ConnectorError("data_cache_read_only", "Configured cache storage is not writable")
+            if free < self.max_bytes + 16 * 1024 * 1024:
+                raise ConnectorError("data_cache_insufficient_space", "Configured cache storage has insufficient free space")
+            return {"status": "available", "cache_root": str(root), "external_volume": str(root).startswith("/Volumes/"), "free_bytes": free}
         except (ConnectorError, OSError) as exc:
             return {"status": getattr(exc, "status", "data_cache_storage_unavailable"), "cache_root": str(self.root), "fallback": False}
 
@@ -84,7 +89,7 @@ class DatasetCache:
         except (OSError, KeyError, ValueError):
             return None
 
-    def fetch(self, candidate, hosts, policy="reuse_if_unchanged", confirm_large=False, stale_seconds=86400, interval=0):
+    def fetch(self, candidate, hosts, policy="reuse_if_unchanged", confirm_large=False, stale_seconds=86400, interval=0, network_policy=NetworkSecurityPolicy.PRODUCTION_PUBLIC_ONLY):
         if policy not in POLICIES:
             raise ValueError("Unknown cache policy")
         cached = self.lookup(candidate)
@@ -117,7 +122,7 @@ class DatasetCache:
             self.root.mkdir(parents=True, exist_ok=True)
             if shutil.disk_usage(self.root).free < limit + 16 * 1024 * 1024:
                 raise ConnectorError("data_cache_storage_unavailable", "Insufficient free cache space")
-            with open_public(candidate.source_url, hosts, headers, interval) as response:
+            with open_public(candidate.source_url, hosts, headers, interval, policy=network_policy) as response:
                 if response.code == 304 and cached:
                     return {**cached, "status": "cached"}
                 media = response.headers.get("Content-Type", "").split(";")[0].lower()
@@ -158,7 +163,7 @@ class DatasetCache:
                 return result
         except (ConnectorError, OSError, ValueError) as exc:
             status = getattr(exc, "status", "online_source_unavailable")
-            if cached and status in {"online_source_unavailable", "rate_limited", "authentication_required"}:
+            if cached and policy != "force_refresh" and status in {"online_source_unavailable", "remote_unavailable", "rate_limited", "authentication_required", "auth_required", "proxy_blocked", "dns_failure", "non_public_resolution"}:
                 return {**cached, "status": "offline_cached", "error_message": status}
             return FetchedDataset(status, candidate.as_dict(), error_message=str(exc) if isinstance(exc, ConnectorError) else "Download failed; inspect provider/storage availability").as_dict()
         finally:

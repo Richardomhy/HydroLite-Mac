@@ -106,12 +106,21 @@ final class BackendManager: ObservableObject {
             }
             if let data = try? Data(contentsOf: manifestURL),
                let manifest = try? JSONDecoder().decode(BackendManifest.self, from: data),
-               let url = URL(string: manifest.url),
-               await healthy(url: url) {
-                localURL = url
-                isHealthy = true
-                status = "运行中"
-                return
+               let url = URL(string: manifest.url) {
+                guard manifest.pid == process?.processIdentifier,
+                      manifest.port > 0, manifest.port < 65536,
+                      url.scheme == "http", url.host == "127.0.0.1",
+                      url.port == manifest.port else {
+                    status = "后端清单无效"
+                    errorMessage = "后端进程标识或 loopback 端口与启动配置不一致。"
+                    return
+                }
+                if await healthy(url: url) {
+                    localURL = url
+                    isHealthy = true
+                    status = "运行中"
+                    return
+                }
             }
             try? await Task.sleep(for: .milliseconds(250))
         }

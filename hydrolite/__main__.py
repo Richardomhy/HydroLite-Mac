@@ -646,6 +646,8 @@ def build_parser() -> argparse.ArgumentParser:
         acquisition_sub.add_parser(command)
     x = acquisition_sub.add_parser("search"); x.add_argument("connector"); x.add_argument("config")
     x = acquisition_sub.add_parser("fetch"); x.add_argument("manifest"); x.add_argument("workspace"); x.add_argument("requirement_id"); x.add_argument("--execute", action="store_true"); x.add_argument("--confirm-large", action="store_true")
+    x = acquisition_sub.add_parser("diagnose", help="Run a sanitized, bounded network diagnostic for one connector."); x.add_argument("connector")
+    acquisition_sub.add_parser("cache-status", help="Inspect configured external dataset cache storage.")
 
     requirements_cli = subparsers.add_parser("data-requirements", help="Resolve scenario requirements and generate the user required data list.")
     requirements_sub = requirements_cli.add_subparsers(dest="requirements_command", required=True)
@@ -2019,10 +2021,20 @@ def main(argv: list[str] | None = None) -> int:
         if args.acquisition_command == "health":
             rows = registry.health()
             print(json.dumps(rows, indent=2, ensure_ascii=False, default=str)); return 0
+        if args.acquisition_command == "diagnose":
+            from hydrolite.connectors.diagnostics import ConnectorNetworkDiagnostic
+            result = ConnectorNetworkDiagnostic().run(args.connector)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            return 0 if result.get("status") == "healthy" else 1
+        if args.acquisition_command == "cache-status":
+            from hydrolite.dataset_cache import DatasetCache
+            result = DatasetCache().inspect_storage()
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 0 if result.get("status") == "available" else 1
         if args.acquisition_command == "search":
             config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8")) or {}
             result = registry.search(args.connector, config)
-            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result["status"] not in {"online_source_unavailable", "authentication_required"} else 1
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result["status"] not in {"online_source_unavailable", "remote_unavailable", "dns_failure", "non_public_resolution", "proxy_blocked", "tls_failure", "authentication_required", "auth_required", "configuration_error"} else 1
         if args.acquisition_command == "fetch":
             from hydrolite.data_requirement_resolver import fetch_recommended
             resolution = json.loads(Path(args.manifest).read_text(encoding="utf-8"))

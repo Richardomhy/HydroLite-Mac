@@ -68,16 +68,25 @@ case "$MODE" in
     /usr/bin/log stream --info --style compact --predicate "subsystem == \"$BUNDLE_ID\""
     ;;
   --verify|verify)
+    VERIFY_STARTED_AT="$(date +%s)"
     open_app
     for _ in {1..60}; do
       MANIFEST="$HOME/Library/Application Support/HydroLite Studio/backend_manifest.json"
-      if pgrep -x "$APP_NAME" >/dev/null && [[ -f "$MANIFEST" ]]; then
-        URL="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["url"])' "$MANIFEST" 2>/dev/null || true)"
-        [[ -n "$URL" ]] && curl -fsS "$URL/_stcore/health" | grep -q ok && exit 0
+      APP_PID="$(pgrep -x "$APP_NAME" | head -n 1 || true)"
+      if [[ -n "$APP_PID" && -f "$MANIFEST" && "$(stat -f %m "$MANIFEST" 2>/dev/null || echo 0)" -ge "$VERIFY_STARTED_AT" ]]; then
+        BACKEND_INFO="$(/usr/bin/python3 -c 'import json,sys,urllib.parse; m=json.load(open(sys.argv[1])); u=urllib.parse.urlsplit(m.get("url", "")); assert m.get("address")=="127.0.0.1" and u.scheme=="http" and u.hostname=="127.0.0.1" and u.port==int(m["port"]) and 0<int(m["port"])<65536 and int(m["pid"])>0; print("%s\t%s\t%s" % (m["pid"],m["port"],m["url"]))' "$MANIFEST" 2>/dev/null || true)"
+        if [[ -n "$BACKEND_INFO" ]]; then
+          IFS=$'\t' read -r BACKEND_PID BACKEND_PORT URL <<< "$BACKEND_INFO"
+          BACKEND_PARENT="$(ps -o ppid= -p "$BACKEND_PID" 2>/dev/null | tr -d ' ' || true)"
+          if kill -0 "$BACKEND_PID" 2>/dev/null && [[ "$BACKEND_PARENT" == "$APP_PID" ]] && curl -fsS --max-time 1 "$URL/_stcore/health" 2>/dev/null | grep -q '^ok$'; then
+            echo "Desktop ready: app=$APP_PID backend=$BACKEND_PID port=$BACKEND_PORT manifest=$MANIFEST"
+            exit 0
+          fi
+        fi
       fi
       sleep 1
     done
-    echo "HydroLite Studio process or backend manifest did not become ready" >&2
+    echo "HydroLite Studio backend failed validation: app/backend parent, fresh manifest, loopback URL, or health check not ready" >&2
     exit 1
     ;;
   *)

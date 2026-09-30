@@ -82,6 +82,48 @@ def test_requirement_rates_count_requirements_and_report_only_unobtainable(tmp_p
     assert (path.parent / "data_acquisition_readiness_report_zh.md").is_file()
 
 
+def test_requirement_reports_network_blocked_without_fabricating_resolution(tmp_path):
+    from hydrolite.connectors.contracts import DataRequirement
+    from hydrolite.data_requirement_resolver import resolve_scenario_requirements
+    from hydrolite.workspace import create_workspace
+
+    class Registry:
+        def capabilities(self): return {"stac": ["dem"]}
+        def recommend(self, *_args): return {"candidates": [], "searches": [{"connector_id": "stac", "status": "non_public_resolution"}]}
+
+    workspace = tmp_path / "w"
+    create_workspace(workspace, "network")
+    req = DataRequirement("dem", "dem", allow_auto_fetch=True, fallback_strategy="AUTO_FETCH")
+    result = resolve_scenario_requirements("dem", workspace, Registry(), requirements=[req])
+    assert result["requirements"][0]["status"] == "network_blocked"
+    assert "非公网" in result["requirements"][0]["reason"]
+    assert result["metrics"]["automatic_data_resolution_rate"] == 0
+    assert result["metrics"]["network_blocked"] == 1
+
+
+def test_gaoqiao_m9a2_flat_package_layout_preserves_gates(tmp_path):
+    from hydrolite.data_requirement_resolver import resolve_point_source_requests
+    from hydrolite.workspace import create_workspace
+
+    workspace = tmp_path / "workspace"
+    create_workspace(workspace, "gaoqiao")
+    package = tmp_path / "m9a2"
+    package.mkdir()
+    gates = {"source_load": "ready_with_warnings", "point_source": "blocked"}
+    (package / "m9a2_manifest.json").write_text(json.dumps({"gates": gates}))
+    pd.DataFrame({"request_id": [f"DR0{i}" for i in range(1, 7)]}).to_excel(
+        package / "m9a2_project_data_request_pack.xlsx", index=False
+    )
+    pd.DataFrame(columns=["factor_id", "source_reference"]).to_excel(
+        package / "factor_decision_pack.xlsx", index=False
+    )
+
+    result = resolve_point_source_requests(workspace, package, tmp_path / "reports", online=True)
+    assert result["m9a2_gates_unchanged"] == gates
+    assert [row["requirement"]["requirement_id"] for row in result["requirements"][:6]] == [f"DR0{i}" for i in range(1, 7)]
+    assert all(row["strategy"] == "USER_REQUIRED" for row in result["requirements"][:6])
+
+
 def test_cache_fetch_checks_hash_and_reuses_verified_content(tmp_path, monkeypatch):
     import hydrolite.dataset_cache as cache_module
     from hydrolite.dataset_cache import DatasetCache
@@ -187,6 +229,31 @@ def test_stac_generic_search_uses_configured_endpoint_and_license_metadata(monke
     candidate = result["candidates"][0]
     assert candidate.license_status == "known"
     assert candidate.resolution == 30
+
+
+def test_stac_relative_asset_href_resolves_from_item_self_link(monkeypatch):
+    from contextlib import contextmanager
+    from io import BytesIO
+    from hydrolite.connectors.public import GenericStacAdapter
+
+    payloads = {
+        "/collections/dem": {"license": "CC-BY-4.0"},
+        "/search?collections=dem&limit=5&bbox=0%2C0%2C1%2C1": {
+            "features": [{"id": "tile", "bbox": [0, 0, 1, 1],
+                "links": [{"rel": "self", "href": "https://stac.example.test/collections/dem/items/tile.json"}],
+                "assets": {"elevation": {"href": "../../assets/tile.tif", "roles": ["data"], "type": "image/tiff"}}}]
+        },
+    }
+
+    @contextmanager
+    def fake_open(url, *args, **kwargs):
+        yield BytesIO(json.dumps(next(value for key, value in payloads.items() if key in url)).encode())
+
+    monkeypatch.setattr("hydrolite.connectors.public.open_public", fake_open)
+    connector = GenericStacAdapter({"endpoint": "https://stac.example.test", "allowed_hosts": ["stac.example.test", "assets.example.test"],
+                                    "trusted": True, "provider": "fixture", "collections": {"dem": "dem"}})
+    candidate = connector.search({"online": True, "data_type": "dem", "bbox": [0, 0, 1, 1]})["candidates"][0]
+    assert candidate.source_url == "https://stac.example.test/collections/assets/tile.tif"
 
 
 def test_portable_project_rejects_unknown_license_online_dataset(tmp_path, monkeypatch):

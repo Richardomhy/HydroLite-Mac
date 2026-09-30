@@ -2,7 +2,7 @@
 from dataclasses import replace
 import json
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urljoin
 
 import yaml
 
@@ -68,7 +68,8 @@ class GenericStacAdapter(HttpFileConnector):
             params["datetime"] = f"{config['start']}/{config['end']}"
         try:
             license_name = self._collection_license(collection)
-            with open_public(self.config["endpoint"].rstrip("/") + "/search?" + urlencode(params), self.config["allowed_hosts"], interval=self.config.get("request_interval_seconds", 1)) as response:
+            search_url = self.config["endpoint"].rstrip("/") + "/search?" + urlencode(params)
+            with open_public(search_url, self.config["allowed_hosts"], interval=self.config.get("request_interval_seconds", 1)) as response:
                 raw = response.read(2 * 1024 * 1024 + 1)
                 if len(raw) > 2 * 1024 * 1024:
                     raise ConnectorError("size_guard", "STAC metadata too large")
@@ -86,7 +87,7 @@ class GenericStacAdapter(HttpFileConnector):
                     status = "restricted" if restricted else "known" if recognized else "unknown"
                     rows.append(DatasetCandidate(
                         f"{collection}/{item['id']}/{name}", "stac", self.config.get("provider", "STAC"), kind,
-                        asset.get("href", ""), str(props.get("version") or props.get("updated") or props.get("datetime") or ""),
+                        urljoin(next((link.get("href", "") for link in item.get("links", []) if link.get("rel") == "self"), search_url), asset.get("href", "")), str(props.get("version") or props.get("updated") or props.get("datetime") or ""),
                         (kind,), tuple(item.get("bbox", [])[:4]), tuple(str(props.get(key) or props.get("datetime") or "") for key in ("start_datetime", "end_datetime")),
                         props.get("gsd"), str(asset.get("proj:code") or props.get("proj:code") or props.get("proj:epsg") or "") or None,
                         license=item_license, license_status=status, trusted_provider=bool(self.config.get("trusted")),

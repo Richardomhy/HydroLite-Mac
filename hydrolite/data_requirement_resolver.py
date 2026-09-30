@@ -32,6 +32,18 @@ def classify_requirement_source(requirement):
     return "AUTO_FETCH" if requirement.allow_auto_fetch else requirement.fallback_strategy
 
 
+def _project_evidence_reason(requirement):
+    reasons = {
+        "coordinate_crs": "项目排口坐标和坐标系必须由项目测量/设计资料确认；公开底图不能证明具体排口位置。",
+        "outfall_actual_flow": "排口实际流量是项目与时段特定的实测证据；公共设计规模或遥感不能替代。",
+        "outfall_concentration": "污染物浓度必须来自对应排口、污染物和采样时段的检测记录。",
+        "receiving_water": "真实受纳河段需要排水关系或现场证据确认；最近的公开水系线不能证明排放去向。",
+        "wastewater_volume": "废水量需由该项目的计量/台账记录支持，不能从公共遥感数据推定。",
+        "project_factor_approval": "项目适用系数需要责任人审查与适用性批准；发现公共参考不等于自动采用。",
+    }
+    return reasons.get(requirement.data_type, "该项是项目专属实测或决策证据，不能由通用公共数据代替。")
+
+
 def rank_candidate(requirement, candidate):
     c, r = candidate, requirement
     checks = {}
@@ -88,10 +100,15 @@ def resolve_requirement(requirement, workspace, registry=None, online=False):
     local, ready = _local_matches(requirement, workspace)
     result = {"requirement": requirement.as_dict(), "strategy": strategy, "local_dataset_ids": ready, "candidates": [], "searches": []}
     if ready:
-        return {**result, "status": "local_ready", "reason": "Verified local standardized data and QC"}
+        cached_online = not online and any(
+            item.get("dataset_id") in ready and item.get("source_type") == "online_public"
+            for item in list_workspace_datasets(workspace)
+        )
+        return {**result, "status": "offline_cached" if cached_online else "local_ready",
+                "reason": "Verified standardized dataset is available offline with recorded public-source provenance" if cached_online else "Verified local standardized data and QC"}
     if strategy == "USER_REQUIRED":
         if requirement.requires_project_measurement or requirement.data_type in PROJECT_TYPES:
-            return {**result, "status": "project_measurement_required", "reason": "Project evidence/approval cannot be replaced by public modeled data", "local_unreviewed_count": len(local)}
+            return {**result, "status": "project_measurement_required", "reason": _project_evidence_reason(requirement), "local_unreviewed_count": len(local)}
         supported = {value for values in registry.capabilities().values() for value in values}
         status = "unavailable" if requirement.data_type in supported or requirement.data_type in PUBLIC_TYPES else "unsupported"
         return {**result, "status": status, "reason": "No configured trusted public source; user-provided data may be uploaded", "local_unreviewed_count": len(local)}
@@ -102,6 +119,8 @@ def resolve_requirement(requirement, workspace, registry=None, online=False):
         status = "approval_required" if result["candidates"] else "unavailable"
     elif eligible:
         status = "auto_fetch_available"
+    elif any(item.get("status") in {"dns_failure", "non_public_resolution", "proxy_blocked", "tls_failure", "remote_unavailable"} for item in result["searches"]):
+        status = "network_blocked"
     elif local:
         status = "local_needs_qc"
     elif result["candidates"]:
@@ -109,7 +128,17 @@ def resolve_requirement(requirement, workspace, registry=None, online=False):
     else:
         supported = {value for values in registry.capabilities().values() for value in values}
         status = "unavailable" if requirement.data_type in supported or requirement.data_type in PUBLIC_TYPES else "unsupported"
-    return {**result, "status": status, "reason": "Acquisition is not QC readiness; candidate metadata never substitutes for project measurements"}
+    reason = "Acquisition is not QC readiness; candidate metadata never substitutes for project measurements"
+    if status == "network_blocked":
+        blocked = next(item["status"] for item in result["searches"] if item.get("status") in {"dns_failure", "non_public_resolution", "proxy_blocked", "tls_failure", "remote_unavailable"})
+        reason = {
+            "dns_failure": "数据源域名解析失败；请检查网络或 DNS resolver 设置。",
+            "non_public_resolution": "数据源当前解析到非公网网络地址，为保护本机安全，HydroLite 已阻止连接。",
+            "proxy_blocked": "当前 HTTPS 代理未能建立安全的数据源连接。",
+            "tls_failure": "数据源 TLS 证书校验失败；HydroLite 未绕过凭证或证书检查。",
+            "remote_unavailable": "公开数据源未能在限定请求时间内响应。",
+        }[blocked]
+    return {**result, "status": status, "reason": reason}
 
 
 def requirements_for_scenario(scenario, context=None):
@@ -149,9 +178,10 @@ def resolve_scenario_requirements(scenario, workspace, registry=None, online=Fal
     automatic = sum(row["status"] == "auto_fetch_available" for row in rows)
     candidates = sum(row["status"] in {"approval_required", "online_candidate_available"} for row in rows)
     user = sum(row["strategy"] == "USER_REQUIRED" and row["status"] != "local_ready" for row in rows)
-    blocked = [row["requirement"]["requirement_id"] for row in rows if row["requirement"]["required"] and row["status"] != "local_ready" and not row["requirement"]["quality_rules"].get("allow_missing_warning", False)]
-    local_ready = sum(row["status"] == "local_ready" for row in rows)
-    return {"scenario": scenario, "requirements": rows, "required_blockers": blocked, "run_gate": "blocked" if blocked else "ready_with_warnings", "metrics": {"requirements_evaluated": count, "local_ready": local_ready, "auto_fetch": automatic, "online_candidate": candidates, "user_required": user, "unavailable": sum(row["status"] == "unavailable" for row in rows), "automatic_data_resolution_rate": (local_ready + automatic) / count if count else 0, "auto_fetch_rate": automatic / count if count else 0, "online_candidate_resolution_rate": candidates / count if count else 0, "user_required_rate": user / count if count else 0}, "interpretation": "Rates count requirements, not files. Automatic resolution rate counts local-ready plus fetch-eligible requirements; auto-fetch availability does not mean downloaded or scientifically ready."}
+    ready_statuses = {"local_ready", "offline_cached"}
+    blocked = [row["requirement"]["requirement_id"] for row in rows if row["requirement"]["required"] and row["status"] not in ready_statuses and not row["requirement"]["quality_rules"].get("allow_missing_warning", False)]
+    local_ready = sum(row["status"] in ready_statuses for row in rows)
+    return {"scenario": scenario, "requirements": rows, "required_blockers": blocked, "run_gate": "blocked" if blocked else "ready_with_warnings", "metrics": {"requirements_evaluated": count, "local_ready": local_ready, "auto_fetch": automatic, "online_candidate": candidates, "user_required": user, "unavailable": sum(row["status"] == "unavailable" for row in rows), "network_blocked": sum(row["status"] == "network_blocked" for row in rows), "automatic_data_resolution_rate": (local_ready + automatic) / count if count else 0, "auto_fetch_rate": automatic / count if count else 0, "online_candidate_resolution_rate": candidates / count if count else 0, "user_required_rate": user / count if count else 0}, "interpretation": "Rates count requirements, not files. Automatic resolution rate counts QC-ready local/cached requirements plus fetch-eligible requirements; candidate discovery alone is not resolution, and fetch availability is not scientific readiness."}
 
 
 def build_user_required_data_list(resolution):
@@ -218,13 +248,21 @@ def resolve_point_source_requests(workspace, m9a2_dir, output, online=False):
     # packages remain the authoritative request contract for this review.
     result = resolve_scenario_requirements("water_environment_source_accounting", workspace, online=online, requirements=specs)
     root = Path(m9a2_dir)
-    manifest = json.loads((root / "reports/m9a2_manifest.json").read_text())
-    requests = pd.read_excel(root / "requests/m9a2_project_data_request_pack.xlsx").fillna("")
+    def package_file(name, legacy_subdir):
+        candidates = (root / legacy_subdir / name, root / name)
+        path = next((item for item in candidates if item.is_file()), None)
+        if path is None:
+            raise FileNotFoundError(f"M9A.2 package is missing: {name}")
+        return path
+
+    manifest = json.loads(package_file("m9a2_manifest.json", "reports").read_text())
+    requests = pd.read_excel(package_file("m9a2_project_data_request_pack.xlsx", "requests")).fillna("")
     names = {row["request_id"]: row for row in requests.to_dict("records")}
     for row in result["requirements"]:
         row["existing_request"] = names.get(row["requirement"]["requirement_id"], {})
     # Reviewed public references are candidates, not new discovery or approved coefficients.
-    factors = root / "factors/factor_decision_pack.xlsx"
+    factor_path = root / "factors/factor_decision_pack.xlsx"
+    factors = factor_path if factor_path.is_file() else root / "factor_decision_pack.xlsx"
     frame = pd.read_excel(factors).fillna("") if factors.exists() else pd.DataFrame()
     public = next(row for row in result["requirements"] if row["requirement"]["data_type"] == "emission_factors")
     if not frame.empty:
