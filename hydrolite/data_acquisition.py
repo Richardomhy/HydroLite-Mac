@@ -9,6 +9,8 @@ import pandas as pd
 
 from hydrolite.connectors import get_connector
 from hydrolite.data_requirements import build_project_data_requirement_matrix
+from hydrolite.connectors.contracts import FetchedDataset, DataRequirement
+from hydrolite.workspace import write_workspace_manifest, calculate_file_checksum
 
 
 def select_best_data_source(dataset_type: str, context: dict[str, Any]) -> str:
@@ -17,6 +19,56 @@ def select_best_data_source(dataset_type: str, context: dict[str, Any]) -> str:
         "ICESat2_ATL13": "earthdata", "land_use": "gee", "satellite_image": "stac",
     }
     return preferred.get(dataset_type, "local")
+
+
+def import_fetched_dataset(fetched: dict[str, Any], workspace_dir: str | Path, requirement: DataRequirement) -> dict[str, Any]:
+    """Import inert cache content to the existing workspace; QC/mapping stays in Data Center."""
+    root = Path(workspace_dir).expanduser().resolve()
+    path = Path(fetched.get("local_path", "")).resolve()
+    if not path.is_file() or not fetched.get("checksum") or calculate_file_checksum(path) != fetched["checksum"]:
+        raise ValueError("Fetched artifact checksum is missing or invalid")
+    record = {
+        "dataset_id": "ds_" + fetched["checksum"][:12], "original_filename": path.name,
+        "stored_filename": path.name, "source_type": "online_public", "source_platform": fetched.get("candidate", {}).get("provider"),
+        "upload_time": fetched.get("retrieved_at"), "checksum": fetched["checksum"], "size": path.stat().st_size,
+        "media_type": fetched.get("candidate", {}).get("content_type"), "detected_format": path.suffix.lstrip("."),
+        "user_declared_type": requirement.data_type, "dataset_type": requirement.data_type,
+        "coordinate_system": fetched.get("candidate", {}).get("crs"), "temporal_range": fetched.get("candidate", {}).get("temporal_extent"),
+        "spatial_extent": fetched.get("candidate", {}).get("spatial_extent"), "units": {},
+        "license": fetched.get("candidate", {}).get("license", "unknown"),
+        "license_status": fetched.get("candidate", {}).get("license_status", "unknown"),
+        "processing_status": "downloaded_needs_data_center_ingestion", "quality_status": "needs_mapping",
+        "project_measurement_confirmed": False, "online_provenance": {"candidate": fetched.get("candidate"), "retrieved_at": fetched.get("retrieved_at"), "checksum": fetched["checksum"], "etag": fetched.get("etag"), "last_modified": fetched.get("last_modified"), "processing_chain": fetched.get("processing_chain", [])},
+        "cache_reference": str(path), "standardized_path": None, "lineage_parent": None,
+        "warnings": ["Download success is not QC or model readiness; import and review in Data Center."],
+        "raw_path": str(path),
+    }
+    manifest_path = root / "workspace_manifest.json"
+    if not manifest_path.is_file():
+        raise FileNotFoundError("Workspace manifest is required before importing a fetched dataset")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    existing = next((item for item in manifest.get("datasets", []) if item.get("dataset_id") == record["dataset_id"]), None)
+    if existing:
+        return existing
+    manifest.setdefault("datasets", []).append(record)
+    write_workspace_manifest(root, manifest)
+    from hydrolite.data_lineage import add_lineage_operation
+    add_lineage_operation(fetched["candidate"].get("dataset_id", "online_source"), record["dataset_id"], "public_data_cached", root, source_checksum=fetched["checksum"], output_checksum=fetched["checksum"], parameters={"license_status": record["license_status"], "retrieved_at": record["upload_time"]}, warnings=record["warnings"], reproducible_command="python -m hydrolite data-connectors fetch --requirement <id>")
+    return record
+
+
+def canonical_online_table(frame, dataset_type, metadata):
+    """Share existing field, CRS and time parsers; source units remain explicit."""
+    from hydrolite.field_mapping import infer_field_mapping, apply_field_mapping
+    from hydrolite.timeseries_ingestion import detect_timestamp_column, parse_timestamp_column
+    mapped = infer_field_mapping(frame, dataset_type)
+    standardized = apply_field_mapping(frame, mapped["mapping"])
+    timestamp = detect_timestamp_column(standardized)
+    if timestamp:
+        standardized = parse_timestamp_column(standardized, timestamp)
+    standardized.attrs["online_provenance"] = metadata
+    standardized.attrs["mapping_status"] = mapped["status"]
+    return standardized
 
 
 def create_acquisition_plan(workspace_dir: str | Path, workflow_id: str) -> dict[str, Any]:

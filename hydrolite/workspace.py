@@ -16,7 +16,7 @@ import yaml
 WORKSPACE_DIRS = (
     "raw", "uploads", "external", "staging", "standardized", "vector", "raster",
     "timeseries", "tables", "models", "mappings", "quality", "lineage", "derived",
-    "outputs", "reports", "logs", "cache",
+    "outputs", "reports", "logs",
 )
 
 

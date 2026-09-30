@@ -5,6 +5,7 @@ import streamlit as st
 
 from hydrolite.product_status import get_product_feature_status
 from hydrolite.scenario_registry import assess_scenario_readiness, get_scenario, list_scenarios, submit_scenario_run
+from hydrolite.data_requirement_resolver import resolve_scenario_requirements, write_resolution
 from hydrolite.ui.components.error_panel import render_error_panel
 from hydrolite.ui.components.readiness_panel import render_readiness_panel
 from hydrolite.ui.components.scenario_card import render_scenario_card
@@ -80,9 +81,18 @@ def render(context) -> None:
         if not context.project_loaded:
             render_error_panel("user_action", "尚未加载项目。", "先进入项目页面创建或打开项目。")
         else:
+            resolution = resolve_scenario_requirements(selected_id, context.project_dir)
+            manifest_dir = context.project_dir / "reports" / "data_requirements" / selected_id
+            st.caption(f"数据需求解析：{resolution['run_gate']} · 本地就绪 {resolution['metrics']['local_ready']}/{resolution['metrics']['requirements_evaluated']} · 项目补充 {resolution['metrics']['user_required']}")
+            if resolution["required_blockers"]:
+                st.warning("尚有必需数据缺失：" + "、".join(resolution["required_blockers"]))
+                allow_missing = st.checkbox("我已知晓并允许本次运行带缺失数据继续", key=f"allow_missing_{context.project_id}_{selected_id}")
+            else:
+                allow_missing = True
             st.info(f"将向现有 Run Manager 提交 `{scenario.workflow_id}`，不会创建第二套运行系统。")
-            if st.button("提交运行", type="primary"):
+            if st.button("提交运行", type="primary", disabled=not allow_missing):
                 try:
+                    write_resolution(resolution, manifest_dir)
                     run = submit_scenario_run(context.project_id, selected_id)
                     update_app_state(st.session_state, selected_run=run["run_id"], last_action="run_submitted")
                     st.success(f"Run 已创建：{run['run_id']}")

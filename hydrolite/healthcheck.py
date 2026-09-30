@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import json
 import subprocess
 import sys
 from typing import Any
@@ -68,6 +69,10 @@ def build_healthcheck() -> HealthcheckOutputs:
     _add(rows, "release_date", "passed", __release_date__)
     _add(rows, "python_version", "passed", sys.version.split()[0])
     _add(rows, "project_root", "passed", str(PROJECT_ROOT))
+    from hydrolite.connectors.registry import DataConnectorRegistry
+    connector_rows = DataConnectorRegistry().health()
+    counts = {status: sum(row.get("status") == status for row in connector_rows) for status in ("healthy", "degraded", "authentication_required", "unavailable")}
+    _add(rows, "data_connectors", "passed", json.dumps({"count": len(connector_rows), **counts}, ensure_ascii=False))
 
     for relative in ("requirements.txt", "streamlit_app.py", "projects/demo_project", "cases", "output", "data_raw"):
         path = PROJECT_ROOT / relative

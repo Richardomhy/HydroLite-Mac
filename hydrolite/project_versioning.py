@@ -228,13 +228,25 @@ def create_data_snapshot(project: str | Path, *, snapshot_mode: str = "reference
     discovered: dict[str, Path] = {}
     manifest_path = workspace / "workspace_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    online_metadata: dict[str, dict[str, Any]] = {}
     for item in manifest.get("datasets", []):
         if not isinstance(item, dict):
             continue
-        value = item.get("processed_path") or item.get("logical_path") or item.get("path")
+        value = item.get("processed_path") or item.get("logical_path") or item.get("standardized_path") or item.get("cache_reference") or item.get("path")
         path = _resolve_input_path(str(value), workspace) if value else None
         if path:
-            discovered[str(item.get("dataset_id") or item.get("dataset_type") or path.name)] = path
+            key = str(item.get("dataset_id") or item.get("dataset_type") or path.name)
+            discovered[key] = path
+            if item.get("source_type") == "online_public":
+                online_metadata[key] = {
+                    "provider": item.get("source_platform"),
+                    "dataset_id": item.get("online_provenance", {}).get("candidate", {}).get("dataset_id"),
+                    "dataset_version": item.get("online_provenance", {}).get("candidate", {}).get("version"),
+                    "retrieved_at": item.get("upload_time"),
+                    "license": item.get("license"),
+                    "license_status": item.get("license_status"),
+                    "online_provenance": item.get("online_provenance"),
+                }
     for config_file in config_files:
         if not config_file.exists():
             continue
@@ -247,9 +259,10 @@ def create_data_snapshot(project: str | Path, *, snapshot_mode: str = "reference
     datasets: list[dict[str, Any]] = []
     for dataset_id, path in sorted(discovered.items()):
         row_count, time_range = _table_metadata(path)
+        metadata = online_metadata.get(dataset_id, {})
         datasets.append({
             "dataset_id": dataset_id,
-            "dataset_version": "content-addressed",
+            "dataset_version": metadata.get("dataset_version") or "content-addressed",
             "source_path": _safe_logical_path(path, workspace),
             "logical_path": _safe_logical_path(path, workspace),
             "checksum": _hash_file(path),
@@ -257,6 +270,7 @@ def create_data_snapshot(project: str | Path, *, snapshot_mode: str = "reference
             "time_range": time_range,
             "crs": "unknown",
             "units": "declared_in_source_or_unknown",
+            **metadata,
         })
     created_at = _now()
     snapshot_id = f"data_{uuid.uuid4().hex[:12]}"

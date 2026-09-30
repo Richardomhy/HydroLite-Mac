@@ -67,7 +67,15 @@ def render(context) -> None:
         st.success(f"仅清理运行缓存：{cache}")
     settings = load_settings(); modes = ["local_full", "local_light", "cloud_streamlit", "test", "read_only"]
     mode = st.selectbox("运行模式", modes, index=modes.index(settings["runtime_mode"]))
-    if st.button("保存设置"): settings["runtime_mode"] = mode; st.success(save_settings(settings))
+    cache_root = st.text_input("公开数据缓存根目录（必须位于仓库外）", value=settings.get("data_cache_root", ""))
+    try:
+        from hydrolite.dataset_cache import DatasetCache
+        st.json(DatasetCache(root=cache_root or None).inspect_storage())
+    except Exception as exc:
+        st.warning(f"缓存路径不可用：{exc}")
+    if st.button("保存设置"):
+        settings.update(runtime_mode=mode, data_cache_root=cache_root.strip())
+        st.success(save_settings(settings))
     if st.button("恢复安全默认设置"): st.json(reset_settings())
     st.subheader("macOS 桌面发行")
     diagnosis = build_desktop_diagnosis(RC_APP_PATH if RC_APP_PATH.exists() else APP_PATH)

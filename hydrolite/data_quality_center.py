@@ -52,7 +52,12 @@ def run_dataset_quality_checks(dataset_id: str, workspace_dir: str | Path) -> di
     record = next((item for item in manifest.get("datasets", []) if item["dataset_id"] == dataset_id), None)
     if record is None:
         raise KeyError(f"Unknown dataset_id: {dataset_id}")
-    raw = root / record["raw_path"]
+    raw = Path(record.get("cache_reference") or (root / record["raw_path"])).expanduser().resolve()
+    if record.get("source_type") == "online_public":
+        if root in raw.parents or "data_raw" in raw.parts:
+            raise ValueError("Online source raw cache must remain external and outside data_raw")
+        if not record.get("checksum") or calculate_file_checksum(raw) != record["checksum"]:
+            raise ValueError("Online source cache checksum changed")
     inspection = inspect_uploaded_file(raw)
     dataset_type = record.get("user_declared_type") or record.get("classification", {}).get("dataset_type", "unknown")
     errors: list[str] = []
@@ -119,12 +124,14 @@ def run_dataset_quality_checks(dataset_id: str, workspace_dir: str | Path) -> di
         child_id = f"{dataset_id}_standardized"
         add_lineage_operation(dataset_id, child_id, "field_mapping", root, source_checksum=record["checksum"], output_checksum=calculate_file_checksum(standardized), parameters={"mapping": mapping}, reproducible_command=f"python -m hydrolite data quality {root.name}")
         record["standardized_path"] = str(standardized.relative_to(root))
+        record["standardized_checksum"] = calculate_file_checksum(standardized)
     elif result["quality_status"] in {"ready", "ready_with_warnings"} and inspection["format"] == "geojson":
         standardized = root / "standardized" / raw.name
         shutil.copy2(raw, standardized)
         child_id = f"{dataset_id}_standardized"
         add_lineage_operation(dataset_id, child_id, "quality_filter", root, source_checksum=record["checksum"], output_checksum=calculate_file_checksum(standardized), reproducible_command=f"python -m hydrolite data quality {root.name}")
         record["standardized_path"] = str(standardized.relative_to(root))
+        record["standardized_checksum"] = calculate_file_checksum(standardized)
     record["quality_status"] = result["quality_status"]
     record["processing_status"] = "standardized" if record.get("standardized_path") else "quality_checked"
     if not any(row.get("child_id") == dataset_id and row.get("operation") == "upload" for row in validate_lineage_graph(root)["records"]):

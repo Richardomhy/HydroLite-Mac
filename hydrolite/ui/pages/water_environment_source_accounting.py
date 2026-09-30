@@ -40,7 +40,7 @@ def render(context) -> None:
     st.header("Water Environment Source Accounting")
     st.caption("Experimental / Foundation · M9A · source_accounting_only")
     st.warning("当前水环境能力仅完成污染源清单和产生/净排放负荷核算，尚未模拟污染物入河输移和河流水质过程。")
-    render_point_source_closure()
+    render_point_source_closure(context=context)
     render_evidence_completion()
     outputs = read_water_environment_outputs()
     if not outputs["manifest"]:
@@ -119,7 +119,7 @@ def render_evidence_completion(output_dir=None):
         if request.is_file(): st.download_button("下载补资料清单", request.read_bytes(), file_name=request.name)
 
 
-def render_point_source_closure(output_dir=None):
+def render_point_source_closure(output_dir=None, context=None):
     from hydrolite.point_source_workflow import DEFAULT_OUTPUT as POINT_OUTPUT
     root = Path(output_dir or POINT_OUTPUT)
     st.subheader("Point Source Closure / 点源证据闭环")
@@ -130,10 +130,25 @@ def render_point_source_closure(output_dir=None):
     facts = json.loads(manifest.read_text(encoding="utf-8"))
     st.json({k: facts["gates"][k] for k in ("point_source_m9b_eligibility", "point_source_delivery_gate", "diffuse_source_delivery_gate", "pollutant_delivery_model_gate")})
     st.warning("坐标数值范围不代表 CRS 已确认；点源资格不能代表全流域；不会自动批准系数。")
-    tabs = st.tabs(["Identity", "Spatial", "Flow", "Concentration", "Factor", "Load", "Readiness"])
+    tabs = st.tabs(["Identity", "Spatial", "Flow", "Concentration", "Factor", "Load", "Readiness", "Data Acquisition"])
     files = ["identity/point_source_identity_audit.xlsx", "spatial/source_reach_review_queue.xlsx", "flow/source_flow_evidence.xlsx", "concentration/source_concentration_audit.xlsx", "factors/factor_decision_pack.xlsx", "load/point_source_load_ledger_v3.xlsx", "readiness/point_source_readiness.xlsx"]
     for tab, name in zip(tabs, files):
         with tab: _show_table(root / name)
+    with tabs[7]:
+        st.caption("只读取已完成的 M9A.2 六项数据请求与系数候选，不重新扫描高桥河历史文件。")
+        if context and context.project_loaded and st.button("解析高桥河现有六项数据需求", key="m9a3_resolve_gaoqiao"):
+            try:
+                from hydrolite.data_requirement_resolver import resolve_point_source_requests
+                result = resolve_point_source_requests(context.project_dir, root, context.project_dir / "reports" / "data_requirements" / "gaoqiao_m9a2")
+                st.session_state["m9a3_gaoqiao_resolution"] = result
+            except (ValueError, OSError, KeyError) as exc:
+                st.error(f"数据需求解析失败：{exc}")
+        result = st.session_state.get("m9a3_gaoqiao_resolution")
+        if result:
+            st.dataframe(pd.DataFrame([{"需求": row["requirement"]["requirement_id"], "策略": row["strategy"], "状态": row["status"], "连接器可解决": row["status"] == "auto_fetch_available", "说明": row["reason"]} for row in result["requirements"]]), use_container_width=True, hide_index=True)
+            st.caption("M9A.2 科学门禁保持原值：" + str(result.get("m9a2_gates_unchanged", {}).get("point_source_m9b_eligibility")))
+            report = context.project_dir / "reports" / "data_requirements" / "gaoqiao_m9a2" / "gaoqiao_data_resolution_report.xlsx"
+            if report.is_file(): st.download_button("下载高桥河数据需求分类", report.read_bytes(), file_name=report.name)
     with st.expander("Review Evidence / Confirm Mapping / Review Factor"):
         if facts.get("project_version"):
             st.info("此版本已冻结。先在新的输出目录建立修订工作副本，再逐项审核；不改写已交付版本。")

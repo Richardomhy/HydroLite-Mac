@@ -127,6 +127,19 @@ def _archive_file(
     _archive_bytes(archive, name, _packaged_file_bytes(source, workspace), checksums)
 
 
+def validate_portable_data_licenses(workspace: str | Path, data_paths: Iterable[str | Path]) -> None:
+    root = Path(workspace).expanduser().resolve()
+    manifest_path = root / "workspace_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else {}
+    for path in (Path(value).expanduser().resolve() for value in data_paths):
+        online = next((item for item in manifest.get("datasets", []) if any(
+            value and (Path(value).expanduser().resolve() == path if Path(value).expanduser().is_absolute() else (root / value).resolve() == path)
+            for value in (item.get("cache_reference"), item.get("standardized_path"), item.get("raw_path"))
+        )), None)
+        if online and online.get("source_type") == "online_public" and online.get("license_status") != "known":
+            raise ValueError("Online dataset with unknown/restricted license cannot enter a portable project package")
+
+
 def create_delivery_bundle(deliverable_id: str, output_path: str | Path | None = None) -> Path:
     deliverable = get_deliverable_record(deliverable_id)
     if not deliverable:
@@ -221,6 +234,8 @@ def create_project_package(
             raise ValueError("data_raw is never included in project packages")
         if not path.is_file() or path.stat().st_size > 50 * 1024 * 1024:
             raise ValueError(f"Portable data must be an existing file no larger than 50 MB: {path.name}")
+    if mode == "portable":
+        validate_portable_data_licenses(workspace, data_paths)
     sources = [*data_paths, *(Path(row["path"]) for row in artifact_records)]
     scan = scan_deliverable_for_sensitive_content(sources)
     if scan["status"] != "passed":

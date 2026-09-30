@@ -494,6 +494,24 @@ _STAGES: tuple[WorkflowStage, ...] = (
         "python -m hydrolite water-environment point-source-status", "Water Environment Source Accounting",
         ["不自动批准系数；点源资格不代表全流域门禁。"], ["source_evidence_completion"], "No M9B algorithms; water_quality remains planned.",
     ),
+    WorkflowStage(
+        "resolve_data_requirements", "解析数据需求", "Resolve data requirements",
+        "检查本地数据、在线候选和必须由项目补充的数据。",
+        "Resolve local data, public candidates and project-specific requirements.", PARTIAL,
+        ["scenario contract", "workspace manifest"], ["resolution_manifest.json", "user_required_data.xlsx"],
+        "python -m hydrolite data-requirements resolve", "数据中心",
+        ["公开候选不替代项目实测；需求解析不自动解除科学门禁。"], ["data_center"],
+        "Requirement-level resolver; provider access remains bounded and explicit.",
+    ),
+    WorkflowStage(
+        "fetch_public_data", "获取公开数据", "Fetch public data",
+        "将通过来源、覆盖、许可与大小校验的公开数据导入外部缓存及数据中心。",
+        "Fetch eligible public data into external cache and Data Center.", PARTIAL,
+        ["approved AUTO_FETCH candidate"], ["cache manifest", "workspace dataset record"],
+        "python -m hydrolite data-connectors fetch", "数据中心",
+        ["不下载到 data_raw；不执行下载内容；unknown license 不进入 portable package。"], ["resolve_data_requirements"],
+        "Explicit bounded fetch; quality review remains in Data Center.",
+    ),
     *tuple(
         WorkflowStage(stage_id, title, title, "连续模型验证门禁。", "Continuous-model validation gate.", PARTIAL, ["continuous outputs"], [artifact], command, "连续模型验证", ["水量守恒不等于过程验证。"], ["continuous_hydrology"], "诊断 MVP；不启用水质模型。")
         for stage_id, title, artifact, command in (

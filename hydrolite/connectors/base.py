@@ -8,6 +8,25 @@ class DataConnector:
     connector_id = "base"
     display_name = "Base"
     authentication_type = "none"
+    provider = "unconfigured"
+    data_types = ()
+
+    def describe(self, candidate):
+        return candidate.as_dict()
+
+    def fetch(self, candidate, **kwargs):
+        from hydrolite.connectors.contracts import FetchedDataset
+        return FetchedDataset("provider_not_configured", candidate.as_dict()).as_dict()
+
+    def validate(self, fetched):
+        from hydrolite.workspace import calculate_file_checksum
+        path = Path(fetched.get("local_path", ""))
+        valid = path.is_file() and bool(fetched.get("checksum")) and calculate_file_checksum(path) == fetched["checksum"]
+        return {"status": "passed" if valid else "invalid_dataset"}
+
+    def license_metadata(self, candidate):
+        return {"license": candidate.license, "status": candidate.license_status,
+                "portable_allowed": candidate.license_status == "known"}
 
     def detect_dependencies(self) -> dict[str, Any]:
         return {"available": True, "missing": []}

@@ -2,7 +2,9 @@ def test_connectors_degrade_without_credentials_and_do_not_download():
     from hydrolite.connectors import get_connector, list_connectors
 
     rows = list_connectors()
-    assert {row["connector_id"] for row in rows} == {"local", "gee", "earthdata", "cds", "stac"}
+    ids = {row["connector_id"] for row in rows}
+    assert {"local", "gee", "earthdata", "cds", "stac"} <= ids
+    assert {"http", "meteorological", "hydrology_observations", "environmental_monitoring", "regulatory"} <= ids
     assert all(row["download_execute_default"] is False for row in rows)
     assert get_connector("earthdata").download({}, execute=False)["status"] == "dry_run"
     assert get_connector("cds").detect_authentication().get("credentials_redacted") is True

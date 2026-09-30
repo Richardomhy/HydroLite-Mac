@@ -9,6 +9,7 @@ from hydrolite.runtime_paths import get_runtime_root
 
 DEFAULTS = {
     "runtime_directory": str(get_runtime_root()),
+    "data_cache_root": "",
     "default_workspace_directory": str(Path("workspaces").resolve()),
     "output_directory": str(Path("output").resolve()),
     "max_parallel_tasks": 1,

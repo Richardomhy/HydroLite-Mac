@@ -70,7 +70,7 @@ def read_swmm_outputs(swmm_dir: str | Path) -> dict[str, pd.DataFrame]:
     outputs: dict[str, pd.DataFrame] = {}
     for key, path in files.items():
         df = safe_read_excel(path) if path.suffix == ".xlsx" else safe_read_csv(path)
-        if not df.empty:
+        if path.is_file():
             outputs[key] = df
     return outputs
 

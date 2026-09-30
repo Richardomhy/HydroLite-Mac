@@ -86,6 +86,8 @@ _RECIPES = {
     "full_modeling_workflow": {"stages": ["data_center", "data_standardization", "watershed_delineation", "hydrology", "water_balance_audit", "hec_hms_project", "reservoir_routing", "flood_forecast", "rusle", "sediment_delivery", "watershed_accounting", "reporting"], "local_only_tasks": ["hec_hms_run"]},
     "reporting_only": {"stages": ["reporting"]},
     "gee_dataset_discovery": {"stages": ["gee_catalog_intelligence", "reporting"], "expected_outputs": ["gee_catalog_report_zh.md"]},
+    "data_requirement_resolution": {"stages": ["resolve_data_requirements", "reporting"], "expected_outputs": ["resolution_manifest.json", "user_required_data.xlsx"]},
+    "public_data_acquisition": {"stages": ["resolve_data_requirements", "fetch_public_data", "data_standardization", "reporting"], "expected_outputs": ["workspace_manifest.json", "lineage_manifest.json"]},
     "research_method_intake": {"stages": ["research_source_intake", "research_license_review", "method_inspiration_lab"], "expected_outputs": ["research_sources.xlsx", "research_methods.xlsx"]},
     "gamma_lag_experiment": {"stages": ["gamma_lag_features"], "expected_outputs": ["kernels/single_kernel.csv", "features/gamma_features.csv", "reports/gamma_lag_manifest.json"]},
     "graph_hydrology_experiment": {"stages": ["river_graph_features", "trend_aware_features", "multihorizon_forecast"], "expected_outputs": ["graph/graph_manifest.json", "forecast/horizon_metrics.xlsx", "reports/graph_trend_manifest.json"]},

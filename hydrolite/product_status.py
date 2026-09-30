@@ -44,6 +44,8 @@ _EVIDENCE = {
     "flood_forecast": ("ready_with_warnings", ("Partial capability; not a production warning service.",)),
     "drought_forecast": ("ready_with_warnings", ("Partial capability; validate forcing and horizon skill.",)),
     "hydrology": ("production_ready", ("Project-specific data validation and calibration remain required.",)),
+    "online_data_acquisition": ("framework_ready", ("Only bounded configured public endpoints are enabled; source coverage and license vary by provider.",)),
+    "automatic_requirement_resolution": ("framework_ready", ("Resolution counts requirements; candidate discovery/download does not equal QC or model readiness.",)),
 }
 
 

@@ -640,6 +640,18 @@ def build_parser() -> argparse.ArgumentParser:
     x = connectors_sub.add_parser("plan"); x.add_argument("workspace_dir"); x.add_argument("workflow_id")
     x = connectors_sub.add_parser("execute-plan"); x.add_argument("plan"); x.add_argument("--dry-run", action="store_true"); x.add_argument("--execute", action="store_true")
 
+    acquisition = subparsers.add_parser("data-connectors", help="Resolve and fetch trusted public datasets.")
+    acquisition_sub = acquisition.add_subparsers(dest="acquisition_command", required=True)
+    for command in ("list", "health"):
+        acquisition_sub.add_parser(command)
+    x = acquisition_sub.add_parser("search"); x.add_argument("connector"); x.add_argument("config")
+    x = acquisition_sub.add_parser("fetch"); x.add_argument("manifest"); x.add_argument("workspace"); x.add_argument("requirement_id"); x.add_argument("--execute", action="store_true"); x.add_argument("--confirm-large", action="store_true")
+
+    requirements_cli = subparsers.add_parser("data-requirements", help="Resolve scenario requirements and generate the user required data list.")
+    requirements_sub = requirements_cli.add_subparsers(dest="requirements_command", required=True)
+    x = requirements_sub.add_parser("resolve"); x.add_argument("scenario"); x.add_argument("workspace"); x.add_argument("--online", action="store_true"); x.add_argument("--bbox", nargs=4, type=float, metavar=("WEST", "SOUTH", "EAST", "NORTH")); x.add_argument("--dates", nargs=2, metavar=("START", "END")); x.add_argument("--maximum-resolution-m", type=float); x.add_argument("--output"); x.add_argument("--m9a2-dir", default=str(ROOT / "output/water_environment/m9a2"))
+    x = requirements_sub.add_parser("missing"); x.add_argument("manifest")
+
     workflow_parser = subparsers.add_parser("workflow", help="v0.7.x full modeling workflow orchestration.")
     workflow_subparsers = workflow_parser.add_subparsers(dest="workflow_command", required=True)
     workflow_subparsers.add_parser("list", help="List workflow stages and implementation status.")
@@ -1999,6 +2011,41 @@ def main(argv: list[str] | None = None) -> int:
         if args.connectors_command == "execute-plan":
             plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
             print(json.dumps(execute_acquisition_plan(plan, execute=bool(args.execute)), indent=2, ensure_ascii=False, default=str)); return 0
+    if args.command == "data-connectors":
+        from hydrolite.connectors.registry import DataConnectorRegistry
+        registry = DataConnectorRegistry()
+        if args.acquisition_command == "list":
+            print(json.dumps({"connectors": registry.list(), "capabilities": registry.capabilities()}, indent=2, ensure_ascii=False)); return 0
+        if args.acquisition_command == "health":
+            rows = registry.health()
+            print(json.dumps(rows, indent=2, ensure_ascii=False, default=str)); return 0
+        if args.acquisition_command == "search":
+            config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8")) or {}
+            result = registry.search(args.connector, config)
+            print(json.dumps(result, indent=2, ensure_ascii=False, default=str)); return 0 if result["status"] not in {"online_source_unavailable", "authentication_required"} else 1
+        if args.acquisition_command == "fetch":
+            from hydrolite.data_requirement_resolver import fetch_recommended
+            resolution = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+            if not args.execute:
+                print(json.dumps({"status": "dry_run", "would_execute": args.requirement_id, "execute_required": True}, ensure_ascii=False)); return 0
+            results = fetch_recommended(resolution, args.workspace, registry, requirement_id=args.requirement_id, confirm_large=args.confirm_large)
+            print(json.dumps(results, indent=2, ensure_ascii=False, default=str)); return 0 if any(row.get("checksum") for row in results) else 1
+    if args.command == "data-requirements":
+        from hydrolite.data_requirement_resolver import resolve_scenario_requirements, resolve_point_source_requests, write_resolution, build_user_required_data_list
+        if args.requirements_command == "resolve":
+            output = Path(args.output).expanduser() if args.output else Path(args.workspace) / "reports" / "data_requirements" / args.scenario
+            if args.scenario == "gaoqiao_m9a2":
+                result = resolve_point_source_requests(args.workspace, args.m9a2_dir, output, online=args.online)
+                path = output / "resolution_manifest.json"
+            else:
+                context = {"bbox": args.bbox, "dates": args.dates, "maximum_resolution_m": args.maximum_resolution_m}
+                result = resolve_scenario_requirements(args.scenario, args.workspace, online=args.online, context=context)
+                path = write_resolution(result, output)
+            print(json.dumps({"status": result["run_gate"], "scenario": args.scenario, "metrics": result["metrics"], "required_blockers": result["required_blockers"], "manifest": str(path)}, indent=2, ensure_ascii=False, default=str))
+            return 1 if result["required_blockers"] else 0
+        manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+        rows = build_user_required_data_list(manifest)
+        print(json.dumps({"count": len(rows), "requirements": rows}, indent=2, ensure_ascii=False, default=str)); return 0
     if args.command == "workflow":
         if args.workflow_command == "list":
             for stage in list_workflow_stages():

@@ -129,6 +129,12 @@ def write_coupling_summary(path: Path, summary: dict[str, object]) -> None:
     ).to_excel(path, index=False)
 
 
+def _write_empty_result_tables(node_path: Path, link_path: Path, system_path: Path) -> None:
+    pd.DataFrame(columns=["datetime", "node_id", "depth"]).to_csv(node_path, index=False)
+    pd.DataFrame(columns=["datetime", "link_id", "flow"]).to_csv(link_path, index=False)
+    pd.DataFrame(columns=["datetime", "runoff", "flooding", "outflow", "storage"]).to_csv(system_path, index=False)
+
+
 def read_coupling_summary(path: str | Path) -> pd.DataFrame:
     return pd.read_excel(path)
 
@@ -335,24 +341,38 @@ def _attempt_external_solver(
         )
 
     script = _project_root() / "scripts" / "swmm_env" / "run_swmm_solver.py"
-    completed = subprocess.run(
-        [
-            str(external_python),
-            str(script),
-            "--inp",
-            str(working_inp),
-            "--rpt",
-            str(report_file),
-            "--out",
-            str(output_file),
-            "--summary",
-            str(summary_json),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=180,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            [
+                str(external_python),
+                str(script),
+                "--inp",
+                str(working_inp),
+                "--rpt",
+                str(report_file),
+                "--out",
+                str(output_file),
+                "--summary",
+                str(summary_json),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return (
+            {
+                "backend_name": "external_solver",
+                "backend_available": False,
+                "backend_status": "failed",
+                "return_code": "",
+                "error_message": f"External SWMM solver could not start: {exc}",
+                "external_solver_python": str(external_python),
+                "external_solver_summary_json": str(summary_json),
+            },
+            None,
+        )
     payload = None
     if summary_json.exists():
         try:
@@ -609,6 +629,8 @@ def run_swmm(
             target_node=coupling.target_node,
             inflow_name=coupling.inflow_name,
         )
+        _write_empty_result_tables(node_depth_csv, link_flow_csv, system_csv)
+        write_swmm_kpis(kpis_file, {"run_status": "failed", "backend_used": "", "report_file": str(report_file), "output_file": str(output_file)})
         write_swmm_summary(summary_file, result)
         logger.warning(result.error_message)
         return result, summary_file
@@ -654,6 +676,7 @@ def run_swmm(
             target_node=coupling.target_node,
             inflow_name=coupling.inflow_name,
         )
+        _write_empty_result_tables(node_depth_csv, link_flow_csv, system_csv)
         write_swmm_kpis(
             kpis_file,
             {
@@ -809,6 +832,7 @@ def run_swmm(
     if run_status == "success":
         logger.info("SWMM run succeeded; wrote %s", summary_file)
     else:
+        _write_empty_result_tables(node_depth_csv, link_flow_csv, system_csv)
         logger.warning("SWMM run %s: %s", run_status, error_message)
         logger.warning("HydroLite watershed outputs remain available.")
     return result, summary_file

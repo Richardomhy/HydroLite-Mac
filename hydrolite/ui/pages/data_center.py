@@ -7,11 +7,14 @@ import pandas as pd
 import streamlit as st
 
 from hydrolite.connectors import list_connectors
-from hydrolite.data_acquisition import create_acquisition_plan, write_acquisition_report
+from hydrolite.data_acquisition import create_acquisition_plan, write_acquisition_report, import_fetched_dataset
+from hydrolite.connectors.contracts import DataRequirement
 from hydrolite.data_center import write_data_center_reports
 from hydrolite.data_quality_center import run_workspace_quality_checks, write_data_quality_report
 from hydrolite.data_registry import list_dataset_types, write_data_registry_report
 from hydrolite.data_requirements import build_project_data_requirement_matrix, write_data_readiness_report
+from hydrolite.data_requirement_resolver import resolve_scenario_requirements, write_resolution, fetch_recommended
+from hydrolite.connectors.registry import DataConnectorRegistry
 from hydrolite.data_upload import copy_upload_to_workspace, inspect_uploaded_file, preview_uploaded_dataset
 from hydrolite.input_builder import build_all_inputs
 from hydrolite.data_lineage import validate_lineage_graph, write_lineage_report
@@ -96,8 +99,70 @@ def render(context: WorkbenchContext) -> None:
             st.json(connector_rows[connector_id])
             st.info("搜索必须提供 bbox 与时间范围；真实下载默认关闭，凭证不会显示。")
     with tabs[8]:
-        workflow = st.selectbox("应用场景", ["full_modeling_workflow", "hydrolite_event_model", "flood_forecast", "rusle", "water_quality"])
-        if st.button("生成数据需求", disabled=not workspace.exists()):
+        workflow = st.selectbox("应用场景", ["full_modeling_workflow", "watershed_hydrology", "hydrolite_event_model", "flood_forecast", "drought_monitoring", "SC01", "SC02", "SC03", "SC05", "SC09", "SC10", "water_environment_source_accounting"])
+        online = st.checkbox("允许访问已配置的公开 STAC 元数据端点", value=False, help="关闭时仅使用本地数据与离线目录；GEE 计算认证另行处理。")
+        context = {}
+        if online:
+            bbox_text = st.text_input("检索范围 bbox（W,S,E,N）", placeholder="例如 -122.5,37.7,-122.4,37.8")
+            dates_text = st.text_input("时间范围（可选，ISO start,end）", placeholder="2024-01-01,2024-12-31")
+            resolution = st.number_input("最大像元尺寸（米，可选）", min_value=0.0, value=0.0, step=10.0)
+            if bbox_text.strip():
+                try:
+                    context["bbox"] = [float(value.strip()) for value in bbox_text.split(",")]
+                    if len(context["bbox"]) != 4:
+                        raise ValueError
+                except ValueError:
+                    st.error("bbox 需要四个数值：W,S,E,N。")
+                    context.pop("bbox", None)
+            if dates_text.strip():
+                values = [value.strip() for value in dates_text.split(",")]
+                if len(values) == 2:
+                    context["dates"] = values
+                else:
+                    st.error("时间范围需要两个逗号分隔的 ISO 日期。")
+            if resolution > 0:
+                context["maximum_resolution_m"] = resolution
+        if st.button("解析本地数据与数据需求", disabled=not workspace.exists()):
+            resolution = resolve_scenario_requirements(workflow, workspace, online=online, context=context)
+            target = workspace / "reports" / "data_requirements" / workflow
+            write_resolution(resolution, target)
+            st.session_state["data_requirement_resolution"] = resolution
+            st.session_state["data_requirement_resolution_path"] = str(target)
+        resolution = st.session_state.get("data_requirement_resolution")
+        if resolution and resolution.get("scenario") == workflow:
+            metrics = resolution["metrics"]
+            st.caption(f"需求 {metrics['requirements_evaluated']} 项 · 本地就绪 {metrics['local_ready']} · 可自动获取 {metrics['auto_fetch']} · 在线候选 {metrics['online_candidate']} · 需项目补充 {metrics['user_required']}")
+            st.caption(f"运行前置状态：{resolution['run_gate']}；此状态不会改变水文/水环境科学门禁。")
+            frame = pd.DataFrame([{
+                "需求": row["requirement"]["requirement_id"], "数据类型": row["requirement"]["data_type"],
+                "策略": row["strategy"], "状态": row["status"], "本地数据": ", ".join(row.get("local_dataset_ids", [])),
+                "候选数": len(row.get("candidates", [])), "说明": row["reason"],
+            } for row in resolution["requirements"]])
+            st.dataframe(frame, use_container_width=True, hide_index=True)
+            required_data_path = workspace / "reports" / "data_requirements" / workflow / "user_required_data.xlsx"
+            if required_data_path.is_file():
+                st.download_button("下载项目必需数据清单", required_data_path.read_bytes(), file_name="user_required_data.xlsx", key="required_data_download")
+            for row in resolution["requirements"]:
+                for index, candidate in enumerate(row.get("candidates", [])):
+                    with st.expander(f"{row['requirement']['requirement_id']} · {candidate['candidate']['dataset_id']} · {candidate['candidate']['provider']}"):
+                        st.json({key: value for key, value in candidate.items() if key != "candidate"} | {"candidate": candidate["candidate"]})
+                        st.caption("评分基于覆盖、时间、分辨率、变量、来源、许可与缺失度。下载后仍需进入 Data Center 完成标准化和 QC。")
+                        if row["strategy"] == "AUTO_FETCH" and candidate.get("eligible") and candidate["candidate"].get("access_status") == "public_download":
+                            confirm = st.checkbox("确认获取此公开候选到外部缓存", key=f"fetch_confirm_{workflow}_{row['requirement']['requirement_id']}_{index}")
+                            estimated_size = candidate["candidate"].get("estimated_size")
+                            large_confirm = False
+                            if estimated_size and estimated_size > 50 * 1024 * 1024:
+                                large_confirm = st.checkbox("确认该数据超过 50 MiB，允许最高 200 MiB 下载", key=f"fetch_large_confirm_{workflow}_{row['requirement']['requirement_id']}_{index}")
+                            if st.button("获取并导入待 QC 数据", key=f"fetch_{workflow}_{row['requirement']['requirement_id']}_{index}", disabled=not confirm or (bool(estimated_size and estimated_size > 50 * 1024 * 1024) and not large_confirm)):
+                                result = DataConnectorRegistry().fetch(candidate["candidate"], confirm_large=large_confirm)
+                                if result.get("checksum"):
+                                    result["data_center"] = import_fetched_dataset(result, workspace, DataRequirement(**row["requirement"]))
+                                st.json(result)
+                        elif row["strategy"] == "AUTO_DISCOVER_REQUIRE_APPROVAL":
+                            st.warning("该项只允许发现并人工审批；不会自动进入项目参数。")
+                        elif candidate["candidate"].get("access_status") == "authentication_required":
+                            st.info("目录可查；此计算/导出需要原有提供方认证。")
+        if st.button("生成旧版完整度矩阵", disabled=not workspace.exists()):
             matrix = build_project_data_requirement_matrix(workflow, workspace)
             write_data_readiness_report(OUTPUT, {"workflow_id": workflow, "matrix": matrix})
             st.dataframe(matrix, use_container_width=True)
