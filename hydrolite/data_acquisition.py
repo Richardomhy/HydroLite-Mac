@@ -27,18 +27,24 @@ def import_fetched_dataset(fetched: dict[str, Any], workspace_dir: str | Path, r
     path = Path(fetched.get("local_path", "")).resolve()
     if not path.is_file() or not fetched.get("checksum") or calculate_file_checksum(path) != fetched["checksum"]:
         raise ValueError("Fetched artifact checksum is missing or invalid")
+    candidate = fetched.get("candidate", {})
+    origin = candidate.get("metadata", {}).get("data_origin_class", "unknown")
+    from hydrolite.connectors.contracts import DATA_ORIGIN_CLASSES
+    if origin not in DATA_ORIGIN_CLASSES:
+        origin = "unknown"
     record = {
         "dataset_id": "ds_" + fetched["checksum"][:12], "original_filename": path.name,
-        "stored_filename": path.name, "source_type": "online_public", "source_platform": fetched.get("candidate", {}).get("provider"),
+        "stored_filename": path.name, "source_type": "online_public", "source_platform": candidate.get("provider"), "data_origin_class": origin,
         "upload_time": fetched.get("retrieved_at"), "checksum": fetched["checksum"], "size": path.stat().st_size,
-        "media_type": fetched.get("candidate", {}).get("content_type"), "detected_format": path.suffix.lstrip("."),
+        "media_type": candidate.get("content_type"), "detected_format": path.suffix.lstrip("."),
         "user_declared_type": requirement.data_type, "dataset_type": requirement.data_type,
-        "coordinate_system": fetched.get("candidate", {}).get("crs"), "temporal_range": fetched.get("candidate", {}).get("temporal_extent"),
-        "spatial_extent": fetched.get("candidate", {}).get("spatial_extent"), "units": {},
-        "license": fetched.get("candidate", {}).get("license", "unknown"),
-        "license_status": fetched.get("candidate", {}).get("license_status", "unknown"),
+        "coordinate_system": candidate.get("crs"), "temporal_range": candidate.get("temporal_extent"),
+        "spatial_extent": candidate.get("spatial_extent"), "units": {},
+        "fitness_for_purpose": candidate.get("metadata", {}).get("fitness_for_purpose", "requires Data Center review"),
+        "license": candidate.get("license", "unknown"),
+        "license_status": candidate.get("license_status", "unknown"),
         "processing_status": "downloaded_needs_data_center_ingestion", "quality_status": "needs_mapping",
-        "project_measurement_confirmed": False, "online_provenance": {"candidate": fetched.get("candidate"), "retrieved_at": fetched.get("retrieved_at"), "checksum": fetched["checksum"], "etag": fetched.get("etag"), "last_modified": fetched.get("last_modified"), "processing_chain": fetched.get("processing_chain", [])},
+        "project_measurement_confirmed": False, "online_provenance": {"candidate": candidate, "retrieved_at": fetched.get("retrieved_at"), "checksum": fetched["checksum"], "source_provider": candidate.get("provider"), "source_version": candidate.get("version"), "license": candidate.get("license"), "aoi": candidate.get("spatial_extent"), "etag": fetched.get("etag"), "last_modified": fetched.get("last_modified"), "processing_chain": fetched.get("processing_chain", [])},
         "cache_reference": str(path), "standardized_path": None, "lineage_parent": None,
         "warnings": ["Download success is not QC or model readiness; import and review in Data Center."],
         "raw_path": str(path),

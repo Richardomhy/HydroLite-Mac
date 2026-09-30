@@ -3,6 +3,8 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 STRATEGIES = {"AUTO_FETCH", "AUTO_DISCOVER_REQUIRE_APPROVAL", "USER_REQUIRED"}
+SOURCE_MODES = {"AUTO_FETCH", "AUTO_DISCOVER_REQUIRE_APPROVAL", "AUTH_REQUIRED", "USER_REQUIRED", "UNAVAILABLE"}
+DATA_ORIGIN_CLASSES = {"public_observation", "public_remote_sensing", "public_model_reanalysis", "project_measurement", "project_survey", "regulatory_record", "derived", "unknown"}
 AUTH_TYPES = {"none", "api_key", "oauth", "service_account", "external_cli", "user_login_required"}
 PROJECT_TYPES = {"outfall_actual_flow", "wastewater_volume", "outfall_concentration", "coordinate_crs", "receiving_water", "project_factor_approval", "streamflow_observed", "field_survey", "calibrated_parameters"}
 

@@ -92,7 +92,7 @@ class GenericStacAdapter(HttpFileConnector):
                         props.get("gsd"), str(asset.get("proj:code") or props.get("proj:code") or props.get("proj:epsg") or "") or None,
                         license=item_license, license_status=status, trusted_provider=bool(self.config.get("trusted")),
                         access_status="public_download", estimated_size=asset.get("file:size"), content_type=asset.get("type", "").split(";")[0],
-                        metadata={"stac_item_id": item["id"], "source_date": props.get("datetime"), "missingness": "unknown", "catalog_envelope_only": True},
+                        metadata={"stac_item_id": item["id"], "source_date": props.get("datetime"), "missingness": "unknown", "catalog_envelope_only": True, "data_origin_class": "public_remote_sensing", "fitness_for_purpose": "candidate metadata only; product-specific review required"},
                     ))
             return {"status": "available" if rows else "no_match", "candidates": rows}
         except (ConnectorError, ValueError, KeyError) as exc:
@@ -119,6 +119,165 @@ class GenericStacAdapter(HttpFileConnector):
 
     def healthcheck(self):
         return {"connector_id": self.connector_id, "status": "degraded", "reason": "configured; live probe only on explicit search", "supported_datasets": list(self.config.get("collections", {}))}
+
+
+class CopernicusStacConnector(GenericStacAdapter):
+    connector_id = "copernicus_stac"
+    display_name = "Copernicus Data Space STAC"
+
+    def __init__(self, config=None):
+        super().__init__(provider_config().get("copernicus_stac", {}) if config is None else config)
+
+    def search(self, config):
+        result = super().search(config)
+        # Metadata search is available; asset hosting and collection licenses
+        # are collection-specific and are not enabled for automatic fetch here.
+        result["candidates"] = [replace(candidate, access_status="discover_only") for candidate in result.get("candidates", [])]
+        return result
+
+
+class NASACMRConnector(DataConnector):
+    connector_id = "nasa_cmr"
+    display_name = "NASA Earthdata CMR"
+    provider = "NASA Earthdata CMR"
+    authentication_type = "Earthdata Login for restricted granule downloads"
+    data_types = ("rainfall", "temperature", "soil_moisture", "satellite_image", "dem")
+
+    def __init__(self, config=None):
+        self.config = provider_config().get("nasa_cmr", {}) if config is None else config
+
+    def search(self, config):
+        if not config.get("online", False):
+            return {"status": "offline_discovery", "candidates": []}
+        kind = config.get("data_type", "rainfall")
+        short_name = config.get("short_name") or self.config.get("collections", {}).get(kind)
+        params = {"page_size": min(max(int(config.get("limit", 5)), 1), 20), "include_has_granules": "true"}
+        granules = bool(config.get("granules"))
+        if granules:
+            collection_id = config.get("collection_concept_id")
+            if not collection_id:
+                return {"status": "collection_required_for_granules", "candidates": []}
+            params.pop("include_has_granules", None)
+            params["collection_concept_id"] = str(collection_id)[:96]
+        if short_name:
+            params["short_name"] = short_name
+        if config.get("keyword"):
+            params["keyword"] = str(config["keyword"])[:120]
+        if config.get("bbox"):
+            DataConnector.validate_bounds({"bbox": list(config["bbox"]), "start": config.get("start") or "bounded", "end": config.get("end") or "bounded"})
+            params["bounding_box"] = ",".join(map(str, config["bbox"]))
+        if config.get("start") and config.get("end"):
+            params["temporal"] = f"{config['start']}T00:00:00Z,{config['end']}T23:59:59Z"
+        endpoint = self.config["endpoint"].rstrip("/") + ("/granules.json?" if granules else "/collections.json?") + urlencode(params)
+        try:
+            with open_public(endpoint, self.config["allowed_hosts"], headers={"Accept": "application/json"}, interval=self.config.get("request_interval_seconds", 1)) as response:
+                payload = json.loads(response.read(2 * 1024 * 1024 + 1))
+            entries = (payload.get("feed") or {}).get("entry", payload.get("items", []))
+            rows = []
+            for item in entries[:20]:
+                title = item.get("dataset_id") or item.get("entry_title") or item.get("title") or "NASA CMR collection"
+                concept = item.get("id") or item.get("concept_id") or item.get("concept-id") or title
+                extent = item.get("boxes") or item.get("boxes_and_polygons") or []
+                bbox = ()
+                if extent and isinstance(extent[0], str):
+                    try: bbox = tuple(float(value) for value in extent[0].split())
+                    except ValueError: pass
+                rows.append(DatasetCandidate(
+                    str(concept), self.connector_id, self.provider, kind,
+                    f"{self.config['endpoint'].rstrip('/')}/{('granules' if granules else 'collections')}/{concept}.json",
+                    str(item.get("version_id") or item.get("version") or ""), (kind,), bbox,
+                    tuple(item.get("time_start_end") or ()), None, None,
+                    license=str(item.get("license") or "collection-specific terms"), license_status="unknown",
+                    trusted_provider=True, access_status="discover_only",
+                    metadata={"collection_title": title, "short_name": item.get("short_name"), "concept_id": concept,
+                              "has_granules": item.get("has_granules"), "downloadable": item.get("downloadable"),
+                              "result_level": "granule" if granules else "collection", "collection_concept_id": config.get("collection_concept_id"),
+                              "data_origin_class": "public_remote_sensing", "fitness_for_purpose": "collection metadata only; product estimates do not replace project measurements", "auth_status": "auth_required_for_restricted_download"},
+                ))
+            return {"status": "available" if rows else "no_match", "candidates": rows}
+        except (ConnectorError, ValueError, KeyError, TypeError) as exc:
+            return {"status": getattr(exc, "status", "invalid_metadata"), "candidates": [], "error_message": str(exc) if isinstance(exc, ConnectorError) else "Invalid NASA CMR response"}
+
+    def healthcheck(self):
+        return {"connector_id": self.connector_id, "status": "degraded", "reason": "public metadata search; granule download/auth is separate", "supported_datasets": list(self.config.get("collections", {})), "authentication": "not required for search"}
+
+    def fetch(self, candidate, **kwargs):
+        from hydrolite.connectors.contracts import FetchedDataset
+        return FetchedDataset("auth_required", candidate.as_dict(), error_message="CMR metadata is public; granule access is not verified as anonymous. Configure Earthdata Login through the supported user workflow.").as_dict()
+
+
+class HydroSHEDSConnector(HttpFileConnector):
+    connector_id = "hydrosheds"
+    display_name = "HydroSHEDS official core products"
+
+    def __init__(self, config=None):
+        super().__init__(provider_config().get("hydrosheds", {}) if config is None else config)
+
+    @staticmethod
+    def tile_candidates(bbox):
+        west, south, east, north = map(float, bbox)
+        if not (-180 <= west < east <= 180 and -90 <= south < north <= 90):
+            raise ValueError("Invalid WGS84 bbox")
+        # The official 3-arc-second product uses 10x10 degree tiles; this returns
+        # coordinate-derived candidates without guessing provider filenames.
+        return [f"SW:{lon}:{lat}" for lon in range(int(west // 10 * 10), int((east - 1e-12) // 10 * 10) + 1, 10)
+                for lat in range(int(south // 10 * 10), int((north - 1e-12) // 10 * 10) + 1, 10)]
+
+    def search(self, config):
+        if not config.get("online", False):
+            return {"status": "offline_discovery", "candidates": []}
+        bbox = config.get("bbox")
+        if not bbox:
+            return {"status": "spatial_extent_required", "candidates": []}
+        tiles = self.tile_candidates(bbox)
+        kind = config.get("data_type", "dem")
+        product = self.config.get("products", {}).get(kind)
+        if not product:
+            page_by_type = {"hydrography": ("HydroRIVERS", "https://www.hydrosheds.org/products/hydrorivers"),
+                            "conditioned_dem": ("HydroSHEDS conditioned DEM", "https://www.hydrosheds.org/hydrosheds-core-downloads")}
+            if kind not in page_by_type:
+                return {"status": "unsupported", "candidates": [], "tile_candidates": tiles}
+            title, page = page_by_type[kind]
+            candidate = DatasetCandidate(title, self.connector_id, self.config.get("provider", "HydroSHEDS"), kind,
+                page, "official_catalog_page", (kind,), (-180.0, -90.0, 180.0, 90.0), (), None, "EPSG:4326",
+                license="product-specific license review", license_status="unknown", trusted_provider=True,
+                access_status="discover_only", metadata={"official_product_page": page, "tile_candidates": tiles,
+                    "data_origin_class": "derived", "fitness_for_purpose": "discovery only; product extent/license/resolution require review"})
+            return {"status": "available", "candidates": [candidate], "tile_candidates": tiles}
+        # Product table is intentionally conservative: only official Asia 30s
+        # files with a published size below the 50 MiB automatic ceiling qualify.
+        region = product.get("regions", {}).get("asia")
+        aoi_bbox = tuple(map(float, bbox))
+        if not region or not _covers(tuple(region["bbox"]), aoi_bbox):
+            return {"status": "approval_required", "candidates": [], "tile_candidates": tiles, "reason": "No verified small regional product covers this AOI"}
+        href = self.config["endpoint"].rstrip("/") + "/" + product["collection"] + "/" + region["filename"]
+        candidate = DatasetCandidate(
+            f"hydrosheds-v1/{kind}/asia-30s", self.connector_id, self.config.get("provider", "HydroSHEDS"), kind,
+            href, "v1.1-30s", (kind,), tuple(region["bbox"]), (), 900.0, "EPSG:4326",
+            license=region["license"], license_status="known", trusted_provider=True,
+            access_status="public_download", estimated_size=int(region["estimated_mb"] * 1_000_000), content_type="application/zip",
+            metadata={"official_product_page": "https://www.hydrosheds.org/hydrosheds-core-downloads",
+                      "official_license_url": "https://www.hydrosheds.org/products/hydrosheds",
+                      "citation": "Lehner, Verdin & Jarvis (2008), DOI:10.1029/2008EO100001",
+                      "resolution_arc_seconds": 30, "aoi_tile_candidates": tiles,
+                      "data_origin_class": "derived", "fitness_for_purpose": "regional_hydrography_baseline; inspect resolution and extent"},
+        )
+        if candidate.estimated_size > 50 * 1024 * 1024:
+            return {"status": "size_limit", "candidates": [], "tile_candidates": tiles}
+        return {"status": "available", "candidates": [candidate], "tile_candidates": tiles}
+
+    def fetch(self, candidate, **kwargs):
+        return super().fetch(candidate, **kwargs)
+
+    def healthcheck(self):
+        return {"connector_id": self.connector_id, "display_name": self.display_name,
+                "status": "degraded", "authentication_type": "none",
+                "supported_datasets": list(self.config.get("data_types", [])),
+                "reason": "official products configured; network probe only on explicit search"}
+
+
+def _covers(outer, inner):
+    return outer[0] <= inner[0] and outer[1] <= inner[1] and outer[2] >= inner[2] and outer[3] >= inner[3]
 
 
 class MeteorologicalConnector(DataConnector):
@@ -175,6 +334,6 @@ def gee_candidates(config):
             row.get("nominal_scale_m"), row.get("projection"), license=row.get("license_text") or "unknown",
             # Catalog terms need dataset-level review; a URL alone is not redistribution permission.
             license_status="unknown", trusted_provider=True, access_status="authentication_required",
-            metadata={"official_url": row.get("official_catalog_url"), "temporal_resolution": row.get("temporal_resolution"), "bands": row.get("bands", []), "catalog_only": True, "missingness": "unknown"},
+            metadata={"official_url": row.get("official_catalog_url"), "temporal_resolution": row.get("temporal_resolution"), "bands": row.get("bands", []), "catalog_only": True, "missingness": "unknown", "data_origin_class": "public_remote_sensing", "fitness_for_purpose": "catalog discovery only; compute/export auth remains separate"},
         ))
     return {"status": "available" if rows else "no_match", "candidates": rows, "compute_status": "authentication_required"}

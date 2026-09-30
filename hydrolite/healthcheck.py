@@ -72,7 +72,8 @@ def build_healthcheck() -> HealthcheckOutputs:
     from hydrolite.connectors.registry import DataConnectorRegistry
     connector_rows = DataConnectorRegistry().health()
     counts = {status: sum(row.get("status") == status for row in connector_rows) for status in ("healthy", "degraded", "authentication_required", "unavailable")}
-    _add(rows, "data_connectors", "passed", json.dumps({"count": len(connector_rows), **counts}, ensure_ascii=False))
+    providers = [{"provider_id": row["provider_profile"]["provider_id"], "search_supported": row["provider_profile"]["search_supported"], "fetch_supported": row["provider_profile"]["fetch_supported"], "status": row.get("status")} for row in connector_rows if row.get("provider_profile")]
+    _add(rows, "data_connectors", "passed", json.dumps({"count": len(connector_rows), **counts, "official_provider_profiles": providers}, ensure_ascii=False))
 
     for relative in ("requirements.txt", "streamlit_app.py", "projects/demo_project", "cases", "output", "data_raw"):
         path = PROJECT_ROOT / relative

@@ -42,6 +42,8 @@ ACQUISITION_STATUS_LABELS = {
     "proxy_blocked": "Failed · proxy",
     "tls_failure": "Failed · TLS",
     "remote_unavailable": "Failed · provider unavailable",
+    "size_limit": "Approval Required · size limit",
+    "discover_only": "Discovery only",
 }
 
 
@@ -57,19 +59,38 @@ def _safe_workspace(value: str, context: WorkbenchContext) -> tuple[Path, bool]:
     return resolved, safe and "data_raw" not in resolved.parts
 
 
+def _provider_source_rows():
+    from hydrolite.connectors.registry import DataConnectorRegistry, provider_profiles
+    health = {row["connector_id"]: row for row in DataConnectorRegistry().health()}
+    aliases = {"earth_engine": "gee"}
+    rows = []
+    for profile in provider_profiles().values():
+        connector_id = aliases.get(profile["provider_id"], profile["provider_id"])
+        status = health.get(connector_id, {}).get("status", "unavailable")
+        rows.append({"Provider": profile["provider_name"], "Authority": profile["authority"],
+                     "Status": status, "Data types": ", ".join(profile["supported_data_types"]),
+                     "Discovery": profile["search_supported"], "Auto fetch": profile["fetch_supported"],
+                     "Authentication": profile["authentication"], "License": profile["license_status"],
+                     "Commercial use": profile["commercial_use_status"], "Endpoint": profile["base_endpoint"]})
+    return rows
+
+
 def render(context: WorkbenchContext) -> None:
     st.header("数据中心")
     st.caption("真实项目数据上传、识别、字段映射、质量校验、血缘、外部数据计划与模型输入准备。")
     st.warning("原始上传文件保持只读；只有通过质量检查的 standardized/derived 数据可进入模型输入。")
     state = load_app_state(st.session_state)
     if state.ui_mode == "simple":
-        tabs = st.tabs(["数据概况", "完整度", "问题", "需要操作"])
+        tabs = st.tabs(["数据概况", "完整度", "问题", "需要操作", "数据来源"])
         with tabs[0]:
             if context.project_loaded: st.json({"project": context.project_name, "directories": context.directories, "case_count": len(context.cases)})
             else: st.info("没有项目。请先在项目页面创建或打开项目。")
         with tabs[1]: st.info("数据完整度按当前场景的 Required Data / Optional Data 计算。请进入场景页面选择任务。")
         with tabs[2]: st.info("问题状态包括 Missing、Invalid、Needs Mapping、Needs Unit Fix 和 Needs CRS Fix。")
         with tabs[3]: st.info("下一步建议：先选择场景，再处理缺失数据；可自动修复项会明确标记，原始上传保持只读。")
+        with tabs[4]:
+            st.dataframe(pd.DataFrame(_provider_source_rows()), use_container_width=True, hide_index=True)
+            st.caption("公开元数据发现不等于可自动下载；公开遥感/再分析不等于项目实测。")
         return
     workspace_value = st.text_input("工作区路径", value="output/demo_workspace" if context.is_cloud else "workspaces/real_project")
     project_name = st.text_input("项目名称", value="Real Project")
@@ -77,7 +98,7 @@ def render(context: WorkbenchContext) -> None:
     if not safe:
         st.error("工作区必须位于本地 workspaces/ 或云端 output/ 下，且不能位于 data_raw。")
 
-    tabs = st.tabs(["项目", "上传", "字段映射", "数据质量", "GEE", "Earthdata", "Copernicus", "STAC", "数据需求", "模型输入", "血缘", "下载与报告"])
+    tabs = st.tabs(["项目", "上传", "字段映射", "数据质量", "GEE", "Earthdata", "Copernicus", "STAC", "数据需求", "模型输入", "血缘", "下载与报告", "数据来源"])
     with tabs[0]:
         if st.button("创建工作区", disabled=not safe):
             try:
@@ -124,7 +145,7 @@ def render(context: WorkbenchContext) -> None:
             st.info("搜索必须提供 bbox 与时间范围；真实下载默认关闭，凭证不会显示。")
     with tabs[8]:
         workflow = st.selectbox("应用场景", ["full_modeling_workflow", "watershed_hydrology", "hydrolite_event_model", "flood_forecast", "drought_monitoring", "SC01", "SC02", "SC03", "SC05", "SC09", "SC10", "water_environment_source_accounting"])
-        online = st.checkbox("允许访问已配置的公开 STAC 元数据端点", value=False, help="关闭时仅使用本地数据与离线目录；GEE 计算认证另行处理。")
+        online = st.checkbox("允许查询已配置的官方公开元数据端点", value=False, help="只查询公开元数据；GEE 计算/导出认证另行处理，NASA 下载可能需要 Earthdata Login。")
         context = {}
         if online:
             bbox_text = st.text_input("检索范围 bbox（W,S,E,N）", placeholder="例如 -122.5,37.7,-122.4,37.8")
@@ -159,7 +180,7 @@ def render(context: WorkbenchContext) -> None:
             st.caption(f"运行前置状态：{resolution['run_gate']}；此状态不会改变水文/水环境科学门禁。")
             frame = pd.DataFrame([{
                 "需求": row["requirement"]["requirement_id"], "数据类型": row["requirement"]["data_type"],
-                "策略": row["strategy"], "状态": acquisition_status_label(row["status"]), "本地数据": ", ".join(row.get("local_dataset_ids", [])),
+                "策略": row.get("source_mode", row["strategy"]), "状态": acquisition_status_label(row["status"]), "本地数据": ", ".join(row.get("local_dataset_ids", [])),
                 "候选数": len(row.get("candidates", [])), "说明": row["reason"],
             } for row in resolution["requirements"]])
             st.dataframe(frame, use_container_width=True, hide_index=True)
@@ -221,3 +242,8 @@ def render(context: WorkbenchContext) -> None:
             path = OUTPUT / name
             if path.is_file():
                 st.download_button(f"下载 {name}", path.read_bytes(), file_name=name)
+    with tabs[12]:
+        st.subheader("官方公开数据来源")
+        st.dataframe(pd.DataFrame(_provider_source_rows()), use_container_width=True, hide_index=True)
+        st.info("自动获取仅用于已核验许可、覆盖范围和体量的产品。需审批候选与项目必需资料分别展示，不会加入 Fetch All。")
+        st.caption("GEE catalog metadata 与 compute authentication 分离；NASA CMR 搜索不等于可下载；Copernicus STAC 当前为发现候选；HydroSHEDS 每个产品须核对自身 license/attribution。")

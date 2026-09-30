@@ -1,0 +1,72 @@
+schema_version: 1
+providers:
+  earth_engine:
+    provider_id: earth_engine
+    provider_name: Google Earth Engine official catalog
+    authority: Google Earth Engine
+    base_endpoint: https://storage.googleapis.com/earthengine-stac/catalog/catalog.json
+    access_type: catalog_metadata
+    authentication: OAuth required only for compute/export
+    supported_data_types: [dem, land_cover, vegetation_index, rainfall, temperature, soil_moisture, surface_water]
+    search_supported: true
+    fetch_supported: false
+    max_auto_fetch_size: 0
+    license_status: dataset_specific_review
+    commercial_use_status: dataset_specific
+    priority: 40
+    fallback_priority: 40
+    health_status: offline_catalog_available
+  copernicus_stac:
+    provider_id: copernicus_stac
+    provider_name: Copernicus Data Space STAC
+    authority: Copernicus Data Space Ecosystem
+    base_endpoint: https://stac.dataspace.copernicus.eu/v1/
+    access_type: public_metadata
+    authentication: none for discovery; product-specific for restricted assets
+    supported_data_types: [satellite_image, land_cover, dem]
+    search_supported: true
+    fetch_supported: false
+    max_auto_fetch_size: 0
+    license_status: collection_specific_review
+    commercial_use_status: collection_specific
+    priority: 20
+    fallback_priority: 20
+    health_status: probe_on_request
+  nasa_cmr:
+    provider_id: nasa_cmr
+    provider_name: NASA Earthdata CMR
+    authority: NASA EOSDIS
+    base_endpoint: https://cmr.earthdata.nasa.gov/search
+    access_type: public_metadata
+    authentication: none for metadata; Earthdata Login may be required to download
+    supported_data_types: [rainfall, temperature, soil_moisture, satellite_image, dem]
+    search_supported: true
+    fetch_supported: false
+    max_auto_fetch_size: 0
+    license_status: collection_specific_review
+    commercial_use_status: collection_specific
+    priority: 30
+    fallback_priority: 30
+    health_status: probe_on_request
+  hydrosheds:
+    provider_id: hydrosheds
+    provider_name: HydroSHEDS official products
+    authority: HydroSHEDS
+    base_endpoint: https://data.hydrosheds.org/file/
+    access_type: public_binary
+    authentication: none
+    supported_data_types: [dem, conditioned_dem, flow_direction, flow_accumulation, hydrography]
+    search_supported: true
+    fetch_supported: true
+    max_auto_fetch_size: 52428800
+    license_status: product_terms_documented
+    commercial_use_status: v1_core_products_allowed_with_license_attribution
+    priority: 10
+    fallback_priority: 10
+    health_status: probe_on_request
+matrix:
+  watershed_hydrology: {dem: [local, cache, hydrosheds, earth_engine] , hydrography: [local, cache, hydrosheds]}
+  flood_forecast: {dem: [local, cache, hydrosheds, earth_engine], rainfall_forecast: [local, cache, earth_engine, nasa_cmr]}
+  drought: {dem: [local, cache, hydrosheds, earth_engine], rainfall: [local, cache, earth_engine, nasa_cmr], temperature: [local, cache, earth_engine, nasa_cmr]}
+  water_environment_source_accounting: {emission_factors: [local, cache, approval_registry], outfall_actual_flow: [local, project_user]}
+  gee_data_discovery: {dem: [local, cache, earth_engine, hydrosheds], satellite_image: [local, cache, copernicus_stac, earth_engine], land_cover: [local, cache, earth_engine, copernicus_stac]}

@@ -12,6 +12,44 @@ providers:
     collections:
       dem: cop-dem-glo-30
     data_types: [dem]
+  copernicus_stac:
+    connector: copernicus_stac
+    provider: Copernicus Data Space Ecosystem
+    endpoint: https://stac.dataspace.copernicus.eu/v1
+    allowed_hosts: [stac.dataspace.copernicus.eu]
+    trusted: true
+    auth_type: none
+    request_interval_seconds: 1
+    collections:
+      satellite_image: sentinel-2-l2a
+      land_cover: esa-worldcover
+    data_types: [satellite_image, land_cover]
+  nasa_cmr:
+    connector: nasa_cmr
+    provider: NASA Earthdata CMR
+    endpoint: https://cmr.earthdata.nasa.gov/search
+    allowed_hosts: [cmr.earthdata.nasa.gov]
+    trusted: true
+    auth_type: user_login_required
+    request_interval_seconds: 1
+    collections:
+      rainfall: GPM_3IMERGDF
+      soil_moisture: SPL3SMP
+      dem: SRTMGL1
+    data_types: [rainfall, temperature, soil_moisture, satellite_image, dem]
+  hydrosheds:
+    connector: hydrosheds
+    provider: HydroSHEDS v1 core products
+    endpoint: https://data.hydrosheds.org/file
+    allowed_hosts: [data.hydrosheds.org]
+    trusted: true
+    auth_type: none
+    request_interval_seconds: 1
+    products:
+      dem: {collection: hydrosheds-v1-dem, regions: {asia: {filename: hyd_as_dem_30s.zip, estimated_mb: 47, bbox: [25, -12, 180, 82], license: HydroSHEDS v1 core product license}}}
+      flow_direction: {collection: hydrosheds-v1-dir, regions: {asia: {filename: hyd_as_dir_30s.zip, estimated_mb: 12, bbox: [25, -12, 180, 82], license: HydroSHEDS v1 core product license}}}
+      flow_accumulation: {collection: hydrosheds-v1-acc, regions: {asia: {filename: hyd_as_acc_30s.zip, estimated_mb: 27, bbox: [25, -12, 180, 82], license: HydroSHEDS v1 core product license}}}
+    data_types: [dem, conditioned_dem, flow_direction, flow_accumulation, hydrography]
   gee:
     connector: gee
     provider: Google Earth Engine official STAC

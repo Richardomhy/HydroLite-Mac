@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from hydrolite.connectors.contracts import DataRequirement, DatasetCandidate, PROJECT_TYPES
-from hydrolite.connectors.registry import DataConnectorRegistry
+from hydrolite.connectors.contracts import DataRequirement, DatasetCandidate, PROJECT_TYPES, SOURCE_MODES
+from hydrolite.connectors.registry import DataConnectorRegistry, source_priority_for
 from hydrolite.dataset_cache import safe_destination, atomic_json
 from hydrolite.workspace import list_workspace_datasets, calculate_file_checksum
 
 ALIASES = {"rainfall": "rainfall_observed", "observed_streamflow": "streamflow_observed", "forecast_rainfall": "rainfall_forecast", "continuous_meteorology": "daily_meteorology", "land_cover": "land_use"}
-PUBLIC_TYPES = {"dem", "land_cover", "land_use", "vegetation_index", "rainfall", "temperature", "soil_moisture", "surface_water", "daily_meteorology"}
+PUBLIC_TYPES = {"dem", "conditioned_dem", "flow_direction", "flow_accumulation", "hydrography", "land_cover", "land_use", "vegetation_index", "rainfall", "temperature", "soil_moisture", "surface_water", "daily_meteorology"}
 POINT_REQUESTS = {
     "DR01": ("coordinate_crs", "source_id", "longitude", "latitude", "crs", "coordinate_reference"),
     "DR02": ("outfall_actual_flow", "source_id", "value", "unit", "date_start", "date_end", "flow_kind"),
@@ -98,20 +98,24 @@ def resolve_requirement(requirement, workspace, registry=None, online=False):
     registry = registry or DataConnectorRegistry()
     strategy = classify_requirement_source(requirement)
     local, ready = _local_matches(requirement, workspace)
-    result = {"requirement": requirement.as_dict(), "strategy": strategy, "local_dataset_ids": ready, "candidates": [], "searches": []}
+    result = {"requirement": requirement.as_dict(), "strategy": strategy, "local_dataset_ids": ready, "candidates": [], "searches": [],
+              "source_trace": ["project_local_validated_qc", "validated_workspace_cache", "provider_priority_fallback"]}
     if ready:
         cached_online = not online and any(
             item.get("dataset_id") in ready and item.get("source_type") == "online_public"
             for item in list_workspace_datasets(workspace)
         )
-        return {**result, "status": "offline_cached" if cached_online else "local_ready",
+        return {**result, "status": "offline_cached" if cached_online else "local_ready", "source_mode": "AUTO_FETCH",
                 "reason": "Verified standardized dataset is available offline with recorded public-source provenance" if cached_online else "Verified local standardized data and QC"}
     if strategy == "USER_REQUIRED":
         if requirement.requires_project_measurement or requirement.data_type in PROJECT_TYPES:
-            return {**result, "status": "project_measurement_required", "reason": _project_evidence_reason(requirement), "local_unreviewed_count": len(local)}
+            return {**result, "status": "project_measurement_required", "source_mode": "USER_REQUIRED", "reason": _project_evidence_reason(requirement), "local_unreviewed_count": len(local)}
         supported = {value for values in registry.capabilities().values() for value in values}
         status = "unavailable" if requirement.data_type in supported or requirement.data_type in PUBLIC_TYPES else "unsupported"
-        return {**result, "status": status, "reason": "No configured trusted public source; user-provided data may be uploaded", "local_unreviewed_count": len(local)}
+        return {**result, "status": status, "source_mode": "UNAVAILABLE", "reason": "No configured trusted public source; user-provided data may be uploaded", "local_unreviewed_count": len(local)}
+    if not requirement.preferred_connectors and source_priority_for(requirement.data_type):
+        requirement = replace(requirement, preferred_connectors=source_priority_for(requirement.data_type))
+        result["requirement"] = requirement.as_dict()
     recommendations = registry.recommend(requirement, {"online": online})
     result.update(recommendations)
     eligible = [row for row in result["candidates"] if row["eligible"] and row["candidate"]["access_status"] == "public_download"]
@@ -119,8 +123,10 @@ def resolve_requirement(requirement, workspace, registry=None, online=False):
         status = "approval_required" if result["candidates"] else "unavailable"
     elif eligible:
         status = "auto_fetch_available"
-    elif any(item.get("status") in {"dns_failure", "non_public_resolution", "proxy_blocked", "tls_failure", "remote_unavailable"} for item in result["searches"]):
+    elif any(item.get("status") in {"dns_failure", "non_public_resolution", "proxy_blocked", "tls_failure", "remote_unavailable", "security_blocked"} for item in result["searches"]):
         status = "network_blocked"
+    elif any(item.get("status") in {"auth_required", "authentication_required"} for item in result["searches"]):
+        status = "auth_required"
     elif local:
         status = "local_needs_qc"
     elif result["candidates"]:
@@ -130,15 +136,22 @@ def resolve_requirement(requirement, workspace, registry=None, online=False):
         status = "unavailable" if requirement.data_type in supported or requirement.data_type in PUBLIC_TYPES else "unsupported"
     reason = "Acquisition is not QC readiness; candidate metadata never substitutes for project measurements"
     if status == "network_blocked":
-        blocked = next(item["status"] for item in result["searches"] if item.get("status") in {"dns_failure", "non_public_resolution", "proxy_blocked", "tls_failure", "remote_unavailable"})
+        blocked = next(item["status"] for item in result["searches"] if item.get("status") in {"dns_failure", "non_public_resolution", "proxy_blocked", "tls_failure", "remote_unavailable", "security_blocked"})
         reason = {
             "dns_failure": "数据源域名解析失败；请检查网络或 DNS resolver 设置。",
             "non_public_resolution": "数据源当前解析到非公网网络地址，为保护本机安全，HydroLite 已阻止连接。",
             "proxy_blocked": "当前 HTTPS 代理未能建立安全的数据源连接。",
             "tls_failure": "数据源 TLS 证书校验失败；HydroLite 未绕过凭证或证书检查。",
             "remote_unavailable": "公开数据源未能在限定请求时间内响应。",
+            "security_blocked": "数据源请求被网络安全策略阻止。",
         }[blocked]
-    return {**result, "status": status, "reason": reason}
+    source_mode = {"auto_fetch_available": "AUTO_FETCH", "approval_required": "AUTO_DISCOVER_REQUIRE_APPROVAL",
+                   "project_measurement_required": "USER_REQUIRED", "auth_required": "AUTH_REQUIRED",
+                   "unavailable": "UNAVAILABLE", "unsupported": "UNAVAILABLE"}.get(status,
+                   "AUTO_DISCOVER_REQUIRE_APPROVAL" if result["candidates"] else "UNAVAILABLE")
+    if status == "network_blocked":
+        source_mode = "AUTH_REQUIRED" if any(item["candidate"].get("access_status") == "authentication_required" for item in result["candidates"]) else "UNAVAILABLE"
+    return {**result, "status": status, "source_mode": source_mode if source_mode in SOURCE_MODES else "UNAVAILABLE", "reason": reason}
 
 
 def requirements_for_scenario(scenario, context=None):
@@ -173,7 +186,8 @@ def requirements_for_scenario(scenario, context=None):
 
 def resolve_scenario_requirements(scenario, workspace, registry=None, online=False, context=None, requirements=None):
     specs = requirements if requirements is not None else requirements_for_scenario(scenario, context)
-    rows = [resolve_requirement(row, workspace, registry, online) for row in specs]
+    resolver = DataSourceResolver(registry)
+    rows = [resolver.resolve(row, workspace, online=online) for row in specs]
     count = len(rows)
     automatic = sum(row["status"] == "auto_fetch_available" for row in rows)
     candidates = sum(row["status"] in {"approval_required", "online_candidate_available"} for row in rows)
@@ -182,6 +196,15 @@ def resolve_scenario_requirements(scenario, workspace, registry=None, online=Fal
     blocked = [row["requirement"]["requirement_id"] for row in rows if row["requirement"]["required"] and row["status"] not in ready_statuses and not row["requirement"]["quality_rules"].get("allow_missing_warning", False)]
     local_ready = sum(row["status"] in ready_statuses for row in rows)
     return {"scenario": scenario, "requirements": rows, "required_blockers": blocked, "run_gate": "blocked" if blocked else "ready_with_warnings", "metrics": {"requirements_evaluated": count, "local_ready": local_ready, "auto_fetch": automatic, "online_candidate": candidates, "user_required": user, "unavailable": sum(row["status"] == "unavailable" for row in rows), "network_blocked": sum(row["status"] == "network_blocked" for row in rows), "automatic_data_resolution_rate": (local_ready + automatic) / count if count else 0, "auto_fetch_rate": automatic / count if count else 0, "online_candidate_resolution_rate": candidates / count if count else 0, "user_required_rate": user / count if count else 0}, "interpretation": "Rates count requirements, not files. Automatic resolution rate counts QC-ready local/cached requirements plus fetch-eligible requirements; candidate discovery alone is not resolution, and fetch availability is not scientific readiness."}
+
+
+class DataSourceResolver:
+    """Facade over the existing requirement resolver; does not duplicate resolution policy."""
+    def __init__(self, registry=None):
+        self.registry = registry
+
+    def resolve(self, requirement, workspace, online=False):
+        return resolve_requirement(requirement, workspace, self.registry, online)
 
 
 def build_user_required_data_list(resolution):
@@ -231,7 +254,7 @@ def fetch_recommended(resolution, workspace, registry=None, cache=None, requirem
         eligible = [item for item in row["candidates"] if rank_candidate(requirement, DatasetCandidate(**item["candidate"]))["eligible"] and item["candidate"]["access_status"] == "public_download"]
         if not eligible:
             continue
-        if len(eligible) > 1 and eligible[0]["score"] == eligible[1]["score"]:
+        if len(eligible) > 1 and eligible[0]["score"] == eligible[1]["score"] and eligible[0].get("provider_rank") == eligible[1].get("provider_rank"):
             results.append({"requirement_id": requirement.requirement_id, "status": "candidate_selection_required"})
             continue
         result = registry.fetch(eligible[0]["candidate"], cache=cache, confirm_large=confirm_large)
@@ -266,7 +289,7 @@ def resolve_point_source_requests(workspace, m9a2_dir, output, online=False):
     frame = pd.read_excel(factors).fillna("") if factors.exists() else pd.DataFrame()
     public = next(row for row in result["requirements"] if row["requirement"]["data_type"] == "emission_factors")
     if not frame.empty:
-        public.update(status="approval_required", candidates=[{"candidate": {"dataset_id": str(row.get("factor_id") or row.get("source_reference") or f"public_factor_{i}"), "connector_id": "regulatory", "provider": str(row.get("source_name") or row.get("source_reference") or "M9A.2 reviewed public reference"), "data_type": "emission_factors", "source_url": str(row.get("source_url") or ""), "version": "", "variables": (str(row.get("pollutant") or ""),), "spatial_extent": (), "temporal_extent": (), "resolution": None, "crs": None, "nodata": None, "license": str(row.get("license") or "unknown"), "license_status": str(row.get("license_status") or "unknown"), "trusted_provider": True, "access_status": "approval_required", "estimated_size": None, "content_type": "", "checksum": "", "metadata": {"source_reference": str(row.get("source_reference") or ""), "existing_m9a2_candidate": True}}, "score": 0, "quality": {}, "eligible": False, "qc_pending": True, "selection_reason": "Existing public reference; project applicability requires human approval"} for i, row in enumerate(frame.to_dict("records"))], reason="Existing M9A.2 public references reused; applicability remains unapproved", existing_candidate_count=len(frame))
+        public.update(status="approval_required", source_mode="AUTO_DISCOVER_REQUIRE_APPROVAL", candidates=[{"candidate": {"dataset_id": str(row.get("factor_id") or row.get("source_reference") or f"public_factor_{i}"), "connector_id": "regulatory", "provider": str(row.get("source_name") or row.get("source_reference") or "M9A.2 reviewed public reference"), "data_type": "emission_factors", "source_url": str(row.get("source_url") or ""), "version": "", "variables": (str(row.get("pollutant") or ""),), "spatial_extent": (), "temporal_extent": (), "resolution": None, "crs": None, "nodata": None, "license": str(row.get("license") or "unknown"), "license_status": str(row.get("license_status") or "unknown"), "trusted_provider": True, "access_status": "approval_required", "estimated_size": None, "content_type": "", "checksum": "", "metadata": {"source_reference": str(row.get("source_reference") or ""), "existing_m9a2_candidate": True}}, "score": 0, "quality": {}, "eligible": False, "qc_pending": True, "selection_reason": "Existing public reference; project applicability requires human approval"} for i, row in enumerate(frame.to_dict("records"))], reason="Existing M9A.2 public references reused; applicability remains unapproved", existing_candidate_count=len(frame))
         result["metrics"].update(online_candidate=1, online_candidate_resolution_rate=1 / len(result["requirements"]), unavailable=0)
     result["m9a2_gates_unchanged"] = manifest["gates"]
     write_resolution(result, output)
